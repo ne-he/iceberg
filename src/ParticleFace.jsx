@@ -3,8 +3,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { faceState, scrollState } from './scrollState'
 
-// jumlah partikel: bener-bener padat biar fotonya kebentuk jelas ala igloo
-const COUNT = 32000
+// jumlah partikel: bener-bener padat biar fotonya kebentuk jelas ala igloo —
+// 48k + slab makin tipis = antar partikel makin rapat, muka makin solid
+const COUNT = 48000
 // radius & displacement maksimal efek buyar pas pointer nyentuh partikel —
 // push-nya SATURASI (bukan akumulasi) biar pointer diem gak ngebolongin badan
 const REPEL_R = 1.05
@@ -33,7 +34,7 @@ function samplePixels(ctx, w, h) {
 }
 
 // pilih COUNT titik acak → posisi 3D (slab tipis) + warna per partikel
-function pickPoints(pts, scale, tint = null, jitter = 0.03) {
+function pickPoints(pts, scale, tint = null, jitter = 0.02) {
   const pos = new Float32Array(COUNT * 3)
   const col = new Float32Array(COUNT * 3)
   for (let i = 0; i < COUNT; i++) {
@@ -42,7 +43,7 @@ function pickPoints(pts, scale, tint = null, jitter = 0.03) {
     pos[i3] = p[0] * scale + (Math.random() - 0.5) * jitter
     pos[i3 + 1] = p[1] * scale + (Math.random() - 0.5) * jitter
     // slab tipis: kedalaman kecil biar siluet foto tetep rapat, gak mencar
-    pos[i3 + 2] = (Math.random() - 0.5) * 0.26
+    pos[i3 + 2] = (Math.random() - 0.5) * 0.16
     if (tint) {
       col[i3] = tint[0]
       col[i3 + 1] = tint[1]
@@ -253,7 +254,7 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
           ref={mat}
           map={sprite}
           vertexColors
-          size={0.052}
+          size={0.056}
           sizeAttenuation
           transparent
           opacity={0}

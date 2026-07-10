@@ -10,10 +10,12 @@ import { dragState, scrollState } from './scrollState'
 
 export const FOG_COLOR = '#b9c0c7'
 
-export default function Experience({ onOpen }) {
+export default function Experience({ onOpen, hasVideo }) {
   return (
     <>
-      <color attach="background" args={[FOG_COLOR]} />
+      {/* kalau ada video langit (bg.mp4), canvas dibiarin transparan biar videonya
+          keliatan di belakang — pas video fade out, body #b9c0c7 yang jadi kabut */}
+      {!hasVideo && <color attach="background" args={[FOG_COLOR]} />}
       {/* nilai awal aja — FogRig yang ngatur tebal-tipisnya ngikutin kedalaman scroll */}
       <fog attach="fog" args={[FOG_COLOR, 16, 50]} />
       <FogRig />
@@ -237,10 +239,10 @@ function LightShafts() {
   ))
 }
 
-// selama rentang ini di sekitar tiap kristal, KAMERA BENERAN "LARI" ke depan
-// kristalnya dan berhenti sebentar (posisi + pandangan sama-sama dikunci),
-// baru lanjut terbang ke kristal berikutnya — persis behavior igloo.inc
-const HOLD = 0.07
+// selama rentang ini di sekitar tiap kristal, kamera berhenti SEBENTAR aja —
+// dulunya 0.07 tapi plateau segitu bikin scroll kerasa "patah/ngelag",
+// sekarang tipis: hampir tiap gerakan scroll langsung keliatan jalan
+const HOLD = 0.03
 
 function CameraRig() {
   const camera = useThree((s) => s.camera)
@@ -254,16 +256,19 @@ function CameraRig() {
       new THREE.Vector3(),
       [
         { t: 0, pos: v(0, 1.8, 11), look: v(0, 0.5, 0) },
-        { t: 0.25, pos: front(CRYSTALS[0].position, 7.5), look: v(...CRYSTALS[0].position) },
-        { t: 0.5, pos: front(CRYSTALS[1].position, 7.5), look: v(...CRYSTALS[1].position) },
-        { t: 0.75, pos: front(CRYSTALS[2].position, 7.5), look: v(...CRYSTALS[2].position) },
+        // anchor ngikut daftar CRYSTALS — nambah batu tinggal nambah di content.js
+        ...CRYSTALS.map((c, i) => ({
+          t: (i + 1) / (CRYSTALS.length + 1),
+          pos: front(c.position, 7.5),
+          look: v(...c.position),
+        })),
         { t: 1, pos: v(0, -36.4, 12), look: v(0, -37, 0) },
       ],
     ]
   }, [])
 
   useFrame((state, delta) => {
-    easing.damp(scrollState, 'damped', scrollState.progress, 0.22, delta)
+    easing.damp(scrollState, 'damped', scrollState.progress, 0.16, delta)
     const k = THREE.MathUtils.clamp(scrollState.damped, 0, 1)
 
     // cari segmen anchor aktif, lalu interpolasi dengan plateau di tiap kristal

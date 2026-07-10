@@ -5,7 +5,7 @@ import { CONTACT, PANELS, SECTION_WORDS } from './content'
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
 // titik scroll tempat kamera pas nge-frame tiap batu — target auto-center
-const SNAP_ANCHORS = [0, 0.25, 0.5, 0.75, 1]
+const SNAP_ANCHORS = [0, 0.2, 0.4, 0.6, 0.8, 1]
 
 export function UI({ panel, onClose }) {
   const hero = useRef()

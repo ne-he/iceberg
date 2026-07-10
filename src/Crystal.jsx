@@ -142,6 +142,7 @@ function Artifact({ type }) {
   if (!type) return null
   return (
     <mesh scale={0.8}>
+      {type === 'tetrahedron' && <tetrahedronGeometry args={[0.4, 0]} />}
       {type === 'octahedron' && <octahedronGeometry args={[0.34, 0]} />}
       {type === 'torusknot' && <torusKnotGeometry args={[0.26, 0.085, 110, 14]} />}
       {type === 'icosahedron' && <icosahedronGeometry args={[0.32, 0]} />}

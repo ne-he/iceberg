@@ -13,10 +13,21 @@ export const HERO_CRYSTAL = {
 
 export const CRYSTALS = [
   {
-    id: 'journey',
+    id: 'about',
     code: 'ICEBERG_SEC_01',
+    name: 'ABOUT',
+    position: [3.4, -7, -2],
+    scale: 1.1,
+    spin: 0.06,
+    yaw: 1.4,
+    artifact: 'tetrahedron',
+    labelOffset: [-2.1, 1.0, 0],
+  },
+  {
+    id: 'journey',
+    code: 'ICEBERG_SEC_02',
     name: 'JOURNEY',
-    position: [-3.5, -8.5, -2],
+    position: [-3.5, -14.5, -2],
     scale: 1.15,
     spin: 0.07,
     yaw: 2.1,
@@ -25,9 +36,9 @@ export const CRYSTALS = [
   },
   {
     id: 'projects',
-    code: 'ICEBERG_SEC_02',
+    code: 'ICEBERG_SEC_03',
     name: 'PROJECTS',
-    position: [4, -18, -3],
+    position: [4, -22, -3],
     scale: 1.3,
     spin: 0.055,
     yaw: 4.2,
@@ -36,9 +47,9 @@ export const CRYSTALS = [
   },
   {
     id: 'skills',
-    code: 'ICEBERG_SEC_03',
+    code: 'ICEBERG_SEC_04',
     name: 'SKILLS',
-    position: [-3.2, -28, 0.5],
+    position: [-3.2, -29, 0.5],
     scale: 1.05,
     spin: 0.08,
     yaw: 0.9,
@@ -48,14 +59,39 @@ export const CRYSTALS = [
 ]
 
 export const SECTION_WORDS = [
-  { word: 'JOURNEY', center: 0.25 },
-  { word: 'PROJECTS', center: 0.5 },
-  { word: 'SKILLS', center: 0.75 },
+  { word: 'ABOUT', center: 0.2 },
+  { word: 'JOURNEY', center: 0.4 },
+  { word: 'PROJECTS', center: 0.6 },
+  { word: 'SKILLS', center: 0.8 },
 ]
 
 export const PANELS = {
-  journey: {
+  about: {
     code: 'ICEBERG_SEC_01',
+    title: 'ABOUT',
+    rows: [
+      {
+        h: 'NEHEMIAH WILHELMUS JUNAIDI',
+        p: 'Data Science undergraduate at Binus University, Jakarta. Semester 4, building at the intersection of machine learning and the web.',
+      },
+      {
+        h: 'WHAT I DO',
+        p: 'End-to-end work: from raw data and model training to the interface people actually touch. This site included.',
+      },
+      {
+        h: 'HOW I WORK',
+        tag: 'AI-NATIVE',
+        p: 'Agentic workflows by default. LLM pipelines, automation-first tooling, ship fast and iterate.',
+      },
+      {
+        h: 'BELOW THE SURFACE',
+        p: 'This rock is just the tip. Keep descending for the journey, the projects, and the stack underneath.',
+      },
+    ],
+    foot: 'PROFILE / JAKARTA 2026',
+  },
+  journey: {
+    code: 'ICEBERG_SEC_02',
     title: 'JOURNEY',
     rows: [
       {
@@ -75,7 +111,7 @@ export const PANELS = {
     foot: 'TIMELINE / UPDATED 07.2026',
   },
   projects: {
-    code: 'ICEBERG_SEC_02',
+    code: 'ICEBERG_SEC_03',
     title: 'PROJECTS',
     rows: [
       {
@@ -102,7 +138,7 @@ export const PANELS = {
     foot: 'SELECTED WORK / MORE ON REQUEST',
   },
   skills: {
-    code: 'ICEBERG_SEC_03',
+    code: 'ICEBERG_SEC_04',
     title: 'SKILLS',
     rows: [
       {
