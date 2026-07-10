@@ -1,8 +1,9 @@
 import * as THREE from 'three'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Float, Html, MeshTransmissionMaterial, useCursor, useGLTF } from '@react-three/drei'
 import { easing } from 'maath'
+import { dragState } from './scrollState'
 
 const MODEL = '/models/iceberg.glb'
 
@@ -50,25 +51,36 @@ export function Crystal({ data, onOpen, interactive = true }) {
     }
   }
   if (draggable) {
-    // hero bisa diputer manual: drag horizontal muter Y, vertikal ngangguk dikit
+    // hero bisa diputer manual: pointerdown di mesh, move/up ditangkap di window
+    // (lebih reliabel daripada pointer capture punya R3F)
     events.onPointerDown = (e) => {
       e.stopPropagation()
       dragging.current = { x: e.clientX, y: e.clientY }
-      e.target.setPointerCapture(e.pointerId)
+      dragState.active = true
     }
-    events.onPointerMove = (e) => {
+  }
+
+  useEffect(() => {
+    if (!draggable) return
+    const move = (e) => {
       if (!dragging.current || !spinner.current) return
       const dx = e.clientX - dragging.current.x
       const dy = e.clientY - dragging.current.y
-      spinner.current.rotation.y += dx * 0.006
-      spinner.current.rotation.x = THREE.MathUtils.clamp(spinner.current.rotation.x + dy * 0.004, -0.5, 0.5)
+      spinner.current.rotation.y += dx * 0.01
+      spinner.current.rotation.x = THREE.MathUtils.clamp(spinner.current.rotation.x + dy * 0.006, -0.6, 0.6)
       dragging.current = { x: e.clientX, y: e.clientY }
     }
-    events.onPointerUp = (e) => {
+    const up = () => {
       dragging.current = null
-      e.target.releasePointerCapture?.(e.pointerId)
+      dragState.active = false
     }
-  }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    return () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+    }
+  }, [draggable])
 
   return (
     <Float speed={1.1} rotationIntensity={draggable ? 0 : 0.1} floatIntensity={0.4}>

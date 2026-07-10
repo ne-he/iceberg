@@ -95,8 +95,8 @@ body {
 
 /* ---------- label anotasi ala igloo ---------- */
 .anno {
-  position: relative; padding-left: 20px;
-  color: #fff; font-size: 15px; font-weight: 500; line-height: 1.55;
+  position: relative; padding-left: 24px;
+  color: #fff; font-size: 17px; font-weight: 500; line-height: 1.55;
   letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap;
   opacity: 0; transform: translateY(6px);
   transition: opacity 0.55s ease, transform 0.55s ease;
@@ -108,13 +108,13 @@ body {
   background: rgba(255, 255, 255, 0.75);
 }
 .anno::after {
-  content: ''; position: absolute; left: -34px; top: 50%; width: 34px; height: 1px;
+  content: ''; position: absolute; left: -44px; top: 50%; width: 44px; height: 1px;
   background: rgba(255, 255, 255, 0.4);
 }
 .anno.is-visible { opacity: 1; transform: none; }
-.anno-code { opacity: 0.8; font-size: 13px; }
-.anno-name { font-size: 23px; font-weight: 600; letter-spacing: 0.14em; margin-top: 3px; }
-.anno-cta { margin-top: 9px; font-size: 13px; opacity: 0.7; transition: opacity 0.3s; }
+.anno-code { opacity: 0.85; font-size: 15px; }
+.anno-name { font-size: 32px; font-weight: 600; letter-spacing: 0.14em; margin-top: 4px; }
+.anno-cta { margin-top: 10px; font-size: 15px; opacity: 0.75; transition: opacity 0.3s; }
 .anno.is-hot .anno-cta { opacity: 1; }
 
 /* ---------- panel info ---------- */
@@ -145,6 +145,19 @@ body {
 .panel-close:hover { background: rgba(23, 26, 29, 0.08); }
 .panel-foot { margin-top: 26px; font-size: 10px; letter-spacing: 0.12em; opacity: 0.5; text-transform: uppercase; }
 
+/* ---------- depth ruler kiri: penggaris kedalaman yang ikut scroll ---------- */
+.ruler {
+  position: fixed; left: 32px; top: 0; bottom: 0; z-index: 9;
+  overflow: hidden; pointer-events: none; opacity: 0.55;
+}
+.ruler-in { padding: 42vh 0; will-change: transform; }
+.tick {
+  height: 74px; display: flex; align-items: center; gap: 10px;
+  font-size: 11px; letter-spacing: 0.16em; color: #fff;
+}
+.tick::before { content: ''; width: 20px; height: 1px; background: rgba(255, 255, 255, 0.55); }
+.tick span { opacity: 0.75; }
+
 /* ---------- film grain halus di atas segalanya (tekstur ala igloo) ---------- */
 .grain {
   position: fixed; inset: -100px; z-index: 35; pointer-events: none;
@@ -174,6 +187,7 @@ body {
   .logo { left: 20px; top: 20px; font-size: 20px; }
   .meta { right: 20px; top: 24px; }
   .readout { display: none; }
+  .ruler { display: none; }
   .bigword { right: 2vw; }
   .panel { padding: 76px 22px 28px; }
 }

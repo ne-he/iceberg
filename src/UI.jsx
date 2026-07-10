@@ -14,6 +14,7 @@ export function UI({ panel, onClose }) {
   const num = useRef()
   const bar = useRef()
   const hint = useRef()
+  const ruler = useRef()
 
   // simpan konten panel terakhir biar teks gak hilang pas animasi nutup
   const lastRef = useRef(null)
@@ -46,6 +47,10 @@ export function UI({ panel, onClose }) {
       if (num.current) num.current.textContent = `${String(Math.round(t * 100)).padStart(2, '0')} / 100`
       if (bar.current) bar.current.style.transform = `scaleX(${t})`
       if (hint.current) hint.current.style.opacity = clamp(1 - (t - 0.82) / 0.06, 0, 1)
+      if (ruler.current) {
+        const travel = ruler.current.offsetHeight - window.innerHeight
+        if (travel > 0) ruler.current.style.transform = `translateY(${-t * travel}px)`
+      }
       raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
@@ -64,6 +69,16 @@ export function UI({ panel, onClose }) {
   return (
     <>
       <div className="grain" aria-hidden="true" />
+      {/* penggaris kedalaman kiri — ikut gerak scroll, ala instrumen igloo */}
+      <div className="ruler" aria-hidden="true">
+        <div className="ruler-in" ref={ruler}>
+          {Array.from({ length: 39 }, (_, i) => (
+            <div className="tick" key={i}>
+              <span>{String(i * 10).padStart(3, '0')}M</span>
+            </div>
+          ))}
+        </div>
+      </div>
       <div className="hud">
         <div className="logo">ICEBERG</div>
         <div className="meta">
