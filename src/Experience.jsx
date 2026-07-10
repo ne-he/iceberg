@@ -10,12 +10,13 @@ import { dragState, scrollState } from './scrollState'
 
 export const FOG_COLOR = '#b9c0c7'
 
-export default function Experience({ onOpen, hasVideo = false }) {
+export default function Experience({ onOpen }) {
   return (
     <>
-      {/* kalau ada video background (public/bg.mp4), canvas dibikin transparan */}
-      {!hasVideo && <color attach="background" args={[FOG_COLOR]} />}
-      <fog attach="fog" args={[FOG_COLOR, 8, 30]} />
+      <color attach="background" args={[FOG_COLOR]} />
+      {/* nilai awal aja — FogRig yang ngatur tebal-tipisnya ngikutin kedalaman scroll */}
+      <fog attach="fog" args={[FOG_COLOR, 16, 50]} />
+      <FogRig />
 
       <ambientLight intensity={1.1} />
       <directionalLight position={[6, 10, 4]} intensity={1.6} />
@@ -34,6 +35,9 @@ export default function Experience({ onOpen, hasVideo = false }) {
       {/* dunia latar: bongkahan-bongkahan jauh yang jadi siluet di kabut (trik igloo) */}
       <BackgroundField />
 
+      {/* kristal es kecil melayang naik pelan, looping — pengganti video daratan */}
+      <DriftingIce />
+
       {/* outro: partikel wajah Nehemiah di atas panggung podium ala igloo */}
       <ParticleFace position={[0, -36.55, 1.5]} />
       <OutroStage />
@@ -47,6 +51,63 @@ export default function Experience({ onOpen, hasVideo = false }) {
       <LightShafts />
     </>
   )
+}
+
+// kabut bertingkat: di hero (atas) JELAS BANGET, makin turun makin berkabut —
+// menandakan makin dalam makin tenggelam di kabut es
+function FogRig() {
+  const scene = useThree((s) => s.scene)
+  useFrame(() => {
+    const k = THREE.MathUtils.clamp(scrollState.damped, 0, 1)
+    if (scene.fog) {
+      scene.fog.near = 16 - k * 10 // 16 → 6
+      scene.fog.far = 50 - k * 27 // 50 → 23
+    }
+  })
+  return null
+}
+
+// pecahan es kecil yang melayang naik pelan sepanjang jalur turun, looping terus —
+// ngasih rasa "dunia hidup" tanpa perlu video background
+function DriftingIce() {
+  const { nodes } = useGLTF('/models/iceberg.glb')
+  const geometry = useMemo(() => Object.values(nodes).find((n) => n.isMesh)?.geometry, [nodes])
+  const material = useMemo(
+    () => new THREE.MeshBasicMaterial({ color: '#d3e2ec', transparent: true, opacity: 0.35, depthWrite: false }),
+    []
+  )
+  const shards = useMemo(() => {
+    const rand = (i, n) => {
+      const x = Math.sin(i * 91.7 + n * 269.5) * 43758.5453
+      return x - Math.floor(x)
+    }
+    return Array.from({ length: 18 }, (_, i) => ({
+      x: (rand(i, 1) - 0.5) * 22,
+      y0: 8 - rand(i, 2) * 54,
+      z: -4 - rand(i, 3) * 9,
+      scale: 0.12 + rand(i, 4) * 0.3,
+      rise: 0.25 + rand(i, 5) * 0.5,
+      spin: 0.15 + rand(i, 6) * 0.4,
+    }))
+  }, [])
+  const refs = useRef([])
+  useFrame((state, delta) => {
+    const t = state.clock.elapsedTime
+    for (let i = 0; i < shards.length; i++) {
+      const m = refs.current[i]
+      if (!m) continue
+      const s = shards[i]
+      // naik pelan, wrap balik ke bawah pas lewat atas (rentang y: -46 .. 8)
+      let y = s.y0 + t * s.rise
+      y = ((y + 46) % 54) - 46
+      m.position.set(s.x + Math.sin(t * 0.3 + i) * 0.6, y, s.z)
+      m.rotation.x += delta * s.spin
+      m.rotation.y += delta * s.spin * 0.7
+    }
+  })
+  return shards.map((s, i) => (
+    <mesh key={i} ref={(el) => (refs.current[i] = el)} geometry={geometry} material={material} scale={s.scale} />
+  ))
 }
 
 // podium bertingkat + ring cahaya, niru panggung outro-nya igloo.inc

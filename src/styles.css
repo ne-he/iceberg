@@ -10,14 +10,6 @@ body {
   overflow-x: hidden;
 }
 
-/* video background opsional (public/bg.mp4) — duduk di belakang canvas transparan */
-.bg-video {
-  position: fixed; inset: 0; width: 100%; height: 100%;
-  object-fit: cover; z-index: 0; pointer-events: none;
-  /* di-scale dikit biar pas parallax mouse gesernya gak ngebuka pinggiran */
-  transform: scale(1.07); will-change: transform;
-}
-
 .canvas-wrap { position: fixed; inset: 0; z-index: 1; }
 .canvas-wrap canvas { display: block; }
 .scroll-space { height: 600vh; pointer-events: none; position: relative; z-index: 1; }
@@ -105,8 +97,8 @@ body {
 
 /* ---------- label anotasi ala igloo ---------- */
 .anno {
-  position: relative; padding-left: 30px;
-  color: #fff; font-size: 20px; font-weight: 500; line-height: 1.5;
+  position: relative; padding-left: 22px;
+  color: #fff; font-size: 14px; font-weight: 500; line-height: 1.5;
   letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap;
   opacity: 0; transform: translateY(6px);
   transition: opacity 0.55s ease, transform 0.55s ease;
@@ -118,13 +110,13 @@ body {
   background: rgba(255, 255, 255, 0.8);
 }
 .anno::after {
-  content: ''; position: absolute; left: -64px; top: 50%; width: 64px; height: 1px;
+  content: ''; position: absolute; left: -48px; top: 50%; width: 48px; height: 1px;
   background: rgba(255, 255, 255, 0.45);
 }
 .anno.is-visible { opacity: 1; transform: none; }
-.anno-code { opacity: 0.9; font-size: 17px; }
-.anno-name { font-size: 58px; font-weight: 600; letter-spacing: 0.12em; margin-top: 6px; }
-.anno-cta { margin-top: 12px; font-size: 17px; opacity: 0.8; transition: opacity 0.3s; }
+.anno-code { opacity: 0.9; font-size: 12px; }
+.anno-name { font-size: 32px; font-weight: 600; letter-spacing: 0.12em; margin-top: 5px; }
+.anno-cta { margin-top: 10px; font-size: 12.5px; opacity: 0.8; transition: opacity 0.3s; }
 .anno.is-hot .anno-cta { opacity: 1; }
 
 /* ---------- panel info ---------- */
@@ -205,6 +197,6 @@ body {
   .readout { display: none; }
   .ruler { display: none; }
   .bigword { right: 2vw; }
-  .anno-name { font-size: 34px; }
+  .anno-name { font-size: 22px; }
   .panel { padding: 76px 22px 28px; }
 }

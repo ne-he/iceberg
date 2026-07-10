@@ -48,11 +48,15 @@ function pickPoints(pts, scale, tint = null, jitter = 0.03) {
       col[i3 + 1] = tint[1]
       col[i3 + 2] = tint[2]
     } else {
-      // warna asli foto digelapin dikit: background site terang, jadi kontras
-      // butuh partikel lebih gelap (kulit terang tadinya ketelen kabut)
-      col[i3] = Math.min(1, p[2] * 0.68 + 0.02)
-      col[i3 + 1] = Math.min(1, p[3] * 0.68 + 0.02)
-      col[i3 + 2] = Math.min(1, p[4] * 0.68 + 0.02)
+      // dua trik biar muka KELIATAN JELAS di background terang:
+      // 1. makin terang pixel asli (kulit), makin agresif digelapin
+      // 2. pow(2.2): renderer nge-encode vertex color linear→sRGB (jadi lebih
+      //    terang di layar) — dikompensasi di sini biar nilai gelapnya beneran gelap
+      const lum = (p[2] + p[3] + p[4]) / 3
+      const m = 0.55 - lum * 0.2
+      col[i3] = Math.pow(Math.min(1, p[2] * m), 2.2)
+      col[i3 + 1] = Math.pow(Math.min(1, p[3] * m), 2.2)
+      col[i3 + 2] = Math.pow(Math.min(1, p[4] * m), 2.2)
     }
   }
   return { pos, col }
@@ -231,19 +235,32 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
     posAttr.needsUpdate = true
     colAttr.needsUpdate = true
 
-    if (mat.current) mat.current.opacity = o * 0.95
+    if (mat.current) mat.current.opacity = o
     group.current.visible = o > 0.01
     group.current.rotation.y = Math.sin(time * 0.25) * 0.07
   })
 
   return (
     <group ref={group} position={position} visible={false}>
-      <points ref={points}>
+      {/* renderOrder tinggi + fog & depthTest mati: partikel SELALU gambar di atas
+          background, gak pernah ketelen kabut — muka harus keliatan jelas maksimal */}
+      <points ref={points} renderOrder={10}>
         <bufferGeometry>
           <bufferAttribute attach="attributes-position" count={COUNT} array={positions.current} itemSize={3} />
           <bufferAttribute attach="attributes-color" count={COUNT} array={colors.current} itemSize={3} />
         </bufferGeometry>
-        <pointsMaterial ref={mat} map={sprite} vertexColors size={0.04} sizeAttenuation transparent opacity={0} depthWrite={false} />
+        <pointsMaterial
+          ref={mat}
+          map={sprite}
+          vertexColors
+          size={0.052}
+          sizeAttenuation
+          transparent
+          opacity={0}
+          depthWrite={false}
+          depthTest={false}
+          fog={false}
+        />
       </points>
     </group>
   )
