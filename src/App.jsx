@@ -18,8 +18,8 @@ export default function App() {
       {bgVideo && <video className="bg-video" src="/bg.mp4" autoPlay muted loop playsInline />}
       <div className="canvas-wrap">
         <Canvas
-          dpr={[1, 2]}
-          gl={{ antialias: true, alpha: true }}
+          dpr={[1, 1.5]}
+          gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
           camera={{ fov: 32, position: [0, 1.8, 11], near: 0.1, far: 100 }}
           style={{ touchAction: 'pan-y' }}
         >

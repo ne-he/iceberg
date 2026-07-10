@@ -2,7 +2,6 @@ import * as THREE from 'three'
 import { Suspense, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Environment, Sparkles, useGLTF } from '@react-three/drei'
-import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
 import { easing } from 'maath'
 import { Crystal } from './Crystal'
 import { ParticleFace } from './ParticleFace'
@@ -46,11 +45,6 @@ export default function Experience({ onOpen, hasVideo = false }) {
 
       {/* kolom-kolom cahaya samar menembus kabut */}
       <LightShafts />
-
-      <EffectComposer disableNormalPass multisampling={0}>
-        <Bloom mipmapBlur intensity={0.35} luminanceThreshold={0.85} />
-        <Vignette eskil={false} offset={0.2} darkness={0.55} />
-      </EffectComposer>
     </>
   )
 }
@@ -76,11 +70,6 @@ function OutroStage() {
         <ringGeometry args={[4.1, 4.26, 96]} />
         <meshBasicMaterial color="#ffffff" toneMapped={false} transparent opacity={0.3} side={THREE.DoubleSide} />
       </mesh>
-      {/* halo lampu studio — nongol dikit di atas frame, ala igloo */}
-      <mesh position={[0, 8.2, -1.2]} rotation-x={0.35}>
-        <torusGeometry args={[2.2, 0.06, 12, 80]} />
-        <meshBasicMaterial color="#ffffff" toneMapped={false} transparent opacity={0.85} />
-      </mesh>
     </group>
   )
 }
@@ -88,6 +77,23 @@ function OutroStage() {
 function BackgroundField() {
   const { nodes } = useGLTF('/models/iceberg.glb')
   const geometry = useMemo(() => Object.values(nodes).find((n) => n.isMesh)?.geometry, [nodes])
+  // SATU material dishare 28 bongkahan — glassy dari envmap + clearcoat, TANPA
+  // transmission (transmission bikin scene dirender ulang tiap frame = lag)
+  const material = useMemo(
+    () =>
+      new THREE.MeshPhysicalMaterial({
+        color: '#ccdbe6',
+        roughness: 0.18,
+        metalness: 0.05,
+        transparent: true,
+        opacity: 0.82,
+        clearcoat: 1,
+        clearcoatRoughness: 0.15,
+        envMapIntensity: 1.2,
+        flatShading: true,
+      }),
+    []
+  )
   const chunks = useMemo(() => {
     // hash deterministik biar layout-nya konsisten tiap load
     const rand = (i, n) => {
@@ -104,31 +110,15 @@ function BackgroundField() {
       }
     })
   }, [])
-  return chunks.map((c, i) => <BgChunk key={i} geometry={geometry} {...c} />)
+  return chunks.map((c, i) => <BgChunk key={i} geometry={geometry} material={material} {...c} />)
 }
 
-function BgChunk({ geometry, speed, ...props }) {
+function BgChunk({ geometry, material, speed, ...props }) {
   const ref = useRef()
   useFrame((_, delta) => {
     if (ref.current) ref.current.rotation.y += delta * speed
   })
-  return (
-    <mesh ref={ref} geometry={geometry} {...props}>
-      {/* es fisikal beneran (transmisi + IOR es) — bukan batu putih matte lagi */}
-      <meshPhysicalMaterial
-        color="#dfe9f0"
-        roughness={0.32}
-        metalness={0}
-        transmission={0.85}
-        thickness={1.6}
-        ior={1.31}
-        attenuationColor="#cfe2ee"
-        attenuationDistance={5}
-        envMapIntensity={0.7}
-        flatShading
-      />
-    </mesh>
-  )
+  return <mesh ref={ref} geometry={geometry} material={material} {...props} />
 }
 
 // kolom cahaya vertikal samar (fake god-rays) — ngisi kekosongan kabut

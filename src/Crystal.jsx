@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Float, Html, MeshTransmissionMaterial, useCursor, useGLTF } from '@react-three/drei'
 import { easing } from 'maath'
-import { dragState } from './scrollState'
+import { dragState, scrollState } from './scrollState'
 
 const MODEL = '/models/iceberg.glb'
 
@@ -50,18 +50,17 @@ export function Crystal({ data, onOpen, interactive = true }) {
       onOpen?.(data.id)
     }
   }
-  if (draggable) {
-    // hero bisa diputer manual: pointerdown di mesh, move/up ditangkap di window
-    // (lebih reliabel daripada pointer capture punya R3F)
-    events.onPointerDown = (e) => {
-      e.stopPropagation()
-      dragging.current = { x: e.clientX, y: e.clientY }
-      dragState.active = true
-    }
-  }
-
   useEffect(() => {
     if (!draggable) return
+    // ala igloo: selama masih di hero, drag DI MANA AJA muterin batunya —
+    // gak tergantung raycast kena mesh (yang sering ketutup overlay/kabut)
+    const down = (e) => {
+      if (scrollState.damped > 0.06) return
+      if (e.target.closest?.('a, button, .panel')) return
+      dragging.current = { x: e.clientX, y: e.clientY }
+      dragState.active = true
+      document.body.style.cursor = 'grabbing'
+    }
     const move = (e) => {
       if (!dragging.current || !spinner.current) return
       const dx = e.clientX - dragging.current.x
@@ -71,12 +70,16 @@ export function Crystal({ data, onOpen, interactive = true }) {
       dragging.current = { x: e.clientX, y: e.clientY }
     }
     const up = () => {
+      if (!dragging.current) return
       dragging.current = null
       dragState.active = false
+      document.body.style.cursor = ''
     }
+    window.addEventListener('pointerdown', down)
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
     return () => {
+      window.removeEventListener('pointerdown', down)
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)
     }
@@ -89,8 +92,8 @@ export function Crystal({ data, onOpen, interactive = true }) {
           <mesh geometry={geometry}>
             <MeshTransmissionMaterial
               transmissionSampler
-              samples={6}
-              resolution={512}
+              samples={4}
+              resolution={256}
               transmission={1}
               thickness={1.8}
               roughness={0.1}

@@ -77,6 +77,11 @@ body {
 }
 /* teks outro GELAP — podiumnya terang, jadi kontrasnya kebalik dari HUD */
 .outro { color: #171a1d; }
+/* konten outro dibungkus — cuma bagian ini yang nangkep mouse, sisanya tembus ke canvas */
+.outro-in {
+  display: flex; flex-direction: column; align-items: center;
+  pointer-events: none;
+}
 .outro h2 {
   font-size: clamp(26px, 3.8vw, 44px); font-weight: 600; letter-spacing: 0.18em;
   text-shadow: 0 0 16px rgba(255, 255, 255, 0.6);
@@ -95,26 +100,26 @@ body {
 
 /* ---------- label anotasi ala igloo ---------- */
 .anno {
-  position: relative; padding-left: 24px;
-  color: #fff; font-size: 17px; font-weight: 500; line-height: 1.55;
+  position: relative; padding-left: 30px;
+  color: #fff; font-size: 20px; font-weight: 500; line-height: 1.5;
   letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap;
   opacity: 0; transform: translateY(6px);
   transition: opacity 0.55s ease, transform 0.55s ease;
   cursor: pointer;
-  text-shadow: 0 1px 14px rgba(90, 100, 110, 0.55);
+  text-shadow: 0 2px 20px rgba(70, 80, 90, 0.75), 0 0 8px rgba(120, 130, 140, 0.4);
 }
 .anno::before {
-  content: ''; position: absolute; left: 0; top: 3px; bottom: 3px; width: 1px;
-  background: rgba(255, 255, 255, 0.75);
+  content: ''; position: absolute; left: 0; top: 3px; bottom: 3px; width: 2px;
+  background: rgba(255, 255, 255, 0.8);
 }
 .anno::after {
-  content: ''; position: absolute; left: -44px; top: 50%; width: 44px; height: 1px;
-  background: rgba(255, 255, 255, 0.4);
+  content: ''; position: absolute; left: -64px; top: 50%; width: 64px; height: 1px;
+  background: rgba(255, 255, 255, 0.45);
 }
 .anno.is-visible { opacity: 1; transform: none; }
-.anno-code { opacity: 0.85; font-size: 15px; }
-.anno-name { font-size: 32px; font-weight: 600; letter-spacing: 0.14em; margin-top: 4px; }
-.anno-cta { margin-top: 10px; font-size: 15px; opacity: 0.75; transition: opacity 0.3s; }
+.anno-code { opacity: 0.9; font-size: 17px; }
+.anno-name { font-size: 58px; font-weight: 600; letter-spacing: 0.12em; margin-top: 6px; }
+.anno-cta { margin-top: 12px; font-size: 17px; opacity: 0.8; transition: opacity 0.3s; }
 .anno.is-hot .anno-cta { opacity: 1; }
 
 /* ---------- panel info ---------- */
@@ -158,6 +163,12 @@ body {
 .tick::before { content: ''; width: 20px; height: 1px; background: rgba(255, 255, 255, 0.55); }
 .tick span { opacity: 0.75; }
 
+/* ---------- vignette CSS — pengganti post-processing GPU yang berat ---------- */
+.vignette {
+  position: fixed; inset: 0; z-index: 8; pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 55%, rgba(18, 22, 26, 0.34) 100%);
+}
+
 /* ---------- film grain halus di atas segalanya (tekstur ala igloo) ---------- */
 .grain {
   position: fixed; inset: -100px; z-index: 35; pointer-events: none;
@@ -189,5 +200,6 @@ body {
   .readout { display: none; }
   .ruler { display: none; }
   .bigword { right: 2vw; }
+  .anno-name { font-size: 34px; }
   .panel { padding: 76px 22px 28px; }
 }

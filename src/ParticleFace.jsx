@@ -4,10 +4,11 @@ import { useFrame } from '@react-three/fiber'
 import { faceState, scrollState } from './scrollState'
 
 // jumlah partikel — padat biar siluet solid (gak bolong), masih enteng buat loop per frame
-const COUNT = 9000
-// radius & kekuatan efek buyar pas pointer nyentuh partikel
-const REPEL_R = 0.9
-const REPEL_F = 3
+const COUNT = 16000
+// radius & displacement maksimal efek buyar pas pointer nyentuh partikel —
+// push-nya SATURASI (bukan akumulasi) biar pointer diem gak ngebolongin badan
+const REPEL_R = 1.05
+const REPEL_MAX = 0.5
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
 // warna logo: slate gelap, nyambung sama tema monokrom
 const LOGO_TINT = [0.16, 0.19, 0.22]
@@ -40,7 +41,7 @@ function pickPoints(pts, scale, tint = null, jitter = 0.03) {
     const i3 = i * 3
     pos[i3] = p[0] * scale + (Math.random() - 0.5) * jitter
     pos[i3 + 1] = p[1] * scale + (Math.random() - 0.5) * jitter
-    pos[i3 + 2] = (Math.random() - 0.5) * 0.35
+    pos[i3 + 2] = (Math.random() - 0.5) * 0.5
     if (tint) {
       col[i3] = tint[0]
       col[i3 + 1] = tint[1]
@@ -67,8 +68,22 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
   const speeds = useRef(null)
   const offsets = useRef(null) // dorongan dari pointer, meluruh pelan = delay balik ala igloo
   const pv = useMemo(() => new THREE.Vector3(), [])
-  // repel cuma aktif kalau mouse beneran gerak — pointer diem (0,0) jangan bolongin badan
-  const lastP = useRef({ x: 0, y: 0, t: -1e9 })
+  // pointer dilacak di WINDOW, bukan lewat R3F — overlay outro (pointer-events: auto)
+  // nyerap event canvas, itu yang bikin hover mati setelah outro muncul
+  const ndc = useRef({ x: 0, y: 0, has: false })
+  // sprite bulat lembut — biar partikel gak keliatan kotak/patah-patah
+  const sprite = useMemo(() => {
+    const c = document.createElement('canvas')
+    c.width = c.height = 64
+    const g = c.getContext('2d')
+    const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32)
+    grad.addColorStop(0, 'rgba(255,255,255,1)')
+    grad.addColorStop(0.6, 'rgba(255,255,255,0.85)')
+    grad.addColorStop(1, 'rgba(255,255,255,0)')
+    g.fillStyle = grad
+    g.fillRect(0, 0, 64, 64)
+    return new THREE.CanvasTexture(c)
+  }, [])
   if (!positions.current) {
     positions.current = new Float32Array(COUNT * 3)
     colors.current = new Float32Array(COUNT * 3)
@@ -82,6 +97,16 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
       speeds.current[i] = 1.6 + Math.random() * 2.6
     }
   }
+
+  useEffect(() => {
+    const onMove = (e) => {
+      ndc.current.x = (e.clientX / window.innerWidth) * 2 - 1
+      ndc.current.y = -(e.clientY / window.innerHeight) * 2 + 1
+      ndc.current.has = true
+    }
+    window.addEventListener('pointermove', onMove, { passive: true })
+    return () => window.removeEventListener('pointermove', onMove)
+  }, [])
 
   useEffect(() => {
     let alive = true
@@ -154,15 +179,10 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
 
     // proyeksikan pointer ke bidang partikel → titik repel (koordinat lokal grup)
     const [gx, gy, gz] = [group.current.position.x, group.current.position.y, group.current.position.z]
-    if (lastP.current.x !== state.pointer.x || lastP.current.y !== state.pointer.y) {
-      lastP.current.x = state.pointer.x
-      lastP.current.y = state.pointer.y
-      lastP.current.t = time
-    }
     let px = 1e9
     let py = 1e9
-    if (o > 0.2 && time - lastP.current.t < 2) {
-      pv.set(state.pointer.x, state.pointer.y, 0.5).unproject(state.camera)
+    if (o > 0.2 && ndc.current.has) {
+      pv.set(ndc.current.x, ndc.current.y, 0.5).unproject(state.camera)
       pv.sub(state.camera.position).normalize()
       const dz = (gz - state.camera.position.z) / (pv.z || -1e-6)
       if (dz > 0 && dz < 60) {
@@ -186,16 +206,19 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
       const d2 = ddx * ddx + ddy * ddy
       if (d2 < R2 && d2 > 1e-6) {
         const d = Math.sqrt(d2)
-        const f = ((REPEL_R - d) / REPEL_R) * REPEL_F * delta
-        ox = clamp(ox + (ddx / d) * f, -0.9, 0.9)
-        oy = clamp(oy + (ddy / d) * f, -0.9, 0.9)
-        oz = clamp(oz + 0.4 * f, -0.7, 0.7)
+        // displacement target berbatas — makin deket pointer makin kedorong,
+        // tapi gak pernah lebih dari REPEL_MAX walau pointer nangkring lama
+        const push = (1 - d / REPEL_R) * REPEL_MAX
+        const blend = 1 - Math.exp(-7 * delta)
+        ox += ((ddx / d) * push - ox) * blend
+        oy += ((ddy / d) * push - oy) * blend
+        oz += (push * 0.5 - oz) * blend
       }
       offs[i3] = ox
       offs[i3 + 1] = oy
       offs[i3 + 2] = oz
-      const wx = Math.sin(time * 1.3 + i * 0.37) * 0.014
-      const wy = Math.cos(time * 1.1 + i * 0.71) * 0.014
+      const wx = Math.sin(time * 1.3 + i * 0.37) * 0.02
+      const wy = Math.cos(time * 1.1 + i * 0.71) * 0.02
       arr[i3] += (tp[i3] + wx + ox - arr[i3]) * k
       arr[i3 + 1] += (tp[i3 + 1] + wy + oy - arr[i3 + 1]) * k
       arr[i3 + 2] += (tp[i3 + 2] + oz - arr[i3 + 2]) * k
@@ -218,7 +241,7 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
           <bufferAttribute attach="attributes-position" count={COUNT} array={positions.current} itemSize={3} />
           <bufferAttribute attach="attributes-color" count={COUNT} array={colors.current} itemSize={3} />
         </bufferGeometry>
-        <pointsMaterial ref={mat} vertexColors size={0.055} sizeAttenuation transparent opacity={0} depthWrite={false} />
+        <pointsMaterial ref={mat} map={sprite} vertexColors size={0.05} sizeAttenuation transparent opacity={0} depthWrite={false} />
       </points>
     </group>
   )

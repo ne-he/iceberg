@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useProgress } from '@react-three/drei'
-import { faceState, scrollState } from './scrollState'
+import { dragState, faceState, scrollState } from './scrollState'
 import { CONTACT, PANELS, SECTION_WORDS } from './content'
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
+// titik scroll tempat kamera pas nge-frame tiap batu — target auto-center
+const SNAP_ANCHORS = [0, 0.25, 0.5, 0.75, 1]
 
 export function UI({ panel, onClose }) {
   const hero = useRef()
@@ -15,6 +17,7 @@ export function UI({ panel, onClose }) {
   const bar = useRef()
   const hint = useRef()
   const ruler = useRef()
+  const outroIn = useRef()
 
   // simpan konten panel terakhir biar teks gak hilang pas animasi nutup
   const lastRef = useRef(null)
@@ -22,12 +25,27 @@ export function UI({ panel, onClose }) {
   const data = PANELS[lastRef.current]
 
   useEffect(() => {
+    // auto-center ala igloo: 2 detik gak ada input → scroll dianimasikan pelan
+    // ke anchor terdekat, jadi kamera otomatis "jalan" nyamperin batunya
+    let lastUser = performance.now()
+    let snapping = false
+    const bump = () => {
+      lastUser = performance.now()
+      snapping = false
+    }
     const onScroll = () => {
       const max = document.documentElement.scrollHeight - window.innerHeight
       scrollState.progress = max > 0 ? window.scrollY / max : 0
+      // scroll hasil auto-center jangan dihitung sebagai input user —
+      // input asli (wheel/touch/key/pointer) udah ke-bump lewat listener sendiri
+      if (!snapping) lastUser = performance.now()
     }
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('wheel', bump, { passive: true })
+    window.addEventListener('touchmove', bump, { passive: true })
+    window.addEventListener('pointerdown', bump)
+    window.addEventListener('keydown', bump)
 
     let raf
     const tick = () => {
@@ -36,7 +54,27 @@ export function UI({ panel, onClose }) {
       if (outro.current) {
         const o = clamp((t - 0.9) / 0.06, 0, 1)
         outro.current.style.opacity = o
-        outro.current.style.pointerEvents = o > 0.5 ? 'auto' : 'none'
+        // pointer events cuma di kontennya — kalau container full-screen yang
+        // di-set auto, dia nyerap semua mouse & bikin hover partikel mati
+        if (outroIn.current) outroIn.current.style.pointerEvents = o > 0.5 ? 'auto' : 'none'
+      }
+      const now = performance.now()
+      if (now - lastUser > 2000 && !dragState.active) {
+        const max = document.documentElement.scrollHeight - window.innerHeight
+        if (max > 0) {
+          const cur = window.scrollY / max
+          let nearest = SNAP_ANCHORS[0]
+          for (const a of SNAP_ANCHORS) if (Math.abs(a - cur) < Math.abs(nearest - cur)) nearest = a
+          const dy = nearest * max - window.scrollY
+          if (Math.abs(dy) > 1) {
+            snapping = true
+            window.scrollTo(0, window.scrollY + dy * 0.045)
+          } else {
+            snapping = false
+          }
+        }
+      } else if (!dragState.active) {
+        snapping = false
       }
       SECTION_WORDS.forEach((w, i) => {
         const el = words.current[i]
@@ -56,6 +94,10 @@ export function UI({ panel, onClose }) {
     raf = requestAnimationFrame(tick)
     return () => {
       window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('wheel', bump)
+      window.removeEventListener('touchmove', bump)
+      window.removeEventListener('pointerdown', bump)
+      window.removeEventListener('keydown', bump)
       cancelAnimationFrame(raf)
     }
   }, [])
@@ -69,6 +111,8 @@ export function UI({ panel, onClose }) {
   return (
     <>
       <div className="grain" aria-hidden="true" />
+      {/* vignette via CSS — dulunya post-processing GPU, dipindah ke sini biar enteng */}
+      <div className="vignette" aria-hidden="true" />
       {/* penggaris kedalaman kiri — ikut gerak scroll, ala instrumen igloo */}
       <div className="ruler" aria-hidden="true">
         <div className="ruler-in" ref={ruler}>
@@ -112,6 +156,7 @@ export function UI({ panel, onClose }) {
       </div>
 
       <div className="outro" ref={outro}>
+        <div className="outro-in" ref={outroIn}>
         <h2>GET IN TOUCH</h2>
         <a href={`mailto:${CONTACT.email}`}>{CONTACT.email.toUpperCase()}</a>
         {/* hover = partikel wajah morph jadi logo, ala igloo */}
@@ -139,6 +184,7 @@ export function UI({ panel, onClose }) {
           </a>
         </div>
         <div className="outro-hint">HOVER THE LINKS — WATCH THE PARTICLES</div>
+        </div>
       </div>
 
       <aside className={`panel ${panel ? 'is-open' : ''}`}>
