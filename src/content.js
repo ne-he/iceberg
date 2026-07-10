@@ -59,20 +59,20 @@ export const PANELS = {
     title: 'JOURNEY',
     rows: [
       {
-        h: '2024 — BINUS UNIVERSITY',
+        h: '2024 / BINUS UNIVERSITY',
         p: 'Started the Data Science undergraduate program in Jakarta. First lines of Python, first real datasets.',
       },
       {
-        h: '2025 — FOUNDATIONS',
-        p: 'Statistics, data wrangling with pandas, exploratory data analysis, and classical machine learning with scikit-learn — all hands-on in Jupyter.',
+        h: '2025 / FOUNDATIONS',
+        p: 'Statistics, data wrangling with pandas, exploratory data analysis, and classical machine learning with scikit-learn, all hands-on in Jupyter.',
       },
       {
-        h: '2026 — SEMESTER 4',
+        h: '2026 / SEMESTER 4',
         tag: 'NOW',
         p: 'Shipping end-to-end work: machine learning for cybersecurity, retrieval systems for LLMs, agentic AI workflows, and this 3D site.',
       },
     ],
-    foot: 'TIMELINE — UPDATED 07.2026',
+    foot: 'TIMELINE / UPDATED 07.2026',
   },
   projects: {
     code: 'ICEBERG_SEC_02',
@@ -86,20 +86,20 @@ export const PANELS = {
       {
         h: 'SECOND BRAIN CLI',
         tag: 'RETRIEVAL',
-        p: 'Deterministic index-and-score retrieval over all my course materials — the LLM opens only the top-ranked section instead of grepping blindly. A/B tested: ~40% cheaper token usage.',
+        p: 'Deterministic index-and-score retrieval over all my course materials: the LLM opens only the top-ranked section instead of grepping blindly. A/B tested: ~40% cheaper token usage.',
       },
       {
         h: 'RESUME RAG CHATBOT',
         tag: 'IN DEVELOPMENT',
-        p: 'A portfolio you can talk to — Gemini embeddings (768-dim) + Supabase pgvector over a personal knowledge base. Will live inside this site.',
+        p: 'A portfolio you can talk to: Gemini embeddings (768-dim) + Supabase pgvector over a personal knowledge base. Will live inside this site.',
       },
       {
         h: 'ICEBERG',
         tag: 'THIS SITE',
-        p: 'Live-rendered 3D scroll experience. Blender-modeled ice driven through an agentic pipeline, React Three Fiber, real-time refraction. No scrubbed video — every object here is real and clickable.',
+        p: 'Live-rendered 3D scroll experience. Blender-modeled ice driven through an agentic pipeline, React Three Fiber, real-time refraction. No scrubbed video, every object here is real and clickable.',
       },
     ],
-    foot: 'SELECTED WORK — MORE ON REQUEST',
+    foot: 'SELECTED WORK / MORE ON REQUEST',
   },
   skills: {
     code: 'ICEBERG_SEC_03',
@@ -126,7 +126,7 @@ export const PANELS = {
         p: 'Three.js, React Three Fiber, Blender, Vite.',
       },
     ],
-    foot: 'STACK — SEMESTER 4 SNAPSHOT',
+    foot: 'STACK / SEMESTER 4 SNAPSHOT',
   },
 }
 

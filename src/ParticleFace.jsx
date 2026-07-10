@@ -3,8 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { faceState, scrollState } from './scrollState'
 
-// jumlah partikel — padat biar siluet solid (gak bolong), masih enteng buat loop per frame
-const COUNT = 16000
+// jumlah partikel: bener-bener padat biar fotonya kebentuk jelas ala igloo
+const COUNT = 32000
 // radius & displacement maksimal efek buyar pas pointer nyentuh partikel —
 // push-nya SATURASI (bukan akumulasi) biar pointer diem gak ngebolongin badan
 const REPEL_R = 1.05
@@ -41,16 +41,18 @@ function pickPoints(pts, scale, tint = null, jitter = 0.03) {
     const i3 = i * 3
     pos[i3] = p[0] * scale + (Math.random() - 0.5) * jitter
     pos[i3 + 1] = p[1] * scale + (Math.random() - 0.5) * jitter
-    pos[i3 + 2] = (Math.random() - 0.5) * 0.5
+    // slab tipis: kedalaman kecil biar siluet foto tetep rapat, gak mencar
+    pos[i3 + 2] = (Math.random() - 0.5) * 0.26
     if (tint) {
       col[i3] = tint[0]
       col[i3 + 1] = tint[1]
       col[i3 + 2] = tint[2]
     } else {
-      // warna asli foto, diangkat dikit biar kebaca di background terang
-      col[i3] = Math.min(1, p[2] * 0.9 + 0.07)
-      col[i3 + 1] = Math.min(1, p[3] * 0.9 + 0.07)
-      col[i3 + 2] = Math.min(1, p[4] * 0.9 + 0.07)
+      // warna asli foto digelapin dikit: background site terang, jadi kontras
+      // butuh partikel lebih gelap (kulit terang tadinya ketelen kabut)
+      col[i3] = Math.min(1, p[2] * 0.68 + 0.02)
+      col[i3 + 1] = Math.min(1, p[3] * 0.68 + 0.02)
+      col[i3 + 2] = Math.min(1, p[4] * 0.68 + 0.02)
     }
   }
   return { pos, col }
@@ -146,7 +148,7 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
     img.src = '/face.png'
     img.onload = () => {
       if (!alive) return
-      const fw = 150
+      const fw = 200
       const fh = Math.max(1, Math.round((fw * img.height) / img.width))
       const fc = document.createElement('canvas')
       fc.width = fw
@@ -217,8 +219,8 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
       offs[i3] = ox
       offs[i3 + 1] = oy
       offs[i3 + 2] = oz
-      const wx = Math.sin(time * 1.3 + i * 0.37) * 0.02
-      const wy = Math.cos(time * 1.1 + i * 0.71) * 0.02
+      const wx = Math.sin(time * 1.3 + i * 0.37) * 0.011
+      const wy = Math.cos(time * 1.1 + i * 0.71) * 0.011
       arr[i3] += (tp[i3] + wx + ox - arr[i3]) * k
       arr[i3 + 1] += (tp[i3 + 1] + wy + oy - arr[i3 + 1]) * k
       arr[i3 + 2] += (tp[i3 + 2] + oz - arr[i3 + 2]) * k
@@ -241,7 +243,7 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
           <bufferAttribute attach="attributes-position" count={COUNT} array={positions.current} itemSize={3} />
           <bufferAttribute attach="attributes-color" count={COUNT} array={colors.current} itemSize={3} />
         </bufferGeometry>
-        <pointsMaterial ref={mat} map={sprite} vertexColors size={0.05} sizeAttenuation transparent opacity={0} depthWrite={false} />
+        <pointsMaterial ref={mat} map={sprite} vertexColors size={0.04} sizeAttenuation transparent opacity={0} depthWrite={false} />
       </points>
     </group>
   )

@@ -25,13 +25,15 @@ export function UI({ panel, onClose }) {
   const data = PANELS[lastRef.current]
 
   useEffect(() => {
-    // auto-center ala igloo: 2 detik gak ada input → scroll dianimasikan pelan
-    // ke anchor terdekat, jadi kamera otomatis "jalan" nyamperin batunya
+    // auto-center ala igloo: 1 detik gak ada input, scroll dianimasikan ease-in-out
+    // ke anchor terdekat. Ngambang pelan kayak gelembung, bukan langsung "tek"
     let lastUser = performance.now()
     let snapping = false
+    let snapAnim = null
     const bump = () => {
       lastUser = performance.now()
       snapping = false
+      snapAnim = null
     }
     const onScroll = () => {
       const max = document.documentElement.scrollHeight - window.innerHeight
@@ -59,22 +61,28 @@ export function UI({ panel, onClose }) {
         if (outroIn.current) outroIn.current.style.pointerEvents = o > 0.5 ? 'auto' : 'none'
       }
       const now = performance.now()
-      if (now - lastUser > 2000 && !dragState.active) {
+      if (!snapAnim && now - lastUser > 1000 && !dragState.active) {
         const max = document.documentElement.scrollHeight - window.innerHeight
         if (max > 0) {
-          const cur = window.scrollY / max
+          const from = window.scrollY
+          const cur = from / max
           let nearest = SNAP_ANCHORS[0]
           for (const a of SNAP_ANCHORS) if (Math.abs(a - cur) < Math.abs(nearest - cur)) nearest = a
-          const dy = nearest * max - window.scrollY
-          if (Math.abs(dy) > 1) {
-            snapping = true
-            window.scrollTo(0, window.scrollY + dy * 0.045)
-          } else {
-            snapping = false
-          }
+          const to = nearest * max
+          // durasi ngikut jarak biar kecepatannya konsisten, tapi dibatasi
+          if (Math.abs(to - from) > 2) snapAnim = { from, to, start: now, dur: Math.min(2600, 900 + Math.abs(to - from) * 1.2) }
         }
-      } else if (!dragState.active) {
-        snapping = false
+      }
+      if (snapAnim) {
+        const u = Math.min(1, (now - snapAnim.start) / snapAnim.dur)
+        // easeInOutCubic: mulai pelan, ngambang, mendarat pelan
+        const e = u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2
+        snapping = true
+        window.scrollTo(0, snapAnim.from + (snapAnim.to - snapAnim.from) * e)
+        if (u >= 1) {
+          snapAnim = null
+          snapping = false
+        }
       }
       SECTION_WORDS.forEach((w, i) => {
         const el = words.current[i]
@@ -124,9 +132,9 @@ export function UI({ panel, onClose }) {
         </div>
       </div>
       <div className="hud">
-        <div className="logo">ICEBERG</div>
+        <div className="logo">THE ICEBERG</div>
         <div className="meta">
-          NEHEMIAH — DATA SCIENCE
+          NEHEMIAH WILHELMUS JUNAIDI
           <br />
           JAKARTA / 2026
         </div>
@@ -152,7 +160,7 @@ export function UI({ panel, onClose }) {
 
       <div className="hero" ref={hero}>
         <h1>NEHEMIAH</h1>
-        <p>DATA SCIENCE PORTFOLIO — DESCEND TO EXPLORE</p>
+        <p>DATA SCIENCE PORTFOLIO / DESCEND TO EXPLORE</p>
       </div>
 
       <div className="outro" ref={outro}>
@@ -183,7 +191,7 @@ export function UI({ panel, onClose }) {
             LINKEDIN
           </a>
         </div>
-        <div className="outro-hint">HOVER THE LINKS — WATCH THE PARTICLES</div>
+        <div className="outro-hint">HOVER THE LINKS, WATCH THE PARTICLES</div>
         </div>
       </div>
 
@@ -228,7 +236,7 @@ export function Loader() {
   }, [])
   return (
     <div className={`loader ${done ? 'is-done' : ''}`}>
-      ICEBERG<span>{Math.round(progress)}%</span>
+      THE ICEBERG<span>{Math.round(progress)}%</span>
     </div>
   )
 }

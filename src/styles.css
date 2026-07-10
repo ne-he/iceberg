@@ -1,6 +1,9 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 html, body { background: #b9c0c7; }
+/* scrollbar browser disembunyiin total, scroll tetap jalan (progress bar bawah jadi penunjuknya) */
+html { scrollbar-width: none; -ms-overflow-style: none; }
+html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; width: 0; height: 0; }
 body {
   font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   color: #fff;
@@ -11,6 +14,8 @@ body {
 .bg-video {
   position: fixed; inset: 0; width: 100%; height: 100%;
   object-fit: cover; z-index: 0; pointer-events: none;
+  /* di-scale dikit biar pas parallax mouse gesernya gak ngebuka pinggiran */
+  transform: scale(1.07); will-change: transform;
 }
 
 .canvas-wrap { position: fixed; inset: 0; z-index: 1; }

@@ -77,20 +77,32 @@ function OutroStage() {
 function BackgroundField() {
   const { nodes } = useGLTF('/models/iceberg.glb')
   const geometry = useMemo(() => Object.values(nodes).find((n) => n.isMesh)?.geometry, [nodes])
-  // SATU material dishare 28 bongkahan — glassy dari envmap + clearcoat, TANPA
-  // transmission (transmission bikin scene dirender ulang tiap frame = lag)
+  // SATU material dishare 28 bongkahan, TANPA transmission (bikin scene
+  // dirender ulang tiap frame = lag). Warna es biru nyambung sama kristal utama,
+  // roughness tinggi + shading halus = kesan out-of-focus
   const material = useMemo(
     () =>
       new THREE.MeshPhysicalMaterial({
-        color: '#ccdbe6',
-        roughness: 0.18,
-        metalness: 0.05,
+        color: '#7ca6c4',
+        roughness: 0.5,
+        metalness: 0,
         transparent: true,
-        opacity: 0.82,
-        clearcoat: 1,
-        clearcoatRoughness: 0.15,
-        envMapIntensity: 1.2,
-        flatShading: true,
+        opacity: 0.8,
+        clearcoat: 0.5,
+        clearcoatRoughness: 0.6,
+        envMapIntensity: 0.55,
+      }),
+    []
+  )
+  // shell transparan sedikit lebih gede di tiap bongkahan = pinggiran lembut,
+  // niru depth-of-field blur tanpa post-processing
+  const shellMaterial = useMemo(
+    () =>
+      new THREE.MeshBasicMaterial({
+        color: '#a9c8dc',
+        transparent: true,
+        opacity: 0.16,
+        depthWrite: false,
       }),
     []
   )
@@ -110,15 +122,20 @@ function BackgroundField() {
       }
     })
   }, [])
-  return chunks.map((c, i) => <BgChunk key={i} geometry={geometry} material={material} {...c} />)
+  return chunks.map((c, i) => <BgChunk key={i} geometry={geometry} material={material} shellMaterial={shellMaterial} {...c} />)
 }
 
-function BgChunk({ geometry, material, speed, ...props }) {
+function BgChunk({ geometry, material, shellMaterial, speed, ...props }) {
   const ref = useRef()
   useFrame((_, delta) => {
     if (ref.current) ref.current.rotation.y += delta * speed
   })
-  return <mesh ref={ref} geometry={geometry} material={material} {...props} />
+  return (
+    <group ref={ref} {...props}>
+      <mesh geometry={geometry} material={material} />
+      <mesh geometry={geometry} material={shellMaterial} scale={1.05} />
+    </group>
+  )
 }
 
 // kolom cahaya vertikal samar (fake god-rays) — ngisi kekosongan kabut
