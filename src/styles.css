@@ -34,7 +34,9 @@ body {
    sebentar, scroll di-reset di baliknya, kebuka lagi pas batu jatuh ulang */
 .loop-wash {
   position: fixed; inset: 0; z-index: 40;
-  background: radial-gradient(ellipse at 50% 60%, #c3cad1 0%, #b9c0c7 70%);
+  /* biru gletser dalam (bukan putih polos) — transisi loop kerasa nyelam ke
+     dalam es, nyambung sama batu asal biru yg membesar (permintaan Nehemiah) */
+  background: radial-gradient(ellipse at 50% 55%, #6d90ab 0%, #46688a 75%);
   opacity: 0; visibility: hidden;
   pointer-events: none;
 }

@@ -268,23 +268,23 @@ function OutroStage() {
 }
 
 function BackgroundField() {
-  // 3 varian bongkahan es BERSUDUT dari Blender (ice_rock.glb) — ganti bola biru
-  // yang dulu. Facet tajam + flat shading = kebaca sebagai batu es beneran, bukan blob
+  // 3 varian bongkahan es ORGANIK dari Blender — di-remesh + decimate dari model
+  // ice_gen (es tengah) jadi low-poly tapi bentuknya realistik senada es tengah,
+  // ganti facet tajem yg dulu keliatan aneh (permintaan Nehemiah)
   const { nodes } = useGLTF('/models/ice_rock.glb')
   const geos = useMemo(() => Object.values(nodes).filter((n) => n.isMesh).map((n) => n.geometry), [nodes])
   // SATU material dishare semua bongkahan, TANPA transmission (bikin scene
-  // dirender ulang tiap frame = lag). flatShading = facet keras khas es pecah
+  // dirender ulang tiap frame = lag). smooth shading = permukaan es organik
   const material = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: '#8fb0cb',
-        roughness: 0.58,
+        color: '#93b4ce',
+        roughness: 0.5,
         metalness: 0,
-        flatShading: true,
         transparent: true,
-        opacity: 0.9,
-        emissive: '#20455f',
-        emissiveIntensity: 0.14,
+        opacity: 0.92,
+        emissive: '#274d68',
+        emissiveIntensity: 0.16,
       }),
     []
   )
