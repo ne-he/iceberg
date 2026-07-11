@@ -121,11 +121,27 @@ body {
   border-bottom: 1px solid rgba(23, 26, 29, 0.55); padding-bottom: 2px;
   text-shadow: 0 0 12px rgba(255, 255, 255, 0.6);
 }
-.outro .socials { margin-top: 16px; font-size: 13px; letter-spacing: 0.18em; display: flex; gap: 16px; align-items: center; }
-.outro .socials a { margin-top: 0; font-size: 13px; font-weight: 600; opacity: 0.9; transition: opacity 0.25s; }
-.outro .socials a:hover { opacity: 1; }
-.outro .soc-sep { opacity: 0.45; }
-.outro-hint { margin-top: 14px; font-size: 10px; letter-spacing: 0.2em; opacity: 0.6; }
+/* carousel sosial ala igloo: [ ITEM AKTIF ] di tengah, tetangga redup di sisi */
+.soc-carousel { margin-top: 18px; display: flex; align-items: center; gap: 14px; letter-spacing: 0.18em; }
+.soc-carousel button { background: none; border: none; color: inherit; font-family: inherit; text-transform: uppercase; cursor: pointer; padding: 0; }
+.soc-arrow { font-size: 17px; line-height: 1; opacity: 0.5; padding: 2px 7px; transition: opacity 0.25s; }
+.soc-arrow:hover { opacity: 1; }
+.soc-side { font-size: 11px; letter-spacing: 0.18em; opacity: 0.32; min-width: 78px; transition: opacity 0.25s; }
+.soc-side:hover { opacity: 0.65; }
+.soc-current {
+  position: relative; margin-top: 0 !important; padding: 8px 20px;
+  font-size: 13px; font-weight: 600; letter-spacing: 0.2em;
+  color: inherit; text-decoration: none; border-bottom: none !important;
+  min-width: 128px; text-align: center;
+}
+/* bracket sudut kiri-kanan kayak [ X / Twitter ] di igloo */
+.soc-current::before,
+.soc-current::after {
+  content: ''; position: absolute; top: 0; bottom: 0; width: 9px;
+  border: 1px solid currentColor; opacity: 0.75;
+}
+.soc-current::before { left: 0; border-right: none; }
+.soc-current::after { right: 0; border-left: none; }
 
 /* ---------- label anotasi ala igloo ---------- */
 .anno {

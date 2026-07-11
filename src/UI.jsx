@@ -4,9 +4,58 @@ import { dragState, faceState, scrollState } from './scrollState'
 import { CONTACT, PANELS, SECTION_WORDS } from './content'
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
+
+// carousel sosial ala igloo.inc: item tengah kekurung bracket, tetangganya
+// redup di kiri-kanan, dipindah pakai panah atau klik langsung labelnya.
+// Item yang dipilih = bentuk partikel di panggung (face | github | linkedin)
+const SOCIAL_ITEMS = [
+  { id: 'face', label: 'NEHEMIAH', url: null },
+  { id: 'github', label: 'GITHUB', url: CONTACT.github },
+  { id: 'linkedin', label: 'LINKEDIN', url: CONTACT.linkedin },
+]
+
+function SocialCarousel() {
+  const [idx, setIdx] = useState(0)
+  const n = SOCIAL_ITEMS.length
+  const select = (i) => {
+    const j = (i + n) % n
+    setIdx(j)
+    faceState.target = SOCIAL_ITEMS[j].id
+  }
+  const prev = SOCIAL_ITEMS[(idx + n - 1) % n]
+  const cur = SOCIAL_ITEMS[idx]
+  const next = SOCIAL_ITEMS[(idx + 1) % n]
+  return (
+    <div className="soc-carousel">
+      <button className="soc-arrow" aria-label="previous" onClick={() => select(idx - 1)}>
+        ‹
+      </button>
+      <button className="soc-side" onClick={() => select(idx - 1)}>
+        {prev.label}
+      </button>
+      {/* item aktif: klik = buka linknya (kalau ada) */}
+      <a
+        className="soc-current"
+        href={cur.url || '#'}
+        target={cur.url ? '_blank' : undefined}
+        rel="noreferrer"
+        onClick={(e) => !cur.url && e.preventDefault()}
+      >
+        {cur.label}
+      </a>
+      <button className="soc-side" onClick={() => select(idx + 1)}>
+        {next.label}
+      </button>
+      <button className="soc-arrow" aria-label="next" onClick={() => select(idx + 1)}>
+        ›
+      </button>
+    </div>
+  )
+}
 // titik scroll tempat kamera pas nge-frame tiap batu — target auto-center
-// (0.9 = view portal dari atas, biar momen "liat portal" gak kelewat ke-snap)
-const SNAP_ANCHORS = [0, 0.2, 0.4, 0.6, 0.8, 0.9, 1]
+// (0.86 = view portal dari luar; dari situ scroll berikutnya nyelam FULL
+// nembus tunnel sampai mendarat di panggung, biar transitnya kerasa utuh)
+const SNAP_ANCHORS = [0, 0.2, 0.4, 0.6, 0.8, 0.86, 1]
 
 export function UI({ panel, onClose }) {
   const hero = useRef()
@@ -55,8 +104,8 @@ export function UI({ panel, onClose }) {
       const t = scrollState.damped
       if (hero.current) hero.current.style.opacity = clamp(1 - t / 0.07, 0, 1)
       if (outro.current) {
-        // baru muncul SETELAH kamera nembus portal (crossing di ±0.98)
-        const o = clamp((t - 0.965) / 0.03, 0, 1)
+        // baru muncul SETELAH kamera keluar dari tunnel dan panggung keliatan
+        const o = clamp((t - 0.974) / 0.022, 0, 1)
         outro.current.style.opacity = o
         // pointer events cuma di kontennya — kalau container full-screen yang
         // di-set auto, dia nyerap semua mouse & bikin hover partikel mati
@@ -169,31 +218,8 @@ export function UI({ panel, onClose }) {
         <div className="outro-in" ref={outroIn}>
         <h2>GET IN TOUCH</h2>
         <a href={`mailto:${CONTACT.email}`}>{CONTACT.email.toUpperCase()}</a>
-        {/* hover = partikel wajah morph jadi logo, ala igloo */}
-        <div className="socials">
-          <a
-            href={CONTACT.github || '#'}
-            target={CONTACT.github ? '_blank' : undefined}
-            rel="noreferrer"
-            onMouseEnter={() => (faceState.target = 'github')}
-            onMouseLeave={() => (faceState.target = 'face')}
-            onClick={(e) => !CONTACT.github && e.preventDefault()}
-          >
-            GITHUB
-          </a>
-          <span className="soc-sep">/</span>
-          <a
-            href={CONTACT.linkedin || '#'}
-            target={CONTACT.linkedin ? '_blank' : undefined}
-            rel="noreferrer"
-            onMouseEnter={() => (faceState.target = 'linkedin')}
-            onMouseLeave={() => (faceState.target = 'face')}
-            onClick={(e) => !CONTACT.linkedin && e.preventDefault()}
-          >
-            LINKEDIN
-          </a>
-        </div>
-        <div className="outro-hint">HOVER THE LINKS, WATCH THE PARTICLES</div>
+        {/* carousel ala igloo: pilih platform → partikel morph jadi logonya */}
+        <SocialCarousel />
         </div>
       </div>
 

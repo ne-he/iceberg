@@ -11,8 +11,9 @@ const COUNT = 48000
 const REPEL_R = 1.05
 const REPEL_MAX = 0.5
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
-// warna logo: slate gelap, nyambung sama tema monokrom
-const LOGO_TINT = [0.16, 0.19, 0.22]
+// warna dasar logo: es terang — shading per-partikel yang bikin gelap/terangnya
+// (depan hampir putih, belakang gelap = kontrasnya nendang di background kabut)
+const LOGO_TINT = [0.72, 0.76, 0.81]
 
 // path resmi GitHub mark (viewBox 24x24) — dirender ke canvas lalu di-sampling jadi titik
 const GITHUB_PATH =
@@ -33,8 +34,10 @@ function samplePixels(ctx, w, h) {
   return pts
 }
 
-// pilih COUNT titik acak → posisi 3D (slab tipis) + warna per partikel
-function pickPoints(pts, scale, tint = null, jitter = 0.02) {
+// pilih COUNT titik acak → posisi 3D + warna per partikel.
+// depth: tebal slab (foto = tipis biar tajem, logo = tebel biar bervolume 3D)
+// shade: partikel depan terang, belakang gelap + grain acak = kesan volume beneran
+function pickPoints(pts, scale, { tint = null, jitter = 0.02, depth = 0.16, shade = false } = {}) {
   const pos = new Float32Array(COUNT * 3)
   const col = new Float32Array(COUNT * 3)
   for (let i = 0; i < COUNT; i++) {
@@ -42,12 +45,22 @@ function pickPoints(pts, scale, tint = null, jitter = 0.02) {
     const i3 = i * 3
     pos[i3] = p[0] * scale + (Math.random() - 0.5) * jitter
     pos[i3 + 1] = p[1] * scale + (Math.random() - 0.5) * jitter
-    // slab tipis: kedalaman kecil biar siluet foto tetep rapat, gak mencar
-    pos[i3 + 2] = (Math.random() - 0.5) * 0.16
+    const z = (Math.random() - 0.5) * depth
+    pos[i3 + 2] = z
     if (tint) {
-      col[i3] = tint[0]
-      col[i3 + 1] = tint[1]
-      col[i3 + 2] = tint[2]
+      if (shade) {
+        // fake ambient occlusion: makin ke belakang makin gelap, plus noise
+        // halus biar permukaannya kerasa granular kayak es beku, bukan flat
+        const fr = z / depth + 0.5
+        const f = 0.22 + fr * 0.95 + (Math.random() - 0.5) * 0.28
+        col[i3] = clamp(tint[0] * f, 0, 1)
+        col[i3 + 1] = clamp(tint[1] * f, 0, 1)
+        col[i3 + 2] = clamp(tint[2] * f, 0, 1)
+      } else {
+        col[i3] = tint[0]
+        col[i3 + 1] = tint[1]
+        col[i3 + 2] = tint[2]
+      }
     } else {
       // biar muka KEBACA JELAS di background terang, kontrasnya diangkat:
       // rumus lama (makin terang makin digelapin) malah ngerata-ratain semua
@@ -69,11 +82,14 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
   const mat = useRef()
   const [targets, setTargets] = useState(null)
 
-  // posisi awal: awan acak — pas visitor nyampe bawah, partikel "merakit diri" jadi wajah
+  // posisi awal: awan acak lebar — pas visitor mendarat di panggung, partikel
+  // kelihatan TERSEBAR dulu, baru ngumpul membentuk wajah (transisi diminta Nehemiah)
   const positions = useRef(null)
   const colors = useRef(null)
   const speeds = useRef(null)
+  const scatter = useRef(null) // posisi sebar per partikel — titik awal sebelum ngumpul
   const offsets = useRef(null) // dorongan dari pointer, meluruh pelan = delay balik ala igloo
+  const wobAmp = useRef(0) // amplitudo goyang idle — 0 pas nampilin foto biar mukanya tajem
   const pv = useMemo(() => new THREE.Vector3(), [])
   // pointer dilacak di WINDOW, bukan lewat R3F — overlay outro (pointer-events: auto)
   // nyerap event canvas, itu yang bikin hover mati setelah outro muncul
@@ -95,11 +111,15 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
     positions.current = new Float32Array(COUNT * 3)
     colors.current = new Float32Array(COUNT * 3)
     speeds.current = new Float32Array(COUNT)
+    scatter.current = new Float32Array(COUNT * 3)
     offsets.current = new Float32Array(COUNT * 3)
     for (let i = 0; i < COUNT; i++) {
-      positions.current[i * 3] = (Math.random() - 0.5) * 10
-      positions.current[i * 3 + 1] = (Math.random() - 0.5) * 10
-      positions.current[i * 3 + 2] = (Math.random() - 0.5) * 6
+      scatter.current[i * 3] = (Math.random() - 0.5) * 16
+      scatter.current[i * 3 + 1] = (Math.random() - 0.5) * 11
+      scatter.current[i * 3 + 2] = (Math.random() - 0.5) * 8
+      positions.current[i * 3] = scatter.current[i * 3]
+      positions.current[i * 3 + 1] = scatter.current[i * 3 + 1]
+      positions.current[i * 3 + 2] = scatter.current[i * 3 + 2]
       colors.current[i * 3] = colors.current[i * 3 + 1] = colors.current[i * 3 + 2] = 0.4
       speeds.current[i] = 1.6 + Math.random() * 2.6
     }
@@ -131,7 +151,7 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
     ctx.fillStyle = '#fff'
     ctx.fill(new Path2D(GITHUB_PATH))
     ctx.restore()
-    t.github = pickPoints(samplePixels(ctx, 220, 220), 3.4, LOGO_TINT)
+    t.github = pickPoints(samplePixels(ctx, 220, 220), 3.4, { tint: LOGO_TINT, depth: 0.85, shade: true })
 
     // --- LinkedIn: rounded square dengan "in" dilubangi ---
     ctx.clearRect(0, 0, 220, 220)
@@ -146,7 +166,7 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
     ctx.textBaseline = 'middle'
     ctx.fillText('in', 110, 118)
     ctx.globalCompositeOperation = 'source-over'
-    t.linkedin = pickPoints(samplePixels(ctx, 220, 220), 3.4, LOGO_TINT)
+    t.linkedin = pickPoints(samplePixels(ctx, 220, 220), 3.4, { tint: LOGO_TINT, depth: 0.85, shade: true })
 
     // --- foto Nehemiah (async, warna asli kebawa) ---
     const img = new Image()
@@ -181,9 +201,12 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
     const tc = target.col
     const time = state.clock.elapsedTime
 
-    // baru merakit diri SETELAH kamera mulai nyelam ke portal — urutannya:
-    // liat portal (0.9) → nembus → partikel kebentuk pas mendarat di outro
-    const o = clamp((scrollState.damped - 0.9) / 0.06, 0, 1)
+    // urutan kemunculan (permintaan Nehemiah): panggung keliatan dulu → partikel
+    // muncul TERSEBAR di atas panggung → baru ngumpul membentuk wajah.
+    // o = opacity (muncul setelah tunnel mulai kebuka), a = progres perakitan
+    const o = clamp((scrollState.damped - 0.968) / 0.014, 0, 1)
+    let a = clamp((scrollState.damped - 0.978) / 0.022, 0, 1)
+    a = a * a * (3 - 2 * a)
 
     // proyeksikan pointer ke bidang partikel → titik repel (koordinat lokal grup)
     const [gx, gy, gz] = [group.current.position.x, group.current.position.y, group.current.position.z]
@@ -202,6 +225,13 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
     // decay pelan = partikel baliknya "males-malesan" dulu, ala igloo
     const dec = Math.exp(-delta * 1.1)
     const R2 = REPEL_R * REPEL_R
+
+    // goyang idle CUMA buat logo — foto Nehemiah harus diem total biar tajem.
+    // amplitudonya di-damp biar transisi logo<->foto gak kaget
+    const wobTarget = faceState.target === 'face' ? 0 : 1
+    wobAmp.current += (wobTarget - wobAmp.current) * (1 - Math.exp(-3 * delta))
+    const wob = wobAmp.current
+    const scat = scatter.current
 
     for (let i = 0; i < COUNT; i++) {
       const k = 1 - Math.exp(-speeds.current[i] * delta)
@@ -225,11 +255,16 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
       offs[i3] = ox
       offs[i3 + 1] = oy
       offs[i3 + 2] = oz
-      const wx = Math.sin(time * 1.3 + i * 0.37) * 0.011
-      const wy = Math.cos(time * 1.1 + i * 0.71) * 0.011
-      arr[i3] += (tp[i3] + wx + ox - arr[i3]) * k
-      arr[i3 + 1] += (tp[i3 + 1] + wy + oy - arr[i3 + 1]) * k
-      arr[i3 + 2] += (tp[i3 + 2] + oz - arr[i3 + 2]) * k
+      const wx = Math.sin(time * 1.3 + i * 0.37) * 0.011 * wob
+      const wy = Math.cos(time * 1.1 + i * 0.71) * 0.011 * wob
+      // target per partikel = interpolasi posisi sebar → posisi wajah/logo,
+      // dikontrol progres perakitan a (scatter pas baru mendarat, ngumpul pas a→1)
+      const txp = scat[i3] + (tp[i3] - scat[i3]) * a
+      const typ = scat[i3 + 1] + (tp[i3 + 1] - scat[i3 + 1]) * a
+      const tzp = scat[i3 + 2] + (tp[i3 + 2] - scat[i3 + 2]) * a
+      arr[i3] += (txp + wx + ox - arr[i3]) * k
+      arr[i3 + 1] += (typ + wy + oy - arr[i3 + 1]) * k
+      arr[i3 + 2] += (tzp + oz - arr[i3 + 2]) * k
       arrC[i3] += (tc[i3] - arrC[i3]) * k
       arrC[i3 + 1] += (tc[i3 + 1] - arrC[i3 + 1]) * k
       arrC[i3 + 2] += (tc[i3 + 2] - arrC[i3 + 2]) * k
@@ -239,7 +274,8 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
 
     if (mat.current) mat.current.opacity = o
     group.current.visible = o > 0.01
-    group.current.rotation.y = Math.sin(time * 0.25) * 0.07
+    // sway grup juga cuma pas nampilin logo — foto harus bener-bener diam
+    group.current.rotation.y = Math.sin(time * 0.25) * 0.07 * wob
   })
 
   return (

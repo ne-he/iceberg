@@ -268,9 +268,12 @@ function CameraRig() {
           pos: front(c.position, 7.5),
           look: v(...c.position),
         })),
-        // mundur dulu dari batu terakhir buat liat portal, terus nukik nembus
-        // lubangnya (z kamera nyebrangin z portal) sebelum mendarat di outro
-        { t: 0.9, pos: v(0, -28.5, 26.5), look: v(...PORTAL_POS) },
+        // mundur dulu dari batu terakhir buat liat portal dari luar (0.86),
+        // nyelam ke mulutnya (0.92), lalu TRANSIT PANJANG nembus tunnel es
+        // sampai mendarat di panggung outro — ketiga titik ini segaris sama
+        // sumbu portal, jadi kamera bener-bener lewat tengah lubangnya
+        { t: 0.86, pos: v(0, -24.7, 33.5), look: v(...PORTAL_POS) },
+        { t: 0.92, pos: v(0, -30.2, 23.4), look: v(0, -36.4, 12) },
         { t: 1, pos: v(0, -36.4, 12), look: v(0, -37, 0) },
       ],
     ]
