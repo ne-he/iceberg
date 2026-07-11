@@ -30,6 +30,14 @@ body {
   transform: translateY(100vh);
   pointer-events: none; will-change: transform;
 }
+/* tirai kabut FULL-SCREEN buat transisi loop 100/100 → 0/100: nutup layar
+   sebentar, scroll di-reset di baliknya, kebuka lagi pas batu jatuh ulang */
+.loop-wash {
+  position: fixed; inset: 0; z-index: 40;
+  background: radial-gradient(ellipse at 50% 60%, #c3cad1 0%, #b9c0c7 70%);
+  opacity: 0; visibility: hidden;
+  pointer-events: none;
+}
 .canvas-wrap { position: fixed; inset: 0; z-index: 1; }
 .canvas-wrap canvas { display: block; }
 /* 480vh untuk 5 segmen = ±1 layar scroll per batu — dulunya 600vh/4 segmen,
@@ -110,16 +118,28 @@ body {
   backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
   border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 3px;
+  /* font formal (permintaan Nehemiah): blok kontak keluar dari mono HUD,
+     pakai sans profesional biar kerasa kartu nama, bukan terminal */
+  font-family: 'Helvetica Neue', 'Segoe UI', Arial, sans-serif;
 }
 .outro h2 {
-  font-size: clamp(20px, 2.8vw, 34px); font-weight: 600; letter-spacing: 0.18em;
+  font-size: clamp(20px, 2.8vw, 34px); font-weight: 700; letter-spacing: 0.24em;
   text-shadow: 0 0 16px rgba(255, 255, 255, 0.6);
 }
 .outro a {
   display: inline-block; margin-top: 14px; color: #171a1d;
-  font-size: 14px; letter-spacing: 0.14em; text-decoration: none;
+  font-size: 14px; font-weight: 500; letter-spacing: 0.14em; text-decoration: none;
   border-bottom: 1px solid rgba(23, 26, 29, 0.55); padding-bottom: 2px;
   text-shadow: 0 0 12px rgba(255, 255, 255, 0.6);
+}
+/* petunjuk loop di bawah carousel — kecil, napas pelan biar kebaca tapi gak ganggu */
+.loop-hint {
+  margin-top: 16px; font-size: 9px; letter-spacing: 0.28em; opacity: 0.5;
+  animation: loop-breathe 2.6s ease-in-out infinite;
+}
+@keyframes loop-breathe {
+  0%, 100% { opacity: 0.32; }
+  50% { opacity: 0.6; }
 }
 /* carousel sosial ala igloo: [ ITEM AKTIF ] di tengah, tetangga redup di sisi */
 .soc-carousel { margin-top: 18px; display: flex; align-items: center; gap: 14px; letter-spacing: 0.18em; }

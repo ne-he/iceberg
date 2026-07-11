@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useProgress } from '@react-three/drei'
-import { dragState, faceState, scrollState } from './scrollState'
+import { beginIntro, dragState, faceState, introState, scrollState } from './scrollState'
 import { CONTACT, PANELS, SECTION_WORDS } from './content'
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
@@ -112,7 +112,9 @@ export function UI({ panel, onClose }) {
     let raf
     const tick = () => {
       const t = scrollState.damped
-      if (hero.current) hero.current.style.opacity = clamp(1 - t / 0.07, 0, 1)
+      // reveal intro: teks hero & hint baru nongol setelah batunya mendarat
+      const rv = introState.phase === 'idle' ? 1 : introState.reveal
+      if (hero.current) hero.current.style.opacity = clamp(1 - t / 0.07, 0, 1) * rv
       if (outro.current) {
         // baru muncul SETELAH kamera keluar dari tunnel dan panggung keliatan
         const o = clamp((t - 0.974) / 0.022, 0, 1)
@@ -153,7 +155,7 @@ export function UI({ panel, onClose }) {
       if (temp.current) temp.current.textContent = `TEMP ${(-1.2 - t * 27.3).toFixed(2)}`
       if (num.current) num.current.textContent = `${String(Math.round(t * 100)).padStart(2, '0')} / 100`
       if (bar.current) bar.current.style.transform = `scaleX(${t})`
-      if (hint.current) hint.current.style.opacity = clamp(1 - (t - 0.82) / 0.06, 0, 1)
+      if (hint.current) hint.current.style.opacity = clamp(1 - (t - 0.82) / 0.06, 0, 1) * rv
       if (ruler.current) {
         const travel = ruler.current.offsetHeight - window.innerHeight
         if (travel > 0) ruler.current.style.transform = `translateY(${-t * travel}px)`
@@ -230,6 +232,8 @@ export function UI({ panel, onClose }) {
         <a href={`mailto:${CONTACT.email}`}>{CONTACT.email.toUpperCase()}</a>
         {/* carousel ala igloo: pilih platform → partikel morph jadi logonya */}
         <SocialCarousel />
+        {/* petunjuk loop: scroll terus di 100/100 = balik ke permukaan */}
+        <div className="loop-hint">KEEP SCROLLING TO RESURFACE ↻</div>
         </div>
       </div>
 
@@ -259,17 +263,27 @@ export function UI({ panel, onClose }) {
 }
 
 export function Loader() {
-  const { progress } = useProgress()
+  const { active, progress } = useProgress()
   const [done, setDone] = useState(false)
   useEffect(() => {
-    if (progress >= 100) {
-      const id = setTimeout(() => setDone(true), 500)
+    // selesai kalau progress 100 ATAU gak ada loader yang aktif lagi —
+    // useProgress kadang mentok di bawah 100 padahal asset udah kelar semua.
+    // Delay 600ms: kalau ternyata masih ada asset nyusul (active balik true),
+    // timer-nya ke-cancel duluan, jadi gak kecolongan mulai intro kepagian
+    if (progress >= 100 || !active) {
+      const id = setTimeout(() => {
+        setDone(true)
+        beginIntro() // loader kelar → batu hero mulai jatuh
+      }, 600)
       return () => clearTimeout(id)
     }
-  }, [progress])
-  // jaring pengaman: apapun yang terjadi, loader hilang setelah 8 detik
+  }, [active, progress])
+  // jaring pengaman: apapun yang terjadi, loader hilang setelah 5 detik
   useEffect(() => {
-    const id = setTimeout(() => setDone(true), 8000)
+    const id = setTimeout(() => {
+      setDone(true)
+      beginIntro()
+    }, 5000)
     return () => clearTimeout(id)
   }, [])
   return (

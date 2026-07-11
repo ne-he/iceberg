@@ -7,7 +7,7 @@ import { Crystal } from './Crystal'
 import { ParticleFace } from './ParticleFace'
 import { Portal, PORTAL_POS } from './Portal'
 import { CRYSTALS, HERO_CRYSTAL } from './content'
-import { dragState, scrollState } from './scrollState'
+import { dragState, introState, scrollState } from './scrollState'
 
 export const FOG_COLOR = '#b9c0c7'
 
@@ -30,7 +30,10 @@ export default function Experience({ onOpen, hasVideo }) {
 
       <CameraRig />
 
-      <Crystal data={HERO_CRYSTAL} interactive={false} snapT={0} />
+      {/* batu hero dibungkus HeroDrop: pas intro/loop dia JATUH dari atas ke posisinya */}
+      <HeroDrop>
+        <Crystal data={HERO_CRYSTAL} interactive={false} snapT={0} />
+      </HeroDrop>
       {CRYSTALS.map((c, i) => (
         // snapT = titik scroll pas kamera nge-frame batu ini (sinkron sama
         // anchor di CameraRig) — jadi tiap batu bisa diputer pas dia yang keliatan
@@ -72,11 +75,29 @@ function FogRig() {
     if (scene.fog) {
       // dilonggarin: dulu far turun ke 23 (kabut pekat nutup semua). sekarang
       // far mentok di 34 → bongkahan latar & background tetep keintip tipis
-      scene.fog.near = 16 - k * 8 // 16 → 8
-      scene.fog.far = 50 - k * 16 // 50 → 34
+      const near = 16 - k * 8 // 16 → 8
+      const far = 50 - k * 16 // 50 → 34
+      // pas intro batu jatuh: kabut RAPET dulu (dunia masih kosong), kebuka
+      // bareng reveal — "baru muncul backgroundnya" persis permintaan Nehemiah
+      const r = introState.phase === 'idle' ? 1 : introState.reveal
+      scene.fog.near = THREE.MathUtils.lerp(9, near, r)
+      scene.fog.far = THREE.MathUtils.lerp(17, far, r)
     }
   })
   return null
+}
+
+// bungkus batu hero: posisi Y-nya diangkat tinggi pas phase 'fall' mulai,
+// turun ngikutin easing "jatuh + dip mendarat" dari App. Pas idle nempel 0.
+function HeroDrop({ children }) {
+  const ref = useRef()
+  useFrame(() => {
+    if (!ref.current) return
+    const S = introState
+    const e = S.phase === 'idle' ? 1 : S.phase === 'fall' ? S.eased : 0
+    ref.current.position.y = (1 - e) * 26
+  })
+  return <group ref={ref}>{children}</group>
 }
 
 // pecahan es kecil yang melayang naik pelan sepanjang jalur turun, looping terus —

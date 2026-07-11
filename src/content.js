@@ -171,10 +171,8 @@ export const PANELS = {
 }
 
 export const CONTACT = {
-  email: 'nehemiahwj@gmail.com',
+  email: 'nehewj@gmail.com',
   github: 'https://github.com/ne-he',
-  // TODO(Nehemiah): isi link LinkedIn asli
-  linkedin: '',
-  // TODO(Nehemiah): isi link WhatsApp (format: https://wa.me/62xxxxxxxxxx)
-  whatsapp: '',
+  linkedin: 'https://www.linkedin.com/in/nehemiah-wilhelmus-b90391327/',
+  whatsapp: 'https://wa.me/6281911497766',
 }
