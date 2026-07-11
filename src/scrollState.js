@@ -1,6 +1,12 @@
-// Shared mutable scroll state — written by the DOM scroll listener (UI.jsx),
-// damped + consumed inside the R3F frame loop (Experience.jsx).
-export const scrollState = { progress: 0, damped: 0 }
+// Shared mutable scroll state — ditulis master scroll di App.jsx, dibaca
+// R3F frame loop (Experience) & HUD (UI).
+//   progress/damped  : posisi DESCEND 0..1 (hero → partikel). =1 selama bridge.
+//   bridge           : 0 selama descend, 0..1 selama "jembatan" balik ke start.
+//   depthK           : kedalaman efektif buat fog/tint/video — SAMA kayak damped
+//                      pas descend, tapi RETRACE balik ke 0 pas bridge, biar
+//                      ujung bridge == awal descend (loop mulus, gak nge-pop).
+//   loopDamped       : posisi loop penuh 0..1 (descend + bridge) buat counter /120.
+export const scrollState = { progress: 0, damped: 0, bridge: 0, depthK: 0, loopDamped: 0 }
 
 // target morph particle di outro: 'face' | 'github' | 'linkedin'
 // ditulis oleh tombol sosial di UI.jsx, dibaca ParticleFace.jsx tiap frame

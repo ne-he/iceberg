@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useProgress } from '@react-three/drei'
-import { beginIntro, dragState, faceState, introState, scrollState } from './scrollState'
+import { beginIntro, faceState, introState, scrollState } from './scrollState'
 import { CONTACT, PANELS, SECTION_WORDS } from './content'
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
@@ -62,10 +62,7 @@ function SocialCarousel() {
     </div>
   )
 }
-// titik scroll tempat kamera pas nge-frame tiap batu — target auto-center
-// (0.915 = view portal yang udah kebangun; dari situ scroll berikutnya nyelam
-// FULL nembus tunnel sampai mendarat di panggung, biar transitnya kerasa utuh)
-const SNAP_ANCHORS = [0, 0.2, 0.4, 0.6, 0.8, 0.915, 1]
+const smooth = (x) => x * x * (3 - 2 * x)
 
 export function UI({ panel, onClose }) {
   const hero = useRef()
@@ -85,92 +82,42 @@ export function UI({ panel, onClose }) {
   const data = PANELS[lastRef.current]
 
   useEffect(() => {
-    // auto-center ala igloo: 1 detik gak ada input, scroll dianimasikan ease-in-out
-    // ke anchor terdekat. Ngambang pelan kayak gelembung, bukan langsung "tek"
-    let lastUser = performance.now()
-    let snapping = false
-    let snapAnim = null
-    const bump = () => {
-      lastUser = performance.now()
-      snapping = false
-      snapAnim = null
-    }
-    const onScroll = () => {
-      const max = document.documentElement.scrollHeight - window.innerHeight
-      scrollState.progress = max > 0 ? window.scrollY / max : 0
-      // scroll hasil auto-center jangan dihitung sebagai input user —
-      // input asli (wheel/touch/key/pointer) udah ke-bump lewat listener sendiri
-      if (!snapping) lastUser = performance.now()
-    }
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('wheel', bump, { passive: true })
-    window.addEventListener('touchmove', bump, { passive: true })
-    window.addEventListener('pointerdown', bump)
-    window.addEventListener('keydown', bump)
-
+    // HUD render only — scrollState di-drive master di App.jsx (infinite loop).
+    // Nilai "descend-linked" (kabut/depth/ruler) pakai depthK biar retrace mulus
+    // balik ke 0 pas bridge (ujung loop == awal, gak nge-pop)
     let raf
     const tick = () => {
-      const t = scrollState.damped
-      // reveal intro: teks hero & hint baru nongol setelah batunya mendarat
+      const t = scrollState.damped // posisi descend (=1 selama bridge)
+      const dk = scrollState.depthK // retrace pas bridge
+      const br = scrollState.bridge
+      const lp = scrollState.loopDamped
       const rv = introState.phase === 'idle' ? 1 : introState.reveal
-      if (hero.current) hero.current.style.opacity = clamp(1 - t / 0.07, 0, 1) * rv
+      // hero text nongol pas dangkal (dk kecil) — otomatis balik muncul di ujung bridge
+      if (hero.current) hero.current.style.opacity = clamp(1 - dk / 0.07, 0, 1) * rv
       if (outro.current) {
-        // baru muncul SETELAH kamera keluar dari tunnel dan panggung keliatan
-        const o = clamp((t - 0.974) / 0.022, 0, 1)
+        // muncul pas mendarat, FADE OUT pas bridge mulai (mau balik ke atas)
+        const o = clamp((t - 0.974) / 0.022, 0, 1) * (1 - smooth(clamp(br / 0.3, 0, 1)))
         outro.current.style.opacity = o
-        // pointer events cuma di kontennya — kalau container full-screen yang
-        // di-set auto, dia nyerap semua mouse & bikin hover partikel mati
         if (outroIn.current) outroIn.current.style.pointerEvents = o > 0.5 ? 'auto' : 'none'
-      }
-      const now = performance.now()
-      if (!snapAnim && now - lastUser > 1000 && !dragState.active) {
-        const max = document.documentElement.scrollHeight - window.innerHeight
-        if (max > 0) {
-          const from = window.scrollY
-          const cur = from / max
-          let nearest = SNAP_ANCHORS[0]
-          for (const a of SNAP_ANCHORS) if (Math.abs(a - cur) < Math.abs(nearest - cur)) nearest = a
-          const to = nearest * max
-          // durasi ngikut jarak biar kecepatannya konsisten, tapi dibatasi
-          if (Math.abs(to - from) > 2) snapAnim = { from, to, start: now, dur: Math.min(2600, 900 + Math.abs(to - from) * 1.2) }
-        }
-      }
-      if (snapAnim) {
-        const u = Math.min(1, (now - snapAnim.start) / snapAnim.dur)
-        // easeInOutCubic: mulai pelan, ngambang, mendarat pelan
-        const e = u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2
-        snapping = true
-        window.scrollTo(0, snapAnim.from + (snapAnim.to - snapAnim.from) * e)
-        if (u >= 1) {
-          snapAnim = null
-          snapping = false
-        }
       }
       SECTION_WORDS.forEach((w, i) => {
         const el = words.current[i]
         if (el) el.style.opacity = clamp(1 - Math.abs(t - w.center) / 0.12, 0, 1)
       })
-      if (depth.current) depth.current.textContent = `DPT ${String(Math.round(t * 380)).padStart(3, '0')}M`
-      if (temp.current) temp.current.textContent = `TEMP ${(-1.2 - t * 27.3).toFixed(2)}`
-      if (num.current) num.current.textContent = `${String(Math.round(t * 100)).padStart(2, '0')} / 100`
-      if (bar.current) bar.current.style.transform = `scaleX(${t})`
-      if (hint.current) hint.current.style.opacity = clamp(1 - (t - 0.82) / 0.06, 0, 1) * rv
+      if (depth.current) depth.current.textContent = `DPT ${String(Math.round(dk * 380)).padStart(3, '0')}M`
+      if (temp.current) temp.current.textContent = `TEMP ${(-1.2 - dk * 27.3).toFixed(2)}`
+      // counter jalan penuh sampai 120 (100..120 = jembatan balik ke start)
+      if (num.current) num.current.textContent = `${String(Math.round(lp * 120)).padStart(3, '0')} / 120`
+      if (bar.current) bar.current.style.transform = `scaleX(${lp})`
+      if (hint.current) hint.current.style.opacity = clamp(1 - (dk - 0.82) / 0.06, 0, 1) * rv
       if (ruler.current) {
         const travel = ruler.current.offsetHeight - window.innerHeight
-        if (travel > 0) ruler.current.style.transform = `translateY(${-t * travel}px)`
+        if (travel > 0) ruler.current.style.transform = `translateY(${-dk * travel}px)`
       }
       raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
-    return () => {
-      window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('wheel', bump)
-      window.removeEventListener('touchmove', bump)
-      window.removeEventListener('pointerdown', bump)
-      window.removeEventListener('keydown', bump)
-      cancelAnimationFrame(raf)
-    }
+    return () => cancelAnimationFrame(raf)
   }, [])
 
   useEffect(() => {
@@ -228,7 +175,7 @@ export function UI({ panel, onClose }) {
 
       <div className="outro" ref={outro}>
         <div className="outro-in" ref={outroIn}>
-        <h2>GET IN TOUCH</h2>
+        <h2>LET'S CONNECT</h2>
         <a href={`mailto:${CONTACT.email}`}>{CONTACT.email.toUpperCase()}</a>
         {/* carousel ala igloo: pilih platform → partikel morph jadi logonya */}
         <SocialCarousel />

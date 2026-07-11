@@ -38,6 +38,13 @@ body {
   opacity: 0; visibility: hidden;
   pointer-events: none;
 }
+/* tint biru gletser buat backdrop kosong (di atas video/veil, di bawah canvas) —
+   opacity digerakin JS ngikut kedalaman: makin dalam makin biru, kesan dalam es */
+.depth-tint {
+  position: fixed; inset: 0; z-index: 0; opacity: 0;
+  background: radial-gradient(ellipse at 50% 30%, rgba(70, 116, 150, 0.55) 0%, rgba(40, 74, 104, 0.9) 75%);
+  pointer-events: none;
+}
 .canvas-wrap { position: fixed; inset: 0; z-index: 1; }
 .canvas-wrap canvas { display: block; }
 /* 480vh untuk 5 segmen = ±1 layar scroll per batu — dulunya 600vh/4 segmen,
@@ -113,11 +120,12 @@ body {
 .outro-in {
   display: flex; flex-direction: column; align-items: center;
   pointer-events: none;
-  padding: 20px 34px 16px;
-  background: rgba(214, 221, 228, 0.42);
-  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  border-radius: 3px;
+  padding: 26px 44px 22px;
+  background: rgba(216, 223, 230, 0.62);
+  backdrop-filter: blur(28px) saturate(1.1); -webkit-backdrop-filter: blur(28px) saturate(1.1);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 4px;
+  box-shadow: 0 20px 60px rgba(60, 72, 84, 0.28);
   /* font formal (permintaan Nehemiah): blok kontak keluar dari mono HUD,
      pakai sans profesional biar kerasa kartu nama, bukan terminal */
   font-family: 'Helvetica Neue', 'Segoe UI', Arial, sans-serif;

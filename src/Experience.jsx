@@ -6,10 +6,15 @@ import { easing } from 'maath'
 import { Crystal } from './Crystal'
 import { ParticleFace } from './ParticleFace'
 import { Portal, PORTAL_POS } from './Portal'
+import { Glacier } from './Glacier'
 import { CRYSTALS, HERO_CRYSTAL } from './content'
 import { dragState, introState, scrollState } from './scrollState'
 
 export const FOG_COLOR = '#b9c0c7'
+// warna kabut di kedalaman: biru gletser — makin dalam makin kerasa di dalam es
+const FOG_TOP = new THREE.Color('#b9c0c7')
+const FOG_DEEP = new THREE.Color('#5c83a4')
+const _fogCol = new THREE.Color()
 
 export default function Experience({ onOpen, hasVideo }) {
   return (
@@ -39,6 +44,9 @@ export default function Experience({ onOpen, hasVideo }) {
         // anchor di CameraRig) — jadi tiap batu bisa diputer pas dia yang keliatan
         <Crystal key={c.id} data={c} onOpen={onOpen} snapT={(i + 1) / (CRYSTALS.length + 1)} />
       ))}
+
+      {/* dinding es crevasse kiri-kanan + caustic — kesan di dalam glacier */}
+      <Glacier />
 
       {/* dunia latar: bongkahan-bongkahan jauh yang jadi siluet di kabut (trik igloo) */}
       <BackgroundField />
@@ -71,7 +79,9 @@ export default function Experience({ onOpen, hasVideo }) {
 function FogRig() {
   const scene = useThree((s) => s.scene)
   useFrame(() => {
-    const k = THREE.MathUtils.clamp(scrollState.damped, 0, 1)
+    // depthK (bukan damped) → pas bridge, kabut retrace balik ke dangkal biar
+    // ujung loop nyambung mulus ke awal (hero) tanpa nge-pop
+    const k = THREE.MathUtils.clamp(scrollState.depthK, 0, 1)
     if (scene.fog) {
       // dilonggarin: dulu far turun ke 23 (kabut pekat nutup semua). sekarang
       // far mentok di 34 → bongkahan latar & background tetep keintip tipis
@@ -82,19 +92,40 @@ function FogRig() {
       const r = introState.phase === 'idle' ? 1 : introState.reveal
       scene.fog.near = THREE.MathUtils.lerp(9, near, r)
       scene.fog.far = THREE.MathUtils.lerp(17, far, r)
+      // warna kabut geser ke biru gletser makin dalam — objek (batu/dinding es)
+      // membaur ke biru dalam, bukan abu pucat
+      _fogCol.copy(FOG_TOP).lerp(FOG_DEEP, THREE.MathUtils.smoothstep(k, 0.15, 0.85))
+      scene.fog.color.copy(_fogCol)
     }
   })
   return null
 }
 
-// bungkus batu hero: posisi Y-nya diangkat tinggi pas phase 'fall' mulai,
-// turun ngikutin easing "jatuh + dip mendarat" dari App. Pas idle nempel 0.
+// batu hero jatuh dari atas. Dua sumber:
+//  1) intro pertama (phase 'fall') — digerakin waktu dari App (S.eased)
+//  2) tiap loop (bridge) — digerakin SCROLL: pas kabut nutup, batu keangkat,
+//     lalu jatuh mendarat pas kabut kebuka → mendarat = awal descend (mulus)
+const easeDrop = (x) => 1 + 1.9 * Math.pow(x - 1, 3) + 0.9 * Math.pow(x - 1, 2)
+const smoothstep = (a, b, x) => {
+  const t = THREE.MathUtils.clamp((x - a) / (b - a), 0, 1)
+  return t * t * (3 - 2 * t)
+}
 function HeroDrop({ children }) {
   const ref = useRef()
   useFrame(() => {
     if (!ref.current) return
     const S = introState
-    const e = S.phase === 'idle' ? 1 : S.phase === 'fall' ? S.eased : 0
+    let e
+    if (S.phase === 'fall') e = S.eased
+    else if (S.phase === 'wait') e = 0
+    else {
+      // idle: dikendalikan bridge. b=0 (descend) → mendarat (e=1). b naik →
+      // keangkat (ketutup kabut), b>0.45 → jatuh lagi sampai mendarat di b~0.95
+      const b = scrollState.bridge
+      if (b <= 0) e = 1
+      else if (b < 0.45) e = 1 - smoothstep(0, 0.45, b) // keangkat (di balik kabut)
+      else e = easeDrop(THREE.MathUtils.clamp((b - 0.45) / 0.5, 0, 1)) // jatuh
+    }
     ref.current.position.y = (1 - e) * 26
   })
   return <group ref={ref}>{children}</group>
@@ -309,7 +340,7 @@ function CameraRig() {
   }, [])
 
   useFrame((state, delta) => {
-    easing.damp(scrollState, 'damped', scrollState.progress, 0.16, delta)
+    // damped di-smoothing di App (master loop) — di sini tinggal baca
     const k = THREE.MathUtils.clamp(scrollState.damped, 0, 1)
 
     // cari segmen anchor aktif, lalu interpolasi dengan plateau per-anchor
@@ -323,6 +354,19 @@ function CameraRig() {
     u = u * u * (3 - 2 * u)
     p.lerpVectors(a.pos, b.pos, u)
     t.lerpVectors(a.look, b.look, u)
+
+    // ---- jembatan loop: pindahin kamera dari panggung (bawah) balik ke hero
+    //      (atas), DISAMARKAN tirai kabut yg nutup di tengah bridge. Pas
+    //      bridge kelar (==awal descend) kamera pas di hero → loop nyambung ----
+    const br = scrollState.bridge
+    if (br > 0) {
+      const hb = THREE.MathUtils.clamp((br - 0.4) / 0.2, 0, 1)
+      const s = hb * hb * (3 - 2 * hb)
+      const hero = anchors[0]
+      const podium = anchors[anchors.length - 1]
+      p.lerpVectors(podium.pos, hero.pos, s)
+      t.lerpVectors(podium.look, hero.look, s)
+    }
 
     // parallax pointer dimatiin halus selama hero di-drag
     easing.damp(parallax, 'v', dragState.active ? 0 : 1, 0.2, delta)

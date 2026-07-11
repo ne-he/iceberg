@@ -4,16 +4,17 @@ import { useFrame } from '@react-three/fiber'
 import { faceState, scrollState } from './scrollState'
 
 // jumlah partikel: bener-bener padat biar fotonya kebentuk jelas ala igloo —
-// 90k + slab tipis = antar partikel makin rapat, celah ketutup, muka solid
-const COUNT = 90000
+// 120k + slab tipis = antar partikel makin rapat, celah ketutup, muka solid
+const COUNT = 120000
 // radius & displacement maksimal efek buyar pas pointer nyentuh partikel —
 // push-nya SATURASI (bukan akumulasi) biar pointer diem gak ngebolongin badan
 const REPEL_R = 1.05
 const REPEL_MAX = 0.5
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
-// warna dasar logo: es terang — shading per-partikel yang bikin gelap/terangnya
-// (depan hampir putih, belakang gelap = kontrasnya nendang di background kabut)
-const LOGO_TINT = [0.72, 0.76, 0.81]
+// warna dasar logo: slate GELAP (bukan es terang lagi) — background kabut terang,
+// jadi logo harus item biar kebaca jelas (permintaan Nehemiah). shading per-partikel
+// tetep ngasih variasi facet biar gak flat, tapi range-nya ketahan di gelap
+const LOGO_TINT = [0.09, 0.1, 0.13]
 
 // path resmi GitHub mark (viewBox 24x24) — dirender ke canvas lalu di-sampling jadi titik
 const GITHUB_PATH =
@@ -54,9 +55,11 @@ function pickPoints(pts, scale, { tint = null, jitter = 0.02, depth = 0.16, shad
     if (tint) {
       if (shade) {
         // fake ambient occlusion: makin ke belakang makin gelap, plus noise
-        // halus biar permukaannya kerasa granular kayak es beku, bukan flat
+        // halus biar permukaannya kerasa granular kayak es beku, bukan flat.
+        // range dijaga gelap (0.55..1.35) biar logo tetep item pekat, cuma
+        // facet depan yang naik dikit — kontras di background kabut terang
         const fr = z / depth + 0.5
-        const f = 0.22 + fr * 0.95 + (Math.random() - 0.5) * 0.28
+        const f = 0.55 + fr * 0.6 + (Math.random() - 0.5) * 0.24
         col[i3] = clamp(tint[0] * f, 0, 1)
         col[i3 + 1] = clamp(tint[1] * f, 0, 1)
         col[i3 + 2] = clamp(tint[2] * f, 0, 1)
@@ -223,8 +226,10 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
 
     // urutan kemunculan (permintaan Nehemiah): panggung keliatan dulu → partikel
     // muncul TERSEBAR di atas panggung → baru ngumpul membentuk wajah.
-    // o = opacity (muncul setelah tunnel mulai kebuka), a = progres perakitan
-    const o = clamp((scrollState.damped - 0.968) / 0.014, 0, 1)
+    // o = opacity (muncul setelah tunnel mulai kebuka), a = progres perakitan.
+    // Pas bridge mulai (mau balik ke atas), partikel FADE OUT ketutup kabut
+    const bridgeFade = 1 - clamp((scrollState.bridge - 0.05) / 0.3, 0, 1)
+    const o = clamp((scrollState.damped - 0.968) / 0.014, 0, 1) * bridgeFade
     let a = clamp((scrollState.damped - 0.978) / 0.022, 0, 1)
     a = a * a * (3 - 2 * a)
 
