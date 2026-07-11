@@ -6,7 +6,7 @@ import { scrollState } from './scrollState'
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
 
-// background = video langit hasil generate (public/bg.mp4): kabut idle "breathing",
+// background = video langit hasil generate (public/scene/scene.mp4): kabut idle "breathing",
 // angin, kristal es lewat — dunia yang masuk akal buat batu-batu melayang.
 // Pas scroll nyampe batu pertama, videonya fade out ketutup kabut putih polos.
 // Kalau file-nya belum ada, fallback ke background procedural (kabut + drifting ice).
@@ -18,7 +18,7 @@ export default function App() {
 
   useEffect(() => {
     // cek beneran video — dev server Vite ngebales 200 text/html buat file yang gak ada
-    fetch('/bg.mp4', { method: 'HEAD' })
+    fetch('/scene/scene.mp4', { method: 'HEAD' })
       .then((r) => {
         const type = r.headers.get('content-type') || ''
         if (r.ok && type.includes('video')) setHasVideo(true)
@@ -54,7 +54,7 @@ export default function App() {
 
   return (
     <>
-      {hasVideo && <video ref={videoRef} className="bg-video" src="/bg.mp4" autoPlay muted loop playsInline />}
+      {hasVideo && <video ref={videoRef} className="bg-video" src="/scene/scene.mp4" autoPlay muted loop playsInline />}
       {hasVideo && <div ref={veilRef} className="fog-veil" aria-hidden="true" />}
       <div className="canvas-wrap">
         <Canvas
