@@ -14,6 +14,7 @@ export default function App() {
   const [panel, setPanel] = useState(null)
   const [hasVideo, setHasVideo] = useState(false)
   const videoRef = useRef()
+  const veilRef = useRef()
 
   useEffect(() => {
     // cek beneran video — dev server Vite ngebales 200 text/html buat file yang gak ada
@@ -30,9 +31,16 @@ export default function App() {
     let raf
     const tick = () => {
       const el = videoRef.current
+      const veil = veilRef.current
+      // transisi video → kabut GAK langsung "plek": tirai kabut NAIK DARI BAWAH
+      // layar nutupin videonya pelan-pelan ngikutin scroll
+      if (veil) {
+        const k = clamp((scrollState.damped - 0.02) / 0.13, 0, 1)
+        veil.style.transform = `translateY(${100 - 200 * k}vh)`
+      }
       if (el) {
-        // jelas penuh di hero, ilang total sebelum batu ABOUT (progress 0.2)
-        const o = clamp(1 - (scrollState.damped - 0.05) / 0.11, 0, 1)
+        // backup fade: video ilang total dikit setelah tirai kabutnya nutup penuh
+        const o = clamp(1 - (scrollState.damped - 0.12) / 0.08, 0, 1)
         el.style.opacity = o
         // video di-pause pas udah gak keliatan — hemat GPU di kedalaman
         if (o === 0 && !el.paused) el.pause()
@@ -47,6 +55,7 @@ export default function App() {
   return (
     <>
       {hasVideo && <video ref={videoRef} className="bg-video" src="/bg.mp4" autoPlay muted loop playsInline />}
+      {hasVideo && <div ref={veilRef} className="fog-veil" aria-hidden="true" />}
       <div className="canvas-wrap">
         <Canvas
           dpr={[1, 1.5]}

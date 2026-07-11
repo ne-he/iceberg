@@ -5,7 +5,8 @@ import { CONTACT, PANELS, SECTION_WORDS } from './content'
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
 // titik scroll tempat kamera pas nge-frame tiap batu — target auto-center
-const SNAP_ANCHORS = [0, 0.2, 0.4, 0.6, 0.8, 1]
+// (0.9 = view portal dari atas, biar momen "liat portal" gak kelewat ke-snap)
+const SNAP_ANCHORS = [0, 0.2, 0.4, 0.6, 0.8, 0.9, 1]
 
 export function UI({ panel, onClose }) {
   const hero = useRef()
@@ -54,7 +55,8 @@ export function UI({ panel, onClose }) {
       const t = scrollState.damped
       if (hero.current) hero.current.style.opacity = clamp(1 - t / 0.07, 0, 1)
       if (outro.current) {
-        const o = clamp((t - 0.9) / 0.06, 0, 1)
+        // baru muncul SETELAH kamera nembus portal (crossing di ±0.98)
+        const o = clamp((t - 0.965) / 0.03, 0, 1)
         outro.current.style.opacity = o
         // pointer events cuma di kontennya — kalau container full-screen yang
         // di-set auto, dia nyerap semua mouse & bikin hover partikel mati

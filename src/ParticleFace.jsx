@@ -49,15 +49,15 @@ function pickPoints(pts, scale, tint = null, jitter = 0.02) {
       col[i3 + 1] = tint[1]
       col[i3 + 2] = tint[2]
     } else {
-      // dua trik biar muka KELIATAN JELAS di background terang:
-      // 1. makin terang pixel asli (kulit), makin agresif digelapin
-      // 2. pow(2.2): renderer nge-encode vertex color linear→sRGB (jadi lebih
-      //    terang di layar) — dikompensasi di sini biar nilai gelapnya beneran gelap
-      const lum = (p[2] + p[3] + p[4]) / 3
-      const m = 0.55 - lum * 0.2
-      col[i3] = Math.pow(Math.min(1, p[2] * m), 2.2)
-      col[i3 + 1] = Math.pow(Math.min(1, p[3] * m), 2.2)
-      col[i3 + 2] = Math.pow(Math.min(1, p[4] * m), 2.2)
+      // biar muka KEBACA JELAS di background terang, kontrasnya diangkat:
+      // rumus lama (makin terang makin digelapin) malah ngerata-ratain semua
+      // jadi coklat lumpur — fitur wajah ilang. Sekarang: kontras di-expand
+      // dulu (highlight hidung/dahi tetep terang, shadow mata makin gelap),
+      // baru diturunin dikit + pow() kompensasi encoding linear→sRGB renderer
+      const cc = (v) => clamp((v - 0.5) * 1.5 + 0.5, 0, 1)
+      col[i3] = Math.pow(cc(p[2]) * 0.62, 1.9)
+      col[i3 + 1] = Math.pow(cc(p[3]) * 0.62, 1.9)
+      col[i3 + 2] = Math.pow(cc(p[4]) * 0.62, 1.9)
     }
   }
   return { pos, col }
@@ -181,8 +181,9 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
     const tc = target.col
     const time = state.clock.elapsedTime
 
-    // cuma muncul di bagian akhir scroll (Get in Touch)
-    const o = clamp((scrollState.damped - 0.84) / 0.08, 0, 1)
+    // baru merakit diri SETELAH kamera mulai nyelam ke portal — urutannya:
+    // liat portal (0.9) → nembus → partikel kebentuk pas mendarat di outro
+    const o = clamp((scrollState.damped - 0.9) / 0.06, 0, 1)
 
     // proyeksikan pointer ke bidang partikel → titik repel (koordinat lokal grup)
     const [gx, gy, gz] = [group.current.position.x, group.current.position.y, group.current.position.z]

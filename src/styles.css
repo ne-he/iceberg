@@ -16,6 +16,20 @@ body {
   width: 100%; height: 100%; object-fit: cover;
   pointer-events: none;
 }
+/* tirai kabut yang NAIK DARI BAWAH nutupin video pas scroll — transisi
+   video → kabut jadi mengalir, bukan langsung "plek" ganti. Digerakin via JS */
+.fog-veil {
+  position: fixed; left: 0; right: 0; top: 0; height: 200vh; z-index: 0;
+  background: linear-gradient(
+    to top,
+    #b9c0c7 0%, #b9c0c7 55%,
+    rgba(185, 192, 199, 0.85) 68%,
+    rgba(185, 192, 199, 0.4) 82%,
+    rgba(185, 192, 199, 0) 100%
+  );
+  transform: translateY(100vh);
+  pointer-events: none; will-change: transform;
+}
 .canvas-wrap { position: fixed; inset: 0; z-index: 1; }
 .canvas-wrap canvas { display: block; }
 /* 480vh untuk 5 segmen = ±1 layar scroll per batu — dulunya 600vh/4 segmen,
@@ -56,7 +70,10 @@ body {
 .bigword {
   position: fixed; top: 44%; right: 5vw; transform: translateY(-50%);
   font-size: clamp(44px, 8.5vw, 118px); font-weight: 600; letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.55);
+  /* halo gelap di belakang huruf — background-nya "digelapin" biar putihnya
+     gak nyamar ketelen kabut terang */
+  text-shadow: 0 0 26px rgba(38, 47, 56, 0.5), 0 0 80px rgba(38, 47, 56, 0.65);
   z-index: 2; pointer-events: none; text-transform: uppercase;
   opacity: 0; white-space: nowrap;
 }
@@ -82,10 +99,17 @@ body {
 }
 /* teks outro GELAP — podiumnya terang, jadi kontrasnya kebalik dari HUD */
 .outro { color: #171a1d; }
-/* konten outro dibungkus — cuma bagian ini yang nangkep mouse, sisanya tembus ke canvas */
+/* konten outro dibungkus — cuma bagian ini yang nangkep mouse, sisanya tembus ke canvas.
+   Panel frost blur di belakang teks: partikel gelap di baliknya keblur + kecerahin,
+   jadi GET IN TOUCH / GITHUB / LINKEDIN gak nyamar lagi */
 .outro-in {
   display: flex; flex-direction: column; align-items: center;
   pointer-events: none;
+  padding: 20px 34px 16px;
+  background: rgba(214, 221, 228, 0.42);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 3px;
 }
 .outro h2 {
   font-size: clamp(20px, 2.8vw, 34px); font-weight: 600; letter-spacing: 0.18em;

@@ -5,6 +5,7 @@ import { Environment, Sparkles, useGLTF } from '@react-three/drei'
 import { easing } from 'maath'
 import { Crystal } from './Crystal'
 import { ParticleFace } from './ParticleFace'
+import { Portal, PORTAL_POS } from './Portal'
 import { CRYSTALS, HERO_CRYSTAL } from './content'
 import { dragState, scrollState } from './scrollState'
 
@@ -39,6 +40,11 @@ export default function Experience({ onOpen, hasVideo }) {
 
       {/* kristal es kecil melayang naik pelan, looping — pengganti video daratan */}
       <DriftingIce />
+
+      {/* portal es ala igloo — kamera nembus lubangnya sebelum nyampe outro */}
+      <Suspense fallback={null}>
+        <Portal />
+      </Suspense>
 
       {/* outro: partikel wajah Nehemiah di atas panggung podium ala igloo */}
       <ParticleFace position={[0, -36.55, 1.5]} />
@@ -262,6 +268,9 @@ function CameraRig() {
           pos: front(c.position, 7.5),
           look: v(...c.position),
         })),
+        // mundur dulu dari batu terakhir buat liat portal, terus nukik nembus
+        // lubangnya (z kamera nyebrangin z portal) sebelum mendarat di outro
+        { t: 0.9, pos: v(0, -28.5, 26.5), look: v(...PORTAL_POS) },
         { t: 1, pos: v(0, -36.4, 12), look: v(0, -37, 0) },
       ],
     ]
