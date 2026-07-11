@@ -245,9 +245,10 @@ function LightShafts() {
   ))
 }
 
-// selama rentang ini di sekitar tiap kristal, kamera berhenti SEBENTAR aja —
-// dulunya 0.07 tapi plateau segitu bikin scroll kerasa "patah/ngelag",
-// sekarang tipis: hampir tiap gerakan scroll langsung keliatan jalan
+// selama rentang ini di sekitar tiap KRISTAL, kamera berhenti sebentar aja.
+// hold-nya per-anchor: anchor sequence portal pakai hold 0 — dulu hold rata
+// 0.03 bikin segmen sempit (0.8 - 0.86) kehabisan jendela gerak, kamera
+// "jebret" lompat sekali frame di 82-83/100
 const HOLD = 0.03
 
 function CameraRig() {
@@ -261,20 +262,23 @@ function CameraRig() {
       new THREE.Vector3(),
       new THREE.Vector3(),
       [
-        { t: 0, pos: v(0, 1.8, 11), look: v(0, 0.5, 0) },
+        { t: 0, pos: v(0, 1.8, 11), look: v(0, 0.5, 0), hold: 0 },
         // anchor ngikut daftar CRYSTALS — nambah batu tinggal nambah di content.js
         ...CRYSTALS.map((c, i) => ({
           t: (i + 1) / (CRYSTALS.length + 1),
           pos: front(c.position, 7.5),
           look: v(...c.position),
+          hold: HOLD,
         })),
-        // mundur dulu dari batu terakhir buat liat portal dari luar (0.86),
-        // nyelam ke mulutnya (0.92), lalu TRANSIT PANJANG nembus tunnel es
-        // sampai mendarat di panggung outro — ketiga titik ini segaris sama
-        // sumbu portal, jadi kamera bener-bener lewat tengah lubangnya
-        { t: 0.86, pos: v(0, -24.7, 33.5), look: v(...PORTAL_POS) },
-        { t: 0.92, pos: v(0, -30.2, 23.4), look: v(0, -36.4, 12) },
-        { t: 1, pos: v(0, -36.4, 12), look: v(0, -37, 0) },
+        // koreografi portal (permintaan Nehemiah): abis batu terakhir kamera
+        // TURUN dulu ngikutin scroll, terus dunia ngebuka — portal naik dari
+        // bawah & kebangun (animasinya di Portal.jsx, sinkron rentang ini),
+        // kamera arc keluar buat natap portal utuh, nyelam ke mulut, transit
+        // tunnel, mendarat. Titik mouth->land segaris sumbu portal
+        { t: 0.86, pos: v(-1.2, -32.5, 12), look: v(0, -34.5, 2), hold: 0 },
+        { t: 0.915, pos: v(0, -24.7, 33.5), look: v(...PORTAL_POS), hold: 0.015 },
+        { t: 0.95, pos: v(0, -30.2, 23.4), look: v(0, -36.4, 12), hold: 0 },
+        { t: 1, pos: v(0, -36.4, 12), look: v(0, -37, 0), hold: 0 },
       ],
     ]
   }, [])
@@ -283,13 +287,13 @@ function CameraRig() {
     easing.damp(scrollState, 'damped', scrollState.progress, 0.16, delta)
     const k = THREE.MathUtils.clamp(scrollState.damped, 0, 1)
 
-    // cari segmen anchor aktif, lalu interpolasi dengan plateau di tiap kristal
+    // cari segmen anchor aktif, lalu interpolasi dengan plateau per-anchor
     let i = 0
     while (i < anchors.length - 2 && k > anchors[i + 1].t) i++
     const a = anchors[i]
     const b = anchors[i + 1]
-    const start = a.t + (i === 0 ? 0 : HOLD)
-    const end = b.t - (i === anchors.length - 2 ? 0 : HOLD)
+    const start = a.t + a.hold
+    const end = b.t - b.hold
     let u = THREE.MathUtils.clamp((k - start) / Math.max(1e-4, end - start), 0, 1)
     u = u * u * (3 - 2 * u)
     p.lerpVectors(a.pos, b.pos, u)

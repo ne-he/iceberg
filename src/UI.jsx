@@ -6,31 +6,44 @@ import { CONTACT, PANELS, SECTION_WORDS } from './content'
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
 
 // carousel sosial ala igloo.inc: item tengah kekurung bracket, tetangganya
-// redup di kiri-kanan, dipindah pakai panah atau klik langsung labelnya.
-// Item yang dipilih = bentuk partikel di panggung (face | github | linkedin)
+// redup di kiri-kanan. Geser pakai ARROW KEY keyboard (kiri/kanan) atau klik
+// langsung label tetangganya — tanpa tombol panah visual (permintaan Nehemiah).
+// Item yang dipilih = bentuk partikel di panggung (face | github | linkedin | whatsapp)
 const SOCIAL_ITEMS = [
   { id: 'face', label: 'NEHEMIAH', url: null },
   { id: 'github', label: 'GITHUB', url: CONTACT.github },
   { id: 'linkedin', label: 'LINKEDIN', url: CONTACT.linkedin },
+  { id: 'whatsapp', label: 'WHATSAPP', url: CONTACT.whatsapp },
 ]
 
 function SocialCarousel() {
   const [idx, setIdx] = useState(0)
   const n = SOCIAL_ITEMS.length
-  const select = (i) => {
-    const j = (i + n) % n
-    setIdx(j)
-    faceState.target = SOCIAL_ITEMS[j].id
-  }
+  const move = (dir) =>
+    setIdx((i) => {
+      const j = (i + dir + n) % n
+      faceState.target = SOCIAL_ITEMS[j].id
+      return j
+    })
+
+  // arrow key kiri/kanan buat geser — aktif cuma pas udah mendarat di outro,
+  // biar gak ganggu navigasi keyboard pas masih di atas
+  useEffect(() => {
+    const onKey = (e) => {
+      if (scrollState.damped < 0.96) return
+      if (e.key === 'ArrowRight') move(1)
+      else if (e.key === 'ArrowLeft') move(-1)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   const prev = SOCIAL_ITEMS[(idx + n - 1) % n]
   const cur = SOCIAL_ITEMS[idx]
   const next = SOCIAL_ITEMS[(idx + 1) % n]
   return (
     <div className="soc-carousel">
-      <button className="soc-arrow" aria-label="previous" onClick={() => select(idx - 1)}>
-        ‹
-      </button>
-      <button className="soc-side" onClick={() => select(idx - 1)}>
+      <button className="soc-side" onClick={() => move(-1)}>
         {prev.label}
       </button>
       {/* item aktif: klik = buka linknya (kalau ada) */}
@@ -43,19 +56,16 @@ function SocialCarousel() {
       >
         {cur.label}
       </a>
-      <button className="soc-side" onClick={() => select(idx + 1)}>
+      <button className="soc-side" onClick={() => move(1)}>
         {next.label}
-      </button>
-      <button className="soc-arrow" aria-label="next" onClick={() => select(idx + 1)}>
-        ›
       </button>
     </div>
   )
 }
 // titik scroll tempat kamera pas nge-frame tiap batu — target auto-center
-// (0.86 = view portal dari luar; dari situ scroll berikutnya nyelam FULL
-// nembus tunnel sampai mendarat di panggung, biar transitnya kerasa utuh)
-const SNAP_ANCHORS = [0, 0.2, 0.4, 0.6, 0.8, 0.86, 1]
+// (0.915 = view portal yang udah kebangun; dari situ scroll berikutnya nyelam
+// FULL nembus tunnel sampai mendarat di panggung, biar transitnya kerasa utuh)
+const SNAP_ANCHORS = [0, 0.2, 0.4, 0.6, 0.8, 0.915, 1]
 
 export function UI({ panel, onClose }) {
   const hero = useRef()

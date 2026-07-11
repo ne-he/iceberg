@@ -26,6 +26,7 @@ function makeGlowTexture(draw) {
 export function Portal() {
   const { nodes } = useGLTF('/models/portal.glb')
   const group = useRef()
+  const build = useRef() // grup world-space buat animasi "kebangun": naik dari bawah + ngembang
   const segs = useRef()
   const glowRing = useRef()
   const glowCore = useRef()
@@ -67,22 +68,38 @@ export function Portal() {
 
   useFrame((state, delta) => {
     const t = state.clock.elapsedTime
-    // segmen dalam muter pelan, ring luar napas dikit — portal kerasa "hidup"
-    if (segs.current) segs.current.rotation.z -= delta * 0.14
+    const d = scrollState.damped
+    const clamp01 = (v) => Math.max(0, Math.min(1, v))
+
+    // animasi KEBANGUN (sinkron kamera turun dari batu terakhir): portal naik
+    // dari bawah sambil ngembang, segmen dalamnya muter kenceng terus settle —
+    // kesannya gerbang lagi dirakit pas visitor dateng
+    let up = clamp01((d - 0.81) / 0.09)
+    up = up * up * (3 - 2 * up)
+    if (build.current) {
+      build.current.position.y = -10 * (1 - up)
+      build.current.scale.setScalar(0.5 + 0.5 * up)
+    }
+
+    // segmen dalam muter — kenceng selama kebangun, kalem pas udah jadi
+    if (segs.current) segs.current.rotation.z -= delta * (0.14 + (1 - up) * 2.2)
     if (group.current) group.current.rotation.z = Math.sin(t * 0.18) * 0.05
     const pulse = 0.85 + Math.sin(t * 1.4) * 0.15
-    // glow mulut portal cuma buat dilihat DARI LUAR — pas kamera mulai nyelam
-    // masuk, dia di-fade habis; kalau nggak, inti glow-nya ditatap dari jarak
-    // deket dan seisi layar kebakar putih
-    const pass = 1 - Math.max(0, Math.min(1, (scrollState.damped - 0.9) / 0.05))
+    // glow mulut portal: nyala bareng proses kebangun, dan cuma buat dilihat
+    // DARI LUAR — pas kamera mulai nyelam masuk, di-fade habis; kalau nggak,
+    // inti glow-nya ditatap dari jarak deket dan seisi layar kebakar putih
+    const pass = (1 - clamp01((d - 0.905) / 0.042)) * up
     if (glowRing.current) glowRing.current.material.opacity = 0.75 * pulse * pass
     if (glowCore.current) glowCore.current.material.opacity = 0.55 * pulse * pass
   })
 
   return (
     // GLB torus dari Blender ngadep +Y (atas) — diputar biar ngadep jalur kamera
-    // yang nukik turun dari belakang-atas
-    <group position={PORTAL_POS} rotation={[Math.PI / 2 - 0.5, 0, 0]}>
+    // yang nukik turun dari belakang-atas. Grup build di luar rotasi: naik-turunnya
+    // di sumbu Y dunia (muncul dari bawah), bukan sumbu miring portal
+    <group position={PORTAL_POS}>
+    <group ref={build}>
+    <group rotation={[Math.PI / 2 - 0.5, 0, 0]}>
       <group ref={group}>
         {ringGeo && (
           <mesh geometry={ringGeo}>
@@ -130,6 +147,8 @@ export function Portal() {
       <Tunnel glowTex={ringGlowTex} />
       {/* cahaya beneran biar batu/kabut sekitar ikut kesorot portal */}
       <pointLight color="#eaf6ff" intensity={38} distance={17} decay={2} />
+    </group>
+    </group>
     </group>
   )
 }
@@ -188,7 +207,7 @@ function Tunnel({ glowTex }) {
     // baru muncul pas kamera mulai nyelam ke mulut portal (bukan pas masih
     // di view luar — dari luar cukup glow ringnya, biar gak silau kebakar putih),
     // ilang pas udah mendarat di outro
-    const fade = clamp01((d - 0.88) / 0.05) * (1 - clamp01((d - 0.962) / 0.028))
+    const fade = clamp01((d - 0.905) / 0.05) * (1 - clamp01((d - 0.962) / 0.028))
     if (shellMat.current) shellMat.current.opacity = 0.8 * fade
     if (streakMat.current) streakMat.current.opacity = 0.5 * fade
     if (streaks.current) streaks.current.rotation.y += delta * 0.35
@@ -224,8 +243,9 @@ function Tunnel({ glowTex }) {
           toneMapped={false}
         />
       </mesh>
-      {/* gerbang-gerbang cahaya sepanjang lorong */}
-      {[-3, -6.2, -9.4].map((y, i) => (
+      {/* gerbang-gerbang cahaya sepanjang lorong (+1 buletan ekstra di depan,
+          deket exit — permintaan Nehemiah biar lorongnya makin berlapis) */}
+      {[-3, -6.2, -9.4, -12.4].map((y, i) => (
         <mesh key={y} ref={(el) => (ringRefs.current[i] = el)} position={[0, y, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[8.6 - i * 0.4, 8.6 - i * 0.4]} />
           <meshBasicMaterial

@@ -171,4 +171,6 @@ export const CONTACT = {
   github: 'https://github.com/ne-he',
   // TODO(Nehemiah): isi link LinkedIn asli
   linkedin: '',
+  // TODO(Nehemiah): isi link WhatsApp (format: https://wa.me/62xxxxxxxxxx)
+  whatsapp: '',
 }

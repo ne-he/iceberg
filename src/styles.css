@@ -124,8 +124,6 @@ body {
 /* carousel sosial ala igloo: [ ITEM AKTIF ] di tengah, tetangga redup di sisi */
 .soc-carousel { margin-top: 18px; display: flex; align-items: center; gap: 14px; letter-spacing: 0.18em; }
 .soc-carousel button { background: none; border: none; color: inherit; font-family: inherit; text-transform: uppercase; cursor: pointer; padding: 0; }
-.soc-arrow { font-size: 17px; line-height: 1; opacity: 0.5; padding: 2px 7px; transition: opacity 0.25s; }
-.soc-arrow:hover { opacity: 1; }
 .soc-side { font-size: 11px; letter-spacing: 0.18em; opacity: 0.32; min-width: 78px; transition: opacity 0.25s; }
 .soc-side:hover { opacity: 0.65; }
 .soc-current {
