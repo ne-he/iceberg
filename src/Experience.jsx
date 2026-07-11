@@ -62,6 +62,8 @@ export default function Experience({ onOpen, hasVideo }) {
       {/* outro: partikel wajah Nehemiah di atas panggung podium ala igloo */}
       <ParticleFace position={[0, -36.55, 1.5]} />
       <OutroStage />
+      {/* batu asal yang naik dari bawah podium saat transisi loop (100→120) */}
+      <HeroEcho />
 
       {/* debu es yang melayang di sepanjang jalur turun */}
       <Sparkles count={260} scale={[18, 48, 12]} position={[0, -17, 0]} size={2} speed={0.3} opacity={0.5} color="#ffffff" />
@@ -131,6 +133,65 @@ function HeroDrop({ children }) {
   return <group ref={ref}>{children}</group>
 }
 
+// batu ASAL yang muncul dari BAWAH podium pas loop (permintaan Nehemiah): pas
+// scroll turun dari panggung, di bawah tempat kita berdiri, batu pertama naik —
+// kamera nyelam ke situ, lalu (ketutup wash) muncul balik di hero atas. Pakai
+// geometri hero yang sama, material lebih murah (tanpa transmission pass ekstra)
+// skala dasar echo — ice_gen.glb dimensi ~1 unit, dinaikin biar sebesar batu hero
+const ECHO_S = 3.5
+function HeroEcho() {
+  // pakai ice_gen.glb (model es detail hasil generate Nehemiah) — di-clone &
+  // center biar poros-nya pas di tengah grup. Cuma dirender pas bridge (hemat)
+  const { nodes } = useGLTF('/models/ice_gen.glb')
+  const geo = useMemo(() => {
+    const src = Object.values(nodes).find((n) => n.isMesh)?.geometry
+    if (!src) return null
+    const g = src.clone()
+    g.center()
+    return g
+  }, [nodes])
+  const grp = useRef()
+  const mat = useRef()
+  useFrame((state) => {
+    if (!grp.current) return
+    const b = scrollState.bridge
+    const vis = b > 0.001 && b < 0.6
+    grp.current.visible = vis
+    if (!vis) return
+    // naik dari bawah frame (-46) ke level dasar podium (-40) selama dive — di z
+    // lebih deket kamera (5.5) biar gak keblok dais podium yg solid, jadi batu
+    // keliatan "muncul dari bawah tempat berdiri" pas kamera nyelam ke arahnya
+    const rise = smoothstep(0, 0.5, b)
+    grp.current.position.y = -44 + rise * 7
+    grp.current.rotation.y = state.clock.elapsedTime * 0.18
+    // membesar "menelan" layar mendekati tengah bridge → motivasi tirai wash
+    const grow = 1 + smoothstep(0.28, 0.52, b) * 1.7
+    grp.current.scale.setScalar(ECHO_S * grow)
+    // muncul cepat lalu ketutup wash di tengah bridge
+    const o = smoothstep(0.02, 0.16, b) * (1 - smoothstep(0.46, 0.6, b))
+    if (mat.current) mat.current.opacity = o
+  })
+  return (
+    <group ref={grp} position={[0, -44, 5.5]} scale={ECHO_S} visible={false}>
+      <mesh geometry={geo}>
+        {/* biru gletser PEKAT — sengaja gelap biar kontras nongol di depan
+            podium/kabut yg terang pas dive (bukan pucat yg nyaru) */}
+        <meshStandardMaterial
+          ref={mat}
+          color="#5f89ac"
+          roughness={0.4}
+          metalness={0}
+          emissive="#2b567a"
+          emissiveIntensity={0.35}
+          transparent
+          opacity={0}
+          depthWrite={false}
+        />
+      </mesh>
+    </group>
+  )
+}
+
 // pecahan es kecil yang melayang naik pelan sepanjang jalur turun, looping terus —
 // ngasih rasa "dunia hidup" tanpa perlu video background
 function DriftingIce() {
@@ -174,48 +235,56 @@ function DriftingIce() {
   ))
 }
 
-// podium bertingkat + ring cahaya, niru panggung outro-nya igloo.inc
+// podium es kristalin (dimodel di Blender: cakram faceted bertingkat + mahkota
+// shard es tajem di rim) — ganti tumpukan silinder polos yang dulu. Wajah
+// partikel Nehemiah melayang di atas dais ini.
 function OutroStage() {
+  const { nodes } = useGLTF('/models/podium.glb')
+  const geo = useMemo(() => Object.values(nodes).find((n) => n.isMesh)?.geometry, [nodes])
   return (
     <group position={[0, -40.35, 1.5]}>
-      <mesh position={[0, 0.15, 0]}>
-        <cylinderGeometry args={[5.2, 5.7, 0.3, 64]} />
-        <meshStandardMaterial color="#99a1a9" roughness={0.92} />
+      <mesh geometry={geo}>
+        {/* es padat biru-pucat, flat shading biar facet & shard kebaca tajam */}
+        <meshStandardMaterial
+          color="#aec2d0"
+          roughness={0.34}
+          metalness={0}
+          emissive="#5f89ac"
+          emissiveIntensity={0.22}
+          flatShading
+        />
       </mesh>
-      <mesh position={[0, 0.42, 0]}>
-        <cylinderGeometry args={[3.6, 3.8, 0.26, 64]} />
-        <meshStandardMaterial color="#a0a8b0" roughness={0.92} />
+      {/* shell tipis lebih terang = rim subsurface, kesan cahaya nembus es */}
+      <mesh geometry={geo} scale={1.012}>
+        <meshBasicMaterial color="#e0f0fb" transparent opacity={0.07} depthWrite={false} />
       </mesh>
-      <mesh position={[0, 0.66, 0]}>
-        <cylinderGeometry args={[2.3, 2.42, 0.22, 64]} />
-        <meshStandardMaterial color="#a7afb7" roughness={0.92} />
-      </mesh>
-      {/* ring cahaya tipis di lantai podium */}
-      <mesh position={[0, 0.34, 0]} rotation-x={-Math.PI / 2}>
-        <ringGeometry args={[4.1, 4.26, 96]} />
-        <meshBasicMaterial color="#ffffff" toneMapped={false} transparent opacity={0.3} side={THREE.DoubleSide} />
+      {/* ring cahaya tipis melingkar di lantai dais */}
+      <mesh position={[0, 0.4, 0]} rotation-x={-Math.PI / 2}>
+        <ringGeometry args={[2.9, 3.12, 96]} />
+        <meshBasicMaterial color="#eaf6ff" toneMapped={false} transparent opacity={0.34} side={THREE.DoubleSide} />
       </mesh>
     </group>
   )
 }
 
 function BackgroundField() {
-  const { nodes } = useGLTF('/models/iceberg.glb')
-  const geometry = useMemo(() => Object.values(nodes).find((n) => n.isMesh)?.geometry, [nodes])
-  // SATU material dishare 28 bongkahan, TANPA transmission (bikin scene
-  // dirender ulang tiap frame = lag). Warna es biru nyambung sama kristal utama,
-  // roughness tinggi + shading halus = kesan out-of-focus
+  // 3 varian bongkahan es BERSUDUT dari Blender (ice_rock.glb) — ganti bola biru
+  // yang dulu. Facet tajam + flat shading = kebaca sebagai batu es beneran, bukan blob
+  const { nodes } = useGLTF('/models/ice_rock.glb')
+  const geos = useMemo(() => Object.values(nodes).filter((n) => n.isMesh).map((n) => n.geometry), [nodes])
+  // SATU material dishare semua bongkahan, TANPA transmission (bikin scene
+  // dirender ulang tiap frame = lag). flatShading = facet keras khas es pecah
   const material = useMemo(
     () =>
-      new THREE.MeshPhysicalMaterial({
-        color: '#7ca6c4',
-        roughness: 0.5,
+      new THREE.MeshStandardMaterial({
+        color: '#8fb0cb',
+        roughness: 0.58,
         metalness: 0,
+        flatShading: true,
         transparent: true,
-        opacity: 0.8,
-        clearcoat: 0.5,
-        clearcoatRoughness: 0.6,
-        envMapIntensity: 0.55,
+        opacity: 0.9,
+        emissive: '#20455f',
+        emissiveIntensity: 0.14,
       }),
     []
   )
@@ -247,7 +316,9 @@ function BackgroundField() {
       }
     })
   }, [])
-  return chunks.map((c, i) => <BgChunk key={i} geometry={geometry} material={material} shellMaterial={shellMaterial} {...c} />)
+  return chunks.map((c, i) => (
+    <BgChunk key={i} geometry={geos[i % geos.length]} material={material} shellMaterial={shellMaterial} {...c} />
+  ))
 }
 
 function BgChunk({ geometry, material, shellMaterial, speed, ...props }) {
@@ -355,17 +426,29 @@ function CameraRig() {
     p.lerpVectors(a.pos, b.pos, u)
     t.lerpVectors(a.look, b.look, u)
 
-    // ---- jembatan loop: pindahin kamera dari panggung (bawah) balik ke hero
-    //      (atas), DISAMARKAN tirai kabut yg nutup di tengah bridge. Pas
-    //      bridge kelar (==awal descend) kamera pas di hero → loop nyambung ----
+    // ---- jembatan loop (100→120): animasi MENYELAM, bukan fade. Dari panggung,
+    //      kamera turun ke bawah podium natap batu asal yg naik dari bawah
+    //      (HeroEcho). Di tengah bridge tirai wash nutup sekejap buat nyamarin
+    //      lompatan balik ke hero atas; pas bridge kelar (==awal descend) kamera
+    //      udah di hero → loop nyambung mulus ----
     const br = scrollState.bridge
     if (br > 0) {
-      const hb = THREE.MathUtils.clamp((br - 0.4) / 0.2, 0, 1)
-      const s = hb * hb * (3 - 2 * hb)
+      const L = THREE.MathUtils.lerp
       const hero = anchors[0]
       const podium = anchors[anchors.length - 1]
-      p.lerpVectors(podium.pos, hero.pos, s)
-      t.lerpVectors(podium.look, hero.look, s)
+      if (br <= 0.55) {
+        // MENYELAM: view panggung → turun & natap batu asal yg naik di depan podium
+        let d = THREE.MathUtils.clamp(br / 0.55, 0, 1)
+        d = d * d * (3 - 2 * d)
+        p.set(L(podium.pos.x, 0, d), L(podium.pos.y, -38.8, d), L(podium.pos.z, 9.5, d))
+        t.set(L(podium.look.x, 0, d), L(podium.look.y, -42, d), L(podium.look.z, 5, d))
+      } else {
+        // MUNCUL (awalnya ketutup wash): emerge di hero, settle naik halus
+        let e = THREE.MathUtils.clamp((br - 0.55) / 0.45, 0, 1)
+        e = e * e * (3 - 2 * e)
+        p.set(hero.pos.x, L(hero.pos.y - 2.4, hero.pos.y, e), L(hero.pos.z + 1.6, hero.pos.z, e))
+        t.set(hero.look.x, hero.look.y, hero.look.z)
+      }
     }
 
     // parallax pointer dimatiin halus selama hero di-drag
@@ -375,3 +458,7 @@ function CameraRig() {
   })
   return null
 }
+
+useGLTF.preload('/models/podium.glb')
+useGLTF.preload('/models/ice_rock.glb')
+useGLTF.preload('/models/ice_gen.glb')

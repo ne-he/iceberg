@@ -144,7 +144,8 @@ export default function App() {
       // ---- tirai kabut jembatan: nutup TENGAH bridge buat nyamarin kamera
       //      pindah dari podium (bawah) balik ke hero (atas) ----
       const br = scrollState.bridge
-      const wash = clamp((br - 0.22) / 0.18, 0, 1) * (1 - clamp((br - 0.62) / 0.18, 0, 1))
+      // full-cover 0.45..0.62 — nyamarin lompatan kamera dive→hero di br 0.55
+      const wash = clamp((br - 0.3) / 0.15, 0, 1) * (1 - clamp((br - 0.62) / 0.18, 0, 1))
       if (washRef.current) {
         washRef.current.style.opacity = wash
         washRef.current.style.visibility = wash > 0.004 ? 'visible' : 'hidden'

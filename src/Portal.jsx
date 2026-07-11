@@ -111,6 +111,10 @@ export function Portal() {
             <meshStandardMaterial color="#8b97a3" roughness={0.45} emissive="#7c93a8" emissiveIntensity={0.25} />
           </mesh>
         )}
+        {/* mahkota shard es tajem ngelilingin mulut portal (senada podium) —
+            biar entry-nya berdesain, bukan cuma lubang glow flat. Ngarah keluar
+            radial di bidang ring (XZ), jadi lubang tengah tetap kosong buat transit */}
+        <PortalCrown />
         {/* LIGHT-LIGHTNYA: ring cahaya + inti terang, dua-duanya additive.
             Sumbu torus GLB = +Y lokal, jadi plane glow diputar biar sebidang
             sama ringnya (tanpa ini keliatan cuma sebagai garis dari samping) */}
@@ -151,6 +155,39 @@ export function Portal() {
     </group>
     </group>
   )
+}
+
+// mahkota shard es di mulut portal — cone tajam ngelilingin ring, ngarah keluar
+// radial. Ditaruh di bidang ring (XZ lokal) jadi lubang tengah tetap bersih
+function PortalCrown() {
+  const shards = useMemo(() => {
+    const rand = (i, n) => {
+      const x = Math.sin(i * 41.3 + n * 89.7) * 43758.5453
+      return x - Math.floor(x)
+    }
+    const N = 15
+    const R = 4.25 // tepat di luar radius ring
+    return Array.from({ length: N }, (_, i) => {
+      const a = (i / N) * Math.PI * 2
+      return {
+        a,
+        R: R + (rand(i, 1) - 0.5) * 0.25,
+        h: 0.75 + rand(i, 2) * 1.15, // tinggi shard variatif
+        r: 0.12 + rand(i, 3) * 0.12,
+        tilt: (rand(i, 4) - 0.5) * 0.3, // miring dikit biar organik
+      }
+    })
+  }, [])
+  return shards.map((s, i) => (
+    // grup diputer di sumbu Y (sumbu lubang portal) → shard tersebar melingkar
+    <group key={i} rotation={[0, s.a, 0]}>
+      {/* cone default ngarah +Y; diputar -90° di Z → ngarah +X (keluar radial) */}
+      <mesh position={[s.R, 0, 0]} rotation={[0, 0, -Math.PI / 2 + s.tilt]}>
+        <coneGeometry args={[s.r, s.h, 5]} />
+        <meshStandardMaterial color="#cfe0ef" roughness={0.3} metalness={0} emissive="#77a8d2" emissiveIntensity={0.45} flatShading />
+      </mesh>
+    </group>
+  ))
 }
 
 // tekstur dinding tunnel: streak vertikal terang-gelap + fade alpha di kedua

@@ -55,9 +55,9 @@ function GlacierWall({ side }) {
           roughness={0.42}
           metalness={0}
           transparent
-          opacity={0.72}
+          opacity={0.8}
           emissive="#1f4a6b"
-          emissiveIntensity={0.4}
+          emissiveIntensity={0.5}
           side={THREE.DoubleSide}
         />
       </mesh>
@@ -67,6 +67,75 @@ function GlacierWall({ side }) {
       </mesh>
     </group>
   )
+}
+
+// tekstur ARUS: garis-garis horizontal lembut memanjang (flow lines) — dipasang
+// di plane lebar yang di-drift ke samping = kesan medium yg mengalir, "di dalam sesuatu"
+function makeCurrentTexture() {
+  const c = document.createElement('canvas')
+  c.width = 512
+  c.height = 256
+  const g = c.getContext('2d')
+  g.fillStyle = '#000'
+  g.fillRect(0, 0, 512, 256)
+  const rand = (i, n) => {
+    const x = Math.sin(i * 71.9 + n * 219.3) * 43758.5453
+    return x - Math.floor(x)
+  }
+  g.globalCompositeOperation = 'lighter'
+  g.lineCap = 'round'
+  // garis arus melengkung, panjang, tipis-tipis — sebagian terang sebagian samar
+  for (let i = 0; i < 40; i++) {
+    const y = rand(i, 1) * 256
+    const amp = 6 + rand(i, 2) * 16
+    g.beginPath()
+    g.moveTo(0, y)
+    for (let x = 0; x <= 512; x += 24) g.lineTo(x, y + Math.sin(x * 0.02 + i) * amp)
+    g.strokeStyle = `rgba(210,232,252,${0.03 + rand(i, 3) * 0.07})`
+    g.lineWidth = 0.6 + rand(i, 4) * 1.8
+    g.stroke()
+  }
+  const t = new THREE.CanvasTexture(c)
+  t.wrapS = t.wrapT = THREE.RepeatWrapping
+  t.repeat.set(2, 1)
+  return t
+}
+
+// arus menyeret: plane-plane lebar sepanjang jalur turun, tekstur di-drift ke
+// samping pelan → suasana "hanyut di dalam gletser" (permintaan Nehemiah)
+function Currents() {
+  const tex = useMemo(makeCurrentTexture, [])
+  const mats = useRef([])
+  const planes = [
+    { pos: [0, -5, -8.5], rot: [0, 0, 0], s: [42, 15] },
+    { pos: [0, -19, -10.5], rot: [0, 0, 0.04], s: [48, 20] },
+    { pos: [0, -33, -9.5], rot: [0, 0, -0.03], s: [42, 16] },
+  ]
+  useFrame((state) => {
+    const t = state.clock.elapsedTime
+    mats.current.forEach((m, i) => {
+      if (!m) return
+      // drift horizontal beda-beda kecepatan tiap layer = paralaks arus
+      m.map.offset.x = (t * (0.008 + i * 0.004)) % 1
+      m.map.offset.y = Math.sin(t * 0.05 + i) * 0.02
+      m.opacity = 0.09 + Math.sin(t * 0.25 + i * 1.7) * 0.03
+    })
+  })
+  return planes.map((p, i) => (
+    <mesh key={i} position={p.pos} rotation={p.rot}>
+      <planeGeometry args={p.s} />
+      <meshBasicMaterial
+        ref={(el) => (mats.current[i] = el)}
+        map={tex}
+        transparent
+        opacity={0.1}
+        blending={THREE.AdditiveBlending}
+        depthWrite={false}
+        toneMapped={false}
+        side={THREE.DoubleSide}
+      />
+    </mesh>
+  ))
 }
 
 // caustic drifting di antara dinding — beberapa plane additive naik pelan,
@@ -111,6 +180,7 @@ export function Glacier() {
       <GlacierWall side={-1} />
       <GlacierWall side={1} />
       <Caustics />
+      <Currents />
     </>
   )
 }
