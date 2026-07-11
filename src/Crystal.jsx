@@ -7,12 +7,13 @@ import { dragState, scrollState } from './scrollState'
 
 const MODEL = '/models/iceberg.glb'
 
-export function Crystal({ data, onOpen, interactive = true }) {
+export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
   const { nodes } = useGLTF(data.model ?? MODEL)
   const group = useRef()
   const spinner = useRef()
   const shineMat = useRef()
   const dragging = useRef(null)
+  const dragMoved = useRef(false) // true kalau gesture terakhir beneran muter (bukan klik)
   const [hovered, setHovered] = useState(false)
   const [near, setNear] = useState(!interactive)
   const wp = useMemo(() => new THREE.Vector3(), [])
@@ -47,17 +48,25 @@ export function Crystal({ data, onOpen, interactive = true }) {
   if (interactive) {
     events.onClick = (e) => {
       e.stopPropagation()
+      // baru abis muter batunya? jangan buka panel — itu drag, bukan klik
+      if (dragMoved.current) {
+        dragMoved.current = false
+        return
+      }
       onOpen?.(data.id)
     }
   }
   useEffect(() => {
     if (!draggable) return
-    // ala igloo: selama masih di hero, drag DI MANA AJA muterin batunya —
-    // gak tergantung raycast kena mesh (yang sering ketutup overlay/kabut)
+    // ala igloo: pas batu ini yang lagi di-frame kamera (scroll deket snap-nya),
+    // drag DI MANA AJA muterin batunya — gak tergantung raycast kena mesh (sering
+    // ketutup overlay/kabut). Gate ke jendela snap-nya biar cuma 1 batu yang aktif,
+    // gak semua batu muter barengan pas di-drag
     const down = (e) => {
-      if (scrollState.damped > 0.06) return
+      if (Math.abs(scrollState.damped - snapT) > 0.09) return
       if (e.target.closest?.('a, button, .panel')) return
       dragging.current = { x: e.clientX, y: e.clientY }
+      dragMoved.current = false
       dragState.active = true
       document.body.style.cursor = 'grabbing'
     }
@@ -65,6 +74,8 @@ export function Crystal({ data, onOpen, interactive = true }) {
       if (!dragging.current || !spinner.current) return
       const dx = e.clientX - dragging.current.x
       const dy = e.clientY - dragging.current.y
+      // gerakan berarti = tandain drag (biar klik setelahnya gak buka panel)
+      if (Math.abs(dx) + Math.abs(dy) > 3) dragMoved.current = true
       spinner.current.rotation.y += dx * 0.01
       spinner.current.rotation.x = THREE.MathUtils.clamp(spinner.current.rotation.x + dy * 0.006, -0.6, 0.6)
       dragging.current = { x: e.clientX, y: e.clientY }
@@ -83,7 +94,7 @@ export function Crystal({ data, onOpen, interactive = true }) {
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)
     }
-  }, [draggable])
+  }, [draggable, snapT])
 
   return (
     <Float speed={1.1} rotationIntensity={draggable ? 0 : 0.1} floatIntensity={0.4}>

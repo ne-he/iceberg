@@ -22,6 +22,7 @@ export const CRYSTALS = [
     yaw: 1.4,
     artifact: 'tetrahedron',
     labelOffset: [-2.1, 1.0, 0],
+    draggable: true,
   },
   {
     id: 'journey',
@@ -33,6 +34,7 @@ export const CRYSTALS = [
     yaw: 2.1,
     artifact: 'octahedron',
     labelOffset: [1.6, 0.9, 0],
+    draggable: true,
   },
   {
     id: 'projects',
@@ -44,6 +46,7 @@ export const CRYSTALS = [
     yaw: 4.2,
     artifact: 'torusknot',
     labelOffset: [-2.4, 1.3, 0],
+    draggable: true,
   },
   {
     id: 'skills',
@@ -55,6 +58,7 @@ export const CRYSTALS = [
     yaw: 0.9,
     artifact: 'icosahedron',
     labelOffset: [1.5, 0.8, 0],
+    draggable: true,
   },
 ]
 

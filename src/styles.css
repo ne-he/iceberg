@@ -22,9 +22,9 @@ body {
   position: fixed; left: 0; right: 0; top: 0; height: 200vh; z-index: 0;
   background: linear-gradient(
     to top,
-    #b9c0c7 0%, #b9c0c7 55%,
-    rgba(185, 192, 199, 0.85) 68%,
-    rgba(185, 192, 199, 0.4) 82%,
+    rgba(185, 192, 199, 0.62) 0%, rgba(185, 192, 199, 0.62) 55%,
+    rgba(185, 192, 199, 0.5) 68%,
+    rgba(185, 192, 199, 0.26) 82%,
     rgba(185, 192, 199, 0) 100%
   );
   transform: translateY(100vh);

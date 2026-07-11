@@ -39,12 +39,11 @@ export default function App() {
         veil.style.transform = `translateY(${100 - 200 * k}vh)`
       }
       if (el) {
-        // backup fade: video ilang total dikit setelah tirai kabutnya nutup penuh
-        const o = clamp(1 - (scrollState.damped - 0.12) / 0.08, 0, 1)
-        el.style.opacity = o
-        // video di-pause pas udah gak keliatan — hemat GPU di kedalaman
-        if (o === 0 && !el.paused) el.pause()
-        else if (o > 0 && el.paused) el.play().catch(() => {})
+        // kabut GAK nutup total: video fade PELAN ke sisa tipis (0.3), jadi langit
+        // background tetep keintip samar pas nyelam ke bawah (permintaan Nehemiah)
+        const fade = clamp(1 - (scrollState.damped - 0.12) / 0.24, 0, 1)
+        el.style.opacity = 0.3 + 0.7 * fade
+        if (el.paused) el.play().catch(() => {})
       }
       raf = requestAnimationFrame(tick)
     }

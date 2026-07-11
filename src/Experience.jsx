@@ -30,9 +30,11 @@ export default function Experience({ onOpen, hasVideo }) {
 
       <CameraRig />
 
-      <Crystal data={HERO_CRYSTAL} interactive={false} />
-      {CRYSTALS.map((c) => (
-        <Crystal key={c.id} data={c} onOpen={onOpen} />
+      <Crystal data={HERO_CRYSTAL} interactive={false} snapT={0} />
+      {CRYSTALS.map((c, i) => (
+        // snapT = titik scroll pas kamera nge-frame batu ini (sinkron sama
+        // anchor di CameraRig) — jadi tiap batu bisa diputer pas dia yang keliatan
+        <Crystal key={c.id} data={c} onOpen={onOpen} snapT={(i + 1) / (CRYSTALS.length + 1)} />
       ))}
 
       {/* dunia latar: bongkahan-bongkahan jauh yang jadi siluet di kabut (trik igloo) */}
@@ -68,8 +70,10 @@ function FogRig() {
   useFrame(() => {
     const k = THREE.MathUtils.clamp(scrollState.damped, 0, 1)
     if (scene.fog) {
-      scene.fog.near = 16 - k * 10 // 16 → 6
-      scene.fog.far = 50 - k * 27 // 50 → 23
+      // dilonggarin: dulu far turun ke 23 (kabut pekat nutup semua). sekarang
+      // far mentok di 34 → bongkahan latar & background tetep keintip tipis
+      scene.fog.near = 16 - k * 8 // 16 → 8
+      scene.fog.far = 50 - k * 16 // 50 → 34
     }
   })
   return null

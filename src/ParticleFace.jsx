@@ -4,8 +4,8 @@ import { useFrame } from '@react-three/fiber'
 import { faceState, scrollState } from './scrollState'
 
 // jumlah partikel: bener-bener padat biar fotonya kebentuk jelas ala igloo —
-// 60k + slab tipis = antar partikel makin rapat, muka & logo makin tebel solid
-const COUNT = 60000
+// 90k + slab tipis = antar partikel makin rapat, celah ketutup, muka solid
+const COUNT = 90000
 // radius & displacement maksimal efek buyar pas pointer nyentuh partikel —
 // push-nya SATURASI (bukan akumulasi) biar pointer diem gak ngebolongin badan
 const REPEL_R = 1.05
@@ -189,14 +189,18 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
     img.src = '/face.png'
     img.onload = () => {
       if (!alive) return
-      const fw = 200
+      // sampling lebih tinggi = titik sumber lebih banyak, partikel gak numpuk
+      // di koordinat sama → point cloud makin rapet
+      const fw = 250
       const fh = Math.max(1, Math.round((fw * img.height) / img.width))
       const fc = document.createElement('canvas')
       fc.width = fw
       fc.height = fh
       const fx = fc.getContext('2d', { willReadFrequently: true })
       fx.drawImage(img, 0, 0, fw, fh)
-      t.face = pickPoints(samplePixels(fx, fw, fh), 5.1)
+      // jitter & slab dipangkas buat foto: partikel duduk lebih ketat di silhouette,
+      // celah antar titik ketutup, muka kebaca lebih tajem
+      t.face = pickPoints(samplePixels(fx, fw, fh), 5.1, { jitter: 0.013, depth: 0.12 })
       setTargets({ ...t })
     }
     img.onerror = () => alive && setTargets({ ...t, face: t.github })
@@ -307,7 +311,7 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
           ref={mat}
           map={sprite}
           vertexColors
-          size={0.062}
+          size={0.07}
           sizeAttenuation
           transparent
           opacity={0}
