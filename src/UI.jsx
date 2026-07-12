@@ -64,7 +64,7 @@ function SocialCarousel() {
 }
 const smooth = (x) => x * x * (3 - 2 * x)
 
-export function UI({ panel, onClose }) {
+export function UI({ panel, onClose, hasGlacier }) {
   const hero = useRef()
   const outro = useRef()
   const words = useRef([])
@@ -184,16 +184,26 @@ export function UI({ panel, onClose }) {
         </div>
       </div>
 
-      <aside className={`panel ${panel ? 'is-open' : ''}`}>
+      {/* panel batu = layar penuh "DI DALAM batu": background loop es-glacier
+          (video generate Nehemiah kalau ada, else gradient es) + teks memenuhi
+          layar. Muncul pas kamera udah nembus masuk batunya (permintaan Nehemiah) */}
+      <div className={`rock-modal ${panel ? 'is-open' : ''}`} aria-hidden={!panel}>
+        {hasGlacier ? (
+          <video className="rock-bg" src="/content/glacier.mp4" autoPlay muted loop playsInline />
+        ) : (
+          <div className="rock-bg rock-bg--fallback" />
+        )}
+        <div className="rock-scrim" />
+        <div className="rock-logo">THE ICEBERG</div>
+        <button className="rock-close" onClick={onClose}>
+          <span className="rock-close-br">⌐</span> CLOSE <span className="rock-close-br">¬</span>
+        </button>
         {data && (
-          <>
-            <button className="panel-close" onClick={onClose}>
-              CLOSE ✕
-            </button>
-            <div className="panel-code">{data.code}</div>
+          <div className="rock-content" key={lastRef.current}>
+            <div className="rock-code">////// {data.code}</div>
             <h2>{data.title}</h2>
             {data.rows.map((r) => (
-              <div className="panel-row" key={r.h}>
+              <div className="rock-row" key={r.h}>
                 <h3>
                   {r.h}
                   {r.tag ? <span>{r.tag}</span> : null}
@@ -201,10 +211,10 @@ export function UI({ panel, onClose }) {
                 <p>{r.p}</p>
               </div>
             ))}
-            <div className="panel-foot">{data.foot}</div>
-          </>
+            <div className="rock-foot">/// {data.foot}</div>
+          </div>
         )}
-      </aside>
+      </div>
     </>
   )
 }

@@ -2,7 +2,7 @@ import { Suspense, useEffect, useRef, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import Experience from './Experience'
 import { UI, Loader } from './UI'
-import { dragState, introState, scrollState } from './scrollState'
+import { beginFocus, dragState, endFocus, focusState, introState, scrollState } from './scrollState'
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
 
@@ -94,7 +94,22 @@ const periodPx = () => window.innerHeight * 5.8
 export default function App() {
   const [panel, setPanel] = useState(null)
   const [hasVideo, setHasVideo] = useState(false)
+  const [hasGlacier, setHasGlacier] = useState(false)
+  const diveTimer = useRef(null)
   const videoRef = useRef()
+
+  // klik batu: mulai animasi menyelam, panel konten muncul pas kamera udah nembus
+  const openRock = (id, pos) => {
+    if (focusState.phase !== 'idle') return // lagi nyelam/kebuka — abaikan klik dobel
+    beginFocus(id, pos ?? [0, 0, 0])
+    clearTimeout(diveTimer.current)
+    diveTimer.current = setTimeout(() => setPanel(id), 1150) // sinkron sama durasi nembus
+  }
+  const closeRock = () => {
+    clearTimeout(diveTimer.current)
+    setPanel(null)
+    endFocus()
+  }
   const veilRef = useRef()
   const washRef = useRef()
   const depthTintRef = useRef()
@@ -255,14 +270,33 @@ export default function App() {
     }
   }, [])
 
+  // kunci scroll halaman selama panel batu kebuka — biar pas ditutup kamera balik
+  // ke batu yg sama (bukan loncat ke posisi scroll yg berubah di belakang panel)
+  useEffect(() => {
+    if (!panel) return
+    const prev = document.documentElement.style.overflow
+    document.documentElement.style.overflow = 'hidden'
+    return () => {
+      document.documentElement.style.overflow = prev
+    }
+  }, [panel])
+
   useEffect(() => {
     // handle debug buat verifikasi otomatis (Playwright) — gak dipakai runtime
-    window.__ice = { introState, scrollState }
+    window.__ice = { introState, scrollState, focusState, open: openRock, close: closeRock }
     // cek beneran video — dev server Vite ngebales 200 text/html buat file yang gak ada
     fetch('/scene/scene.mp4', { method: 'HEAD' })
       .then((r) => {
         const type = r.headers.get('content-type') || ''
         if (r.ok && type.includes('video')) setHasVideo(true)
+      })
+      .catch(() => {})
+    // video loop "dalam glacier" buat background panel batu — kalau Nehemiah udah
+    // taruh filenya, dipakai; kalau belum, panel fallback ke gradient es procedural
+    fetch('/content/glacier.mp4', { method: 'HEAD' })
+      .then((r) => {
+        const type = r.headers.get('content-type') || ''
+        if (r.ok && type.includes('video')) setHasGlacier(true)
       })
       .catch(() => {})
   }, [])
@@ -285,12 +319,12 @@ export default function App() {
           style={{ touchAction: 'pan-y' }}
         >
           <Suspense fallback={null}>
-            <Experience onOpen={setPanel} hasVideo={hasVideo} />
+            <Experience onOpen={openRock} hasVideo={hasVideo} />
           </Suspense>
         </Canvas>
       </div>
       <div ref={scrollSpaceRef} className="scroll-space" aria-hidden="true" />
-      <UI panel={panel} onClose={() => setPanel(null)} />
+      <UI panel={panel} onClose={closeRock} hasGlacier={hasGlacier} />
       <Loader />
     </>
   )

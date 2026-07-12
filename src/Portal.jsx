@@ -44,9 +44,10 @@ export function Portal() {
       makeGlowTexture((g) => {
         const grad = g.createRadialGradient(128, 128, 0, 128, 128, 128)
         grad.addColorStop(0, 'rgba(255,255,255,0)')
-        grad.addColorStop(0.52, 'rgba(230,244,255,0)')
-        grad.addColorStop(0.68, 'rgba(235,247,255,0.9)')
-        grad.addColorStop(0.8, 'rgba(220,240,255,0.35)')
+        grad.addColorStop(0.46, 'rgba(230,244,255,0)')
+        grad.addColorStop(0.62, 'rgba(244,251,255,1)')
+        grad.addColorStop(0.72, 'rgba(232,246,255,0.85)')
+        grad.addColorStop(0.86, 'rgba(214,238,255,0.28)')
         grad.addColorStop(1, 'rgba(255,255,255,0)')
         g.fillStyle = grad
         g.fillRect(0, 0, 256, 256)
@@ -95,10 +96,13 @@ export function Portal() {
     // baru full-blast pas nembus — layar kesorot putih-cyan sekejap, terus padam.
     const win = up * (1 - clamp01((d - 0.965) / 0.035))
     const cross = Math.exp(-Math.pow((d - 0.935) / 0.02, 2))
-    if (glowRing.current) glowRing.current.material.opacity = win * (0.5 * pulse + 0.55 * cross)
-    if (glowCore.current) glowCore.current.material.opacity = win * (0.15 * pulse + 0.7 * cross)
-    // cahaya beneran ikut meledak pas nembus → kristal & wajah di bawah kesorot
-    if (light.current) light.current.intensity = win * (10 + 30 * cross)
+    // RING RIM nyala TERANG sepanjang top-down (kayak referensi igloo ss#2), plus
+    // flare ekstra pas nembus. Core (lubang tengah) setengah kebuka: tetep glow
+    // tapi kristal jauh di bawah masih keintip, full-blaze cuma pas crossing.
+    if (glowRing.current) glowRing.current.material.opacity = win * (0.92 * pulse + 0.5 * cross)
+    if (glowCore.current) glowCore.current.material.opacity = win * (0.28 * pulse + 0.7 * cross)
+    // cahaya beneran: nyorot lumayan pas top-down, meledak pas nembus
+    if (light.current) light.current.intensity = win * (16 + 26 * cross)
   })
 
   return (
@@ -112,8 +116,9 @@ export function Portal() {
         {ringGeo && (
           <mesh geometry={ringGeo}>
             {/* ring GLOW dari es sendiri (bukan cuma additive plane): emissive
-                kuat biar ring-nya kebaca sebagai gerbang nyala, bukan putih mati */}
-            <meshStandardMaterial color="#e6f2fb" roughness={0.28} emissive="#a9dcff" emissiveIntensity={1} />
+                kuat + toneMapped off biar ring-nya kebaca sebagai gerbang nyala
+                terang kayak referensi igloo, bukan putih mati */}
+            <meshStandardMaterial color="#eef7ff" roughness={0.22} emissive="#bfe6ff" emissiveIntensity={1.5} toneMapped={false} />
           </mesh>
         )}
         {segGeo && (

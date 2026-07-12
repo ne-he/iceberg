@@ -15,6 +15,26 @@ export const faceState = { target: 'face' }
 // true selama hero lagi di-drag — CameraRig matiin parallax pointer biar puterannya solid
 export const dragState = { active: false }
 
+// ===== fokus/menyelam ke dalam batu pas diklik (permintaan Nehemiah) =====
+// pas batu (about/journey/projects/skills) diklik: kamera pelan geser batunya ke
+// tengah, lalu NEMBUS masuk ke dalamnya, baru panel konten full-screen (background
+// dalam-glacier + teks) muncul. phase: 'idle' | 'in' (nyelam masuk) | 'open'
+// (nembus, panel kebuka) | 'out' (mundur balik). pos = posisi batu dunia.
+export const focusState = { id: null, pos: [0, 0, 0], phase: 'idle', t0: 0 }
+
+// dipanggil pas batu diklik — mulai animasi menyelam
+export function beginFocus(id, pos) {
+  focusState.id = id
+  focusState.pos = pos
+  focusState.phase = 'in'
+  focusState.t0 = performance.now()
+}
+export function endFocus() {
+  if (focusState.phase === 'idle') return
+  focusState.phase = 'out'
+  focusState.t0 = performance.now()
+}
+
 // ===== intro emerge + infinite loop scroll (permintaan Nehemiah) =====
 // phase: 'wait' (loader masih nutup) → 'fall' (intro EMERGE: biru+salju nyingkap,
 // batu hero mendarat + nama muncul — digerakin waktu di App, bukan layar putih) →

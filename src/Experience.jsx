@@ -8,12 +8,14 @@ import { ParticleFace } from './ParticleFace'
 import { Portal } from './Portal'
 import { Glacier } from './Glacier'
 import { CRYSTALS, HERO_CRYSTAL } from './content'
-import { dragState, introState, scrollState } from './scrollState'
+import { dragState, focusState, introState, scrollState } from './scrollState'
 
 export const FOG_COLOR = '#b9c0c7'
 // warna kabut di kedalaman: biru gletser — makin dalam makin kerasa di dalam es
 const FOG_TOP = new THREE.Color('#b9c0c7')
-const FOG_DEEP = new THREE.Color('#5c83a4')
+// kabut dalam dibikin sedikit lebih terang/biru-es (dulu #5c83a4 agak murky) biar
+// dasar (kamar partikel) kerasa bercahaya, bukan gelap — vibe beda (permintaan Nehemiah)
+const FOG_DEEP = new THREE.Color('#6b93b5')
 const _fogCol = new THREE.Color()
 
 export default function Experience({ onOpen, hasVideo }) {
@@ -62,6 +64,9 @@ export default function Experience({ onOpen, hasVideo }) {
       {/* outro: partikel wajah Nehemiah di atas panggung podium ala igloo.
           Landing zone diturunin (jauh di bawah portal -32.8) biar kesan
           "kristal masih jauh di bawah" pas top-down (permintaan Nehemiah) */}
+      {/* aura terang di belakang wajah = vibe BEDA pas bagian partikel: bukan
+          kabut gelap, tapi kamar es bercahaya (permintaan Nehemiah, ala ss#4) */}
+      <FaceAura />
       <ParticleFace position={[0, -40.55, 1.5]} />
       <OutroStage />
       {/* batu asal yang naik dari bawah podium saat transisi loop (100→120) */}
@@ -248,25 +253,91 @@ function OutroStage() {
   return (
     <group position={[0, -44.35, 1.5]}>
       <mesh geometry={geo}>
-        {/* es padat biru-pucat, flat shading biar tiap facet kristal kebaca */}
+        {/* es padat biru-pucat, flat shading biar tiap facet kristal kebaca.
+            Dinaikin shine-nya (permintaan Nehemiah: "stand tajem dibikin lebih
+            shining"): roughness turun, emissive naik biar tiap facet berkilau */}
         <meshStandardMaterial
-          color="#aec2d0"
-          roughness={0.34}
-          metalness={0}
-          emissive="#5f89ac"
-          emissiveIntensity={0.22}
+          color="#c6d8e4"
+          roughness={0.16}
+          metalness={0.12}
+          emissive="#7ba7cc"
+          emissiveIntensity={0.4}
           flatShading
         />
       </mesh>
       {/* shell tipis lebih terang = rim subsurface, kesan cahaya nembus es */}
-      <mesh geometry={geo} scale={1.012}>
-        <meshBasicMaterial color="#e0f0fb" transparent opacity={0.07} depthWrite={false} />
+      <mesh geometry={geo} scale={1.014}>
+        <meshBasicMaterial color="#f0f9ff" transparent opacity={0.12} depthWrite={false} toneMapped={false} />
       </mesh>
-      {/* ring cahaya tipis melingkar di lantai dais */}
+      {/* dua ring cahaya melingkar di lantai dais — lebih terang & double biar
+          panggungnya kerasa "shining" ala referensi */}
       <mesh position={[0, 0.4, 0]} rotation-x={-Math.PI / 2}>
-        <ringGeometry args={[2.9, 3.12, 96]} />
-        <meshBasicMaterial color="#eaf6ff" toneMapped={false} transparent opacity={0.34} side={THREE.DoubleSide} />
+        <ringGeometry args={[2.9, 3.14, 96]} />
+        <meshBasicMaterial color="#eaf6ff" toneMapped={false} transparent opacity={0.5} side={THREE.DoubleSide} />
       </mesh>
+      <mesh position={[0, 0.34, 0]} rotation-x={-Math.PI / 2}>
+        <ringGeometry args={[3.5, 3.62, 96]} />
+        <meshBasicMaterial color="#cfe8fb" toneMapped={false} transparent opacity={0.22} side={THREE.DoubleSide} />
+      </mesh>
+    </group>
+  )
+}
+
+// aura bercahaya di belakang wajah partikel — bikin bagian outro kerasa "kamar
+// es bercahaya" yang beda vibes dari kabut gelap perjalanan turun (permintaan
+// Nehemiah, referensi igloo ss#4: partikel nyala di tengah lingkaran cahaya).
+// Fade in cuma pas udah mendarat (damped ~1) & padam pas mulai bridge/loop.
+function FaceAura() {
+  const glow = useRef()
+  const ring1 = useRef()
+  const ring2 = useRef()
+  const light = useRef()
+  const tex = useMemo(() => {
+    const c = document.createElement('canvas')
+    c.width = c.height = 256
+    const g = c.getContext('2d')
+    const grad = g.createRadialGradient(128, 128, 0, 128, 128, 128)
+    grad.addColorStop(0, 'rgba(236,247,255,0.95)')
+    grad.addColorStop(0.3, 'rgba(196,226,250,0.5)')
+    grad.addColorStop(0.6, 'rgba(150,190,228,0.18)')
+    grad.addColorStop(1, 'rgba(150,190,228,0)')
+    g.fillStyle = grad
+    g.fillRect(0, 0, 256, 256)
+    return new THREE.CanvasTexture(c)
+  }, [])
+  useFrame((state) => {
+    const a = smoothstep(0.92, 0.99, scrollState.damped) * (1 - smoothstep(0, 0.12, scrollState.bridge))
+    const t = state.clock.elapsedTime
+    if (glow.current) glow.current.material.opacity = 0.85 * a
+    // dua cincin tipis pelan berputar = kesan spiral cahaya di ss#4
+    if (ring1.current) {
+      ring1.current.material.opacity = 0.3 * a
+      ring1.current.rotation.z = t * 0.05
+    }
+    if (ring2.current) {
+      ring2.current.material.opacity = 0.18 * a
+      ring2.current.rotation.z = -t * 0.035
+    }
+    if (light.current) light.current.intensity = 3.4 * a
+  })
+  return (
+    <group position={[0, -40.4, -3.5]}>
+      {/* halo utama — plane additive gede di belakang wajah */}
+      <mesh ref={glow}>
+        <planeGeometry args={[26, 26]} />
+        <meshBasicMaterial map={tex} transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} fog={false} toneMapped={false} />
+      </mesh>
+      {/* cincin cahaya konsentris tipis */}
+      <mesh ref={ring1} position={[0, 0, 0.6]}>
+        <ringGeometry args={[5.4, 5.5, 120]} />
+        <meshBasicMaterial color="#dcefff" transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} fog={false} toneMapped={false} side={THREE.DoubleSide} />
+      </mesh>
+      <mesh ref={ring2} position={[0, 0, 0.6]}>
+        <ringGeometry args={[7.6, 7.72, 120]} />
+        <meshBasicMaterial color="#c6e2fb" transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} fog={false} toneMapped={false} side={THREE.DoubleSide} />
+      </mesh>
+      {/* backlight lembut biar kristal stand & wajah ikut berkilau dari belakang */}
+      <pointLight ref={light} color="#dcefff" intensity={0} distance={20} decay={2} position={[0, 0.5, 2]} />
     </group>
   )
 }
@@ -404,6 +475,8 @@ const HOLD = 0.03
 function CameraRig() {
   const camera = useThree((s) => s.camera)
   const parallax = useMemo(() => ({ v: 1 }), [])
+  // vektor kerja buat animasi menyelam ke batu (biar gak bikin garbage tiap frame)
+  const fv = useMemo(() => ({ center: new THREE.Vector3(), dive: new THREE.Vector3(), look: new THREE.Vector3(), base: new THREE.Vector3(), baseLook: new THREE.Vector3() }), [])
   const [p, t, anchors] = useMemo(() => {
     const v = (x, y, z) => new THREE.Vector3(x, y, z)
     // posisi kamera per anchor = tepat di depan kristalnya (offset +z)
@@ -476,8 +549,44 @@ function CameraRig() {
       }
     }
 
-    // parallax pointer dimatiin halus selama hero di-drag
-    easing.damp(parallax, 'v', dragState.active ? 0 : 1, 0.2, delta)
+    // ---- MENYELAM ke dalam batu pas diklik (permintaan Nehemiah): pertama batu
+    //      pelan digeser ke tengah + kamera dolly deket, lalu NEMBUS masuk ke
+    //      dalamnya (layar keisi es), baru panel konten muncul. 'out' = mundur ----
+    const F = focusState
+    if (F.phase !== 'idle') {
+      const now = performance.now()
+      const cx = F.pos[0], cy = F.pos[1], cz = F.pos[2]
+      fv.center.set(cx, cy + 0.3, cz + 4.6) // batu di tengah, jarak nyaman
+      fv.dive.set(cx, cy + 0.05, cz + 0.5) // nembus masuk (mepet permukaan)
+      fv.look.set(cx, cy, cz)
+      const sm = (x) => x * x * (3 - 2 * x)
+      if (F.phase === 'in') {
+        const q = THREE.MathUtils.clamp((now - F.t0) / 1250, 0, 1)
+        if (q < 0.5) {
+          const e = sm(q / 0.5)
+          p.lerp(fv.center, e) // dari kamera scroll → batu ke tengah
+          t.lerp(fv.look, e)
+        } else {
+          const e = sm((q - 0.5) / 0.5)
+          p.copy(fv.center).lerp(fv.dive, e) // nembus masuk
+          t.copy(fv.look)
+        }
+        if (q >= 1) F.phase = 'open'
+      } else if (F.phase === 'open') {
+        p.copy(fv.dive)
+        t.copy(fv.look)
+      } else if (F.phase === 'out') {
+        const e = sm(THREE.MathUtils.clamp((now - F.t0) / 800, 0, 1))
+        fv.base.copy(p) // p = kamera scroll saat ini (tujuan balik)
+        fv.baseLook.copy(t)
+        p.copy(fv.dive).lerp(fv.base, e)
+        t.copy(fv.look).lerp(fv.baseLook, e)
+        if (e >= 1) F.phase = 'idle'
+      }
+    }
+
+    // parallax pointer dimatiin halus selama hero di-drag / lagi nyelam ke batu
+    easing.damp(parallax, 'v', dragState.active || F.phase !== 'idle' ? 0 : 1, 0.2, delta)
     camera.position.set(p.x + state.pointer.x * 0.5 * parallax.v, p.y + state.pointer.y * 0.3 * parallax.v, p.z)
     camera.lookAt(t)
   })

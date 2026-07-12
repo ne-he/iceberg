@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Float, Html, MeshTransmissionMaterial, useCursor, useGLTF } from '@react-three/drei'
 import { easing } from 'maath'
-import { dragState, scrollState } from './scrollState'
+import { dragState, focusState, scrollState } from './scrollState'
 
 const MODEL = '/models/iceberg.glb'
 
@@ -53,7 +53,7 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
         dragMoved.current = false
         return
       }
-      onOpen?.(data.id)
+      onOpen?.(data.id, data.position)
     }
   }
   useEffect(() => {
@@ -63,8 +63,9 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
     // ketutup overlay/kabut). Gate ke jendela snap-nya biar cuma 1 batu yang aktif,
     // gak semua batu muter barengan pas di-drag
     const down = (e) => {
+      if (focusState.phase !== 'idle') return // lagi nyelam ke batu — jangan drag
       if (Math.abs(scrollState.damped - snapT) > 0.09) return
-      if (e.target.closest?.('a, button, .panel')) return
+      if (e.target.closest?.('a, button, .panel, .rock-modal')) return
       dragging.current = { x: e.clientX, y: e.clientY }
       dragMoved.current = false
       dragState.active = true
@@ -133,7 +134,7 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
             <div
               className={`anno ${near ? 'is-visible' : ''} ${hovered ? 'is-hot' : ''}`}
               style={{ pointerEvents: near ? 'auto' : 'none' }}
-              onClick={() => onOpen?.(data.id)}
+              onClick={() => onOpen?.(data.id, data.position)}
               onPointerOver={() => setHovered(true)}
               onPointerOut={() => setHovered(false)}
             >
