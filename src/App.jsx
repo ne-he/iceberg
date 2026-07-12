@@ -6,14 +6,7 @@ import { dragState, introState, scrollState } from './scrollState'
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
 
-// easing jatuhnya batu: ngebut di awal (gravitasi), mendarat dengan dip kecil
-// ke bawah lalu ngangkat balik — kayak bongkahan es nyemplung terus ngambang
-const easeDrop = (x) => {
-  const c = 0.9
-  return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2)
-}
-
-const FALL_MS = 1900 // durasi batu jatuh (intro pertama)
+const FALL_MS = 2100 // durasi animasi emerge intro pertama
 const smooth = (x) => x * x * (3 - 2 * x)
 
 // salju yg jatuh nutupin biru transisi loop — canvas ringan, cuma gambar pas
@@ -144,18 +137,27 @@ export default function App() {
       if (S.phase === 'wait') {
         // loader masih nutup — diem
       } else if (S.phase === 'fall') {
-        // intro pertama: batu jatuh (waktu), scroll dikunci di puncak
+        // intro PERTAMA (permintaan Nehemiah): BUKAN layar putih — reuse animasi
+        // emerge biru+salju yang sama kayak ujung loop (112→120). Bridge digerakin
+        // WAKTU dari 0.6→1.0: biru+salju nyingkap, batu hero mendarat, nama muncul
         const k = clamp((now - S.t0) / FALL_MS, 0, 1)
-        S.eased = easeDrop(k)
-        S.reveal = clamp((k - 0.55) / 0.45, 0, 1)
+        const br = 0.6 + 0.4 * smooth(k) // bridge 0.6 → 1.0 (fase emerge)
+        const ld = DESCEND + br * (1 - DESCEND)
+        loopDamped = ld
+        S.reveal = 1 // dunia udah ada di balik biru — biru yg nyingkap, bukan fog putih
+        scrollState.progress = 1
+        scrollState.damped = 1
+        scrollState.bridge = br
+        scrollState.loopDamped = ld
+        scrollState.depthK = 1 - br // retrace ke 0 (hero) pas emerge kelar
         if (window.scrollY !== 0) window.scrollTo(0, 0)
-        scrollState.progress = scrollState.damped = scrollState.bridge = 0
-        scrollState.depthK = scrollState.loopDamped = 0
-        loopDamped = 0
         if (k >= 1) {
+          // mendarat di hero → mulai loop normal dari posisi 0
           S.phase = 'idle'
-          S.eased = 1
           S.reveal = 1
+          scrollState.progress = scrollState.damped = scrollState.bridge = 0
+          scrollState.depthK = scrollState.loopDamped = 0
+          loopDamped = 0
           sizeSpace()
           window.scrollTo(0, P) // masuk salinan tengah, posisi loop = 0 (hero)
           lastUser = now

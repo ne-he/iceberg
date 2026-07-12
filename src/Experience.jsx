@@ -5,7 +5,7 @@ import { Environment, Sparkles, useGLTF } from '@react-three/drei'
 import { easing } from 'maath'
 import { Crystal } from './Crystal'
 import { ParticleFace } from './ParticleFace'
-import { Portal, PORTAL_POS } from './Portal'
+import { Portal } from './Portal'
 import { Glacier } from './Glacier'
 import { CRYSTALS, HERO_CRYSTAL } from './content'
 import { dragState, introState, scrollState } from './scrollState'
@@ -103,10 +103,10 @@ function FogRig() {
   return null
 }
 
-// batu hero jatuh dari atas. Dua sumber:
-//  1) intro pertama (phase 'fall') — digerakin waktu dari App (S.eased)
-//  2) tiap loop (bridge) — digerakin SCROLL: pas kabut nutup, batu keangkat,
-//     lalu jatuh mendarat pas kabut kebuka → mendarat = awal descend (mulus)
+// batu hero jatuh dari atas — digerakin BRIDGE (satu jalur buat intro & loop):
+//  - intro pertama (phase 'fall'): App nge-drive bridge 0.6→1.0 (animasi emerge)
+//  - tiap loop (idle, bridge): pas biru nutup batu keangkat, lalu jatuh mendarat
+//    pas biru nyingkap → mendarat = awal descend (loop mulus)
 const easeDrop = (x) => 1 + 1.9 * Math.pow(x - 1, 3) + 0.9 * Math.pow(x - 1, 2)
 const smoothstep = (a, b, x) => {
   const t = THREE.MathUtils.clamp((x - a) / (b - a), 0, 1)
@@ -118,14 +118,14 @@ function HeroDrop({ children }) {
     if (!ref.current) return
     const S = introState
     let e
-    if (S.phase === 'fall') e = S.eased
-    else if (S.phase === 'wait') e = 0
+    if (S.phase === 'wait') e = 0
     else {
-      // idle: dikendalikan bridge. b=0 (descend) → mendarat (e=1). b naik →
-      // keangkat (ketutup kabut), b>0.45 → jatuh lagi sampai mendarat di b~0.95
+      // 'fall' (intro emerge) & 'idle' (loop) sama-sama dikendalikan bridge.
+      // b=0 (descend/mendarat) → e=1. b naik → keangkat (di balik biru),
+      // b>0.45 → jatuh lagi sampai mendarat di b~0.95
       const b = scrollState.bridge
       if (b <= 0) e = 1
-      else if (b < 0.45) e = 1 - smoothstep(0, 0.45, b) // keangkat (di balik kabut)
+      else if (b < 0.45) e = 1 - smoothstep(0, 0.45, b) // keangkat (di balik biru)
       else e = easeDrop(THREE.MathUtils.clamp((b - 0.45) / 0.5, 0, 1)) // jatuh
     }
     ref.current.position.y = (1 - e) * 26
@@ -419,13 +419,13 @@ function CameraRig() {
           hold: HOLD,
         })),
         // koreografi portal (permintaan Nehemiah): abis batu terakhir kamera
-        // TURUN dulu ngikutin scroll, terus dunia ngebuka — portal naik dari
-        // bawah & kebangun (animasinya di Portal.jsx, sinkron rentang ini),
-        // kamera arc keluar buat natap portal utuh, nyelam ke mulut, transit
-        // tunnel, mendarat. Titik mouth->land segaris sumbu portal
-        { t: 0.86, pos: v(-1.2, -32.5, 12), look: v(0, -34.5, 2), hold: 0 },
-        { t: 0.915, pos: v(0, -24.7, 33.5), look: v(...PORTAL_POS), hold: 0.015 },
-        { t: 0.95, pos: v(0, -30.2, 23.4), look: v(0, -36.4, 12), hold: 0 },
+        // NAIK ke atas cluster kristal, NYOROT lurus dari atas (portal ring
+        // ngebingkai kristal di bawahnya — "persis atas si tajem2"), lalu NYELAM
+        // turun nembus ring sambil angle-nya muter dari nunduk ke depan, mendarat
+        // natap wajah partikel di 100/120
+        { t: 0.86, pos: v(0, -30.5, 8.5), look: v(0, -37, 1.5), hold: 0 },
+        { t: 0.905, pos: v(0, -25.5, 2.6), look: v(0, -38, 1.4), hold: 0.02 },
+        { t: 0.95, pos: v(0, -31.5, 7), look: v(0, -37, 3), hold: 0 },
         { t: 1, pos: v(0, -36.4, 12), look: v(0, -37, 0), hold: 0 },
       ],
     ]
