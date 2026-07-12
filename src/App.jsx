@@ -16,6 +16,75 @@ const easeDrop = (x) => {
 const FALL_MS = 1900 // durasi batu jatuh (intro pertama)
 const smooth = (x) => x * x * (3 - 2 * x)
 
+// salju yg jatuh nutupin biru transisi loop — canvas ringan, cuma gambar pas
+// bridge aktif. Ngasih gerak & isi biar 109→120 gak kerasa "biru kosong doang"
+// (permintaan Nehemiah). Alpha ngikut envelope bridge yg sama kayak wash.
+function SnowVeil() {
+  const ref = useRef()
+  useEffect(() => {
+    const cv = ref.current
+    const ctx = cv.getContext('2d')
+    let raf
+    let W = 0
+    let H = 0
+    const dpr = Math.min(2, window.devicePixelRatio || 1)
+    const resize = () => {
+      W = window.innerWidth
+      H = window.innerHeight
+      cv.width = W * dpr
+      cv.height = H * dpr
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    }
+    resize()
+    window.addEventListener('resize', resize)
+    const rnd = (s) => {
+      const x = Math.sin(s * 12.9898) * 43758.5453
+      return x - Math.floor(x)
+    }
+    // 3 lapis kedalaman: jauh (kecil,lambat,samar) → deket (gede,cepat,jelas)
+    const flakes = Array.from({ length: 150 }, (_, i) => {
+      const layer = i % 3
+      return {
+        x: rnd(i + 1),
+        y: rnd(i + 7),
+        r: (0.7 + rnd(i + 3) * 1.6) * (0.6 + layer * 0.45),
+        spd: (0.06 + rnd(i + 5) * 0.16) * (0.5 + layer * 0.5),
+        drift: (rnd(i + 9) - 0.5) * 0.4,
+        ph: rnd(i + 11) * 6.28,
+        a: 0.25 + layer * 0.28,
+      }
+    })
+    let last = performance.now()
+    const tick = (now) => {
+      const dt = Math.min(0.05, (now - last) / 1000)
+      last = now
+      const br = scrollState.bridge
+      const env = clamp((br - 0.28) / 0.14, 0, 1) * (1 - clamp((br - 0.66) / 0.16, 0, 1))
+      ctx.clearRect(0, 0, W, H)
+      if (env > 0.02) {
+        for (const f of flakes) {
+          f.y += f.spd * dt
+          if (f.y > 1.06) f.y -= 1.12
+          f.ph += dt * 0.8
+          const px = (f.x + Math.sin(f.ph) * f.drift * 0.04) * W
+          const py = ((f.y % 1) + 1) % 1 * H
+          ctx.beginPath()
+          ctx.fillStyle = `rgba(234,244,252,${f.a * env * (0.6 + 0.4 * Math.sin(f.ph * 1.6))})`
+          ctx.arc(px, py, f.r, 0, 6.283)
+          ctx.fill()
+        }
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('resize', resize)
+    }
+  }, [])
+  return <canvas ref={ref} className="snow-veil" aria-hidden="true" />
+}
+
 // loop di-bagi: 0..DESCEND = perjalanan turun (hero→partikel), DESCEND..1 =
 // "jembatan" balik ke start (batu jatuh lagi). Counter jalan sampai 120.
 const DESCEND = 100 / 120
@@ -141,14 +210,18 @@ export default function App() {
         scrollState.depthK = br > 0 ? 1 - br : dprog
       }
 
-      // ---- tirai kabut jembatan: nutup TENGAH bridge buat nyamarin kamera
-      //      pindah dari podium (bawah) balik ke hero (atas) ----
+      // ---- tirai biru jembatan: bukan full-cover kosong lagi. Biru dibikin
+      //      TEMBUS (env*0.72) biar batu es echo yg membesar keliatan nembusnya
+      //      = ada isi, gak biru polos (permintaan Nehemiah). Cuma di detik
+      //      teleport (seam br≈0.55) opacity dinaikin ke ~penuh buat nyamarin
+      //      lompatan kamera dive→hero ----
       const br = scrollState.bridge
-      // full-cover 0.45..0.62 — nyamarin lompatan kamera dive→hero di br 0.55
-      const wash = clamp((br - 0.3) / 0.15, 0, 1) * (1 - clamp((br - 0.62) / 0.18, 0, 1))
+      const env = clamp((br - 0.28) / 0.14, 0, 1) * (1 - clamp((br - 0.66) / 0.16, 0, 1))
+      const seam = Math.exp(-Math.pow((br - 0.55) / 0.035, 2))
+      const wash = clamp(env * 0.72 + seam * 0.3, 0, 1)
       if (washRef.current) {
         washRef.current.style.opacity = wash
-        washRef.current.style.visibility = wash > 0.004 ? 'visible' : 'hidden'
+        washRef.current.style.visibility = env > 0.004 ? 'visible' : 'hidden'
       }
 
       const rv = S.phase === 'idle' ? 1 : S.reveal
@@ -198,8 +271,10 @@ export default function App() {
       {hasVideo && <div ref={veilRef} className="fog-veil" aria-hidden="true" />}
       {/* tint biru gletser di backdrop, makin dalam makin pekat */}
       <div ref={depthTintRef} className="depth-tint" aria-hidden="true" />
-      {/* tirai kabut penutup layar buat transisi loop 100/100 → 0/100 */}
+      {/* tirai biru penutup layar buat transisi loop 100/100 → 0/100 */}
       <div ref={washRef} className="loop-wash" aria-hidden="true" />
+      {/* salju jatuh di atas biru pas transisi — biar gak kerasa biru kosong */}
+      <SnowVeil />
       <div className="canvas-wrap">
         <Canvas
           dpr={[1, 1.5]}

@@ -35,9 +35,19 @@ body {
 .loop-wash {
   position: fixed; inset: 0; z-index: 40;
   /* biru gletser dalam (bukan putih polos) — transisi loop kerasa nyelam ke
-     dalam es, nyambung sama batu asal biru yg membesar (permintaan Nehemiah) */
-  background: radial-gradient(ellipse at 50% 55%, #6d90ab 0%, #46688a 75%);
+     dalam es. Berlapis: core cahaya dari atas + vignette gelap di tepi biar
+     gak flat/kosong, nyambung sama batu es echo yg nembus (permintaan Nehemiah) */
+  background:
+    radial-gradient(ellipse at 50% 22%, rgba(190, 214, 232, 0.55) 0%, rgba(190, 214, 232, 0) 42%),
+    radial-gradient(ellipse at 50% 120%, rgba(20, 42, 66, 0.75) 0%, rgba(20, 42, 66, 0) 55%),
+    radial-gradient(ellipse at 50% 52%, #6d90ab 0%, #3f5f81 68%, #2c486690 100%);
   opacity: 0; visibility: hidden;
+  pointer-events: none;
+}
+/* salju transisi loop — di atas wash biru, di bawah HUD */
+.snow-veil {
+  position: fixed; inset: 0; z-index: 41;
+  width: 100%; height: 100%;
   pointer-events: none;
 }
 /* tint biru gletser buat backdrop kosong (di atas video/veil, di bawah canvas) —

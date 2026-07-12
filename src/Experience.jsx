@@ -155,7 +155,7 @@ function HeroEcho() {
   useFrame((state) => {
     if (!grp.current) return
     const b = scrollState.bridge
-    const vis = b > 0.001 && b < 0.6
+    const vis = b > 0.001 && b < 0.68
     grp.current.visible = vis
     if (!vis) return
     // naik dari bawah frame (-46) ke level dasar podium (-40) selama dive — di z
@@ -164,11 +164,12 @@ function HeroEcho() {
     const rise = smoothstep(0, 0.5, b)
     grp.current.position.y = -44 + rise * 7
     grp.current.rotation.y = state.clock.elapsedTime * 0.18
-    // membesar "menelan" layar mendekati tengah bridge → motivasi tirai wash
-    const grow = 1 + smoothstep(0.28, 0.52, b) * 1.7
+    // membesar "menelan" layar — jadi ISI utama biru (bukan biru kosong): batu
+    // gede berputar nembus wash tembus, baru pudar pas seam teleport lewat
+    const grow = 1 + smoothstep(0.26, 0.58, b) * 2.2
     grp.current.scale.setScalar(ECHO_S * grow)
-    // muncul cepat lalu ketutup wash di tengah bridge
-    const o = smoothstep(0.02, 0.16, b) * (1 - smoothstep(0.46, 0.6, b))
+    // muncul cepat, tetep keliatan nembus wash yg tembus, pudar setelah seam 0.55
+    const o = smoothstep(0.02, 0.16, b) * (1 - smoothstep(0.58, 0.67, b))
     if (mat.current) mat.current.opacity = o
   })
   return (
@@ -178,11 +179,11 @@ function HeroEcho() {
             podium/kabut yg terang pas dive (bukan pucat yg nyaru) */}
         <meshStandardMaterial
           ref={mat}
-          color="#5f89ac"
+          color="#7ba3c4"
           roughness={0.4}
           metalness={0}
-          emissive="#2b567a"
-          emissiveIntensity={0.35}
+          emissive="#3d6d95"
+          emissiveIntensity={0.55}
           transparent
           opacity={0}
           depthWrite={false}
@@ -235,16 +236,17 @@ function DriftingIce() {
   ))
 }
 
-// podium es kristalin (dimodel di Blender: cakram faceted bertingkat + mahkota
-// shard es tajem di rim) — ganti tumpukan silinder polos yang dulu. Wajah
-// partikel Nehemiah melayang di atas dais ini.
+// podium = CLUSTER KRISTAL NATURAL (dimodel di Blender: mound es lumpy +
+// belasan kristal prisma variatif — ukuran, ketebalan, tilt, arah beda-beda,
+// sengaja GAK simetris/sejajar & gak jarum tajem, permintaan Nehemiah). Wajah
+// partikel Nehemiah melayang di atas cluster ini.
 function OutroStage() {
   const { nodes } = useGLTF('/models/podium.glb')
   const geo = useMemo(() => Object.values(nodes).find((n) => n.isMesh)?.geometry, [nodes])
   return (
     <group position={[0, -40.35, 1.5]}>
       <mesh geometry={geo}>
-        {/* es padat biru-pucat, flat shading biar facet & shard kebaca tajam */}
+        {/* es padat biru-pucat, flat shading biar tiap facet kristal kebaca */}
         <meshStandardMaterial
           color="#aec2d0"
           roughness={0.34}
@@ -316,9 +318,28 @@ function BackgroundField() {
       }
     })
   }, [])
-  return chunks.map((c, i) => (
-    <BgChunk key={i} geometry={geos[i % geos.length]} material={material} shellMaterial={shellMaterial} {...c} />
-  ))
+  return (
+    <>
+      {/* gate kemunculan: di puncak (hero) background disembunyiin, baru MUNCUL
+          pas mulai turun — biar frame awal bersih cuma batu hero (permintaan
+          Nehemiah: "ada yg muncul duluan"). depthK = kedalaman efektif */}
+      <BgFade material={material} shellMaterial={shellMaterial} />
+      {chunks.map((c, i) => (
+        <BgChunk key={i} geometry={geos[i % geos.length]} material={material} shellMaterial={shellMaterial} {...c} />
+      ))}
+    </>
+  )
+}
+
+// nyalain background pelan-pelan ngikut kedalaman scroll: opacity 0 di hero,
+// penuh pas udah agak dalam. Satu useFrame nyetel material yg di-share semua chunk.
+function BgFade({ material, shellMaterial }) {
+  useFrame(() => {
+    const g = smoothstep(0.05, 0.32, scrollState.depthK)
+    material.opacity = 0.92 * g
+    shellMaterial.opacity = 0.16 * g
+  })
+  return null
 }
 
 function BgChunk({ geometry, material, shellMaterial, speed, ...props }) {
