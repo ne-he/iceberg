@@ -59,8 +59,10 @@ export default function Experience({ onOpen, hasVideo }) {
         <Portal />
       </Suspense>
 
-      {/* outro: partikel wajah Nehemiah di atas panggung podium ala igloo */}
-      <ParticleFace position={[0, -36.55, 1.5]} />
+      {/* outro: partikel wajah Nehemiah di atas panggung podium ala igloo.
+          Landing zone diturunin (jauh di bawah portal -32.8) biar kesan
+          "kristal masih jauh di bawah" pas top-down (permintaan Nehemiah) */}
+      <ParticleFace position={[0, -40.55, 1.5]} />
       <OutroStage />
       {/* batu asal yang naik dari bawah podium saat transisi loop (100→120) */}
       <HeroEcho />
@@ -158,11 +160,11 @@ function HeroEcho() {
     const vis = b > 0.001 && b < 0.68
     grp.current.visible = vis
     if (!vis) return
-    // naik dari bawah frame (-46) ke level dasar podium (-40) selama dive — di z
-    // lebih deket kamera (5.5) biar gak keblok dais podium yg solid, jadi batu
-    // keliatan "muncul dari bawah tempat berdiri" pas kamera nyelam ke arahnya
+    // naik dari bawah frame (-50) ke dasar podium selama dive — di z lebih deket
+    // kamera (5.5) biar gak keblok dais podium yg solid, jadi batu keliatan
+    // "muncul dari bawah tempat berdiri" pas kamera nyelam ke arahnya
     const rise = smoothstep(0, 0.5, b)
-    grp.current.position.y = -44 + rise * 7
+    grp.current.position.y = -48 + rise * 7
     grp.current.rotation.y = state.clock.elapsedTime * 0.18
     // membesar "menelan" layar — jadi ISI utama biru (bukan biru kosong): batu
     // gede berputar nembus wash tembus, baru pudar pas seam teleport lewat
@@ -173,7 +175,7 @@ function HeroEcho() {
     if (mat.current) mat.current.opacity = o
   })
   return (
-    <group ref={grp} position={[0, -44, 5.5]} scale={ECHO_S} visible={false}>
+    <group ref={grp} position={[0, -48, 5.5]} scale={ECHO_S} visible={false}>
       <mesh geometry={geo}>
         {/* biru gletser PEKAT — sengaja gelap biar kontras nongol di depan
             podium/kabut yg terang pas dive (bukan pucat yg nyaru) */}
@@ -244,7 +246,7 @@ function OutroStage() {
   const { nodes } = useGLTF('/models/podium.glb')
   const geo = useMemo(() => Object.values(nodes).find((n) => n.isMesh)?.geometry, [nodes])
   return (
-    <group position={[0, -40.35, 1.5]}>
+    <group position={[0, -44.35, 1.5]}>
       <mesh geometry={geo}>
         {/* es padat biru-pucat, flat shading biar tiap facet kristal kebaca */}
         <meshStandardMaterial
@@ -419,14 +421,16 @@ function CameraRig() {
           hold: HOLD,
         })),
         // koreografi portal (permintaan Nehemiah): abis batu terakhir kamera
-        // NAIK ke atas cluster kristal, NYOROT lurus dari atas (portal ring
-        // ngebingkai kristal di bawahnya — "persis atas si tajem2"), lalu NYELAM
-        // turun nembus ring sambil angle-nya muter dari nunduk ke depan, mendarat
-        // natap wajah partikel di 100/120
-        { t: 0.86, pos: v(0, -30.5, 8.5), look: v(0, -37, 1.5), hold: 0 },
-        { t: 0.905, pos: v(0, -25.5, 2.6), look: v(0, -38, 1.4), hold: 0.02 },
-        { t: 0.95, pos: v(0, -31.5, 7), look: v(0, -37, 3), hold: 0 },
-        { t: 1, pos: v(0, -36.4, 12), look: v(0, -37, 0), hold: 0 },
+        // recenter & natap lurus dari ATAS nembus lubang ring — kristal keliatan
+        // KECIL JAUH di bawah (portal tinggi, jaraknya jauh). Lalu kamera NYELAM
+        // LURUS turun nembus TENGAH ring (z tetep ~1.5, jadi bener2 masuk lubang,
+        // bukan lewat samping) — pas nembus portal meledak nyala = "dunia lain" —
+        // baru turun ke landing zone & swing ke depan natap wajah di 100/120
+        { t: 0.86, pos: v(0, -26.5, 5.5), look: v(0, -33, 1.5), hold: 0 },
+        { t: 0.905, pos: v(0, -26.8, 1.6), look: v(0, -42.5, 1.5), hold: 0.02 },
+        { t: 0.95, pos: v(0, -34.6, 1.4), look: v(0, -43, 1.5), hold: 0 },
+        { t: 0.978, pos: v(0, -39.6, 5.5), look: v(0, -41, 1.5), hold: 0 },
+        { t: 1, pos: v(0, -40.7, 11.5), look: v(0, -40.8, 1.5), hold: 0 },
       ],
     ]
   }, [])
@@ -461,8 +465,8 @@ function CameraRig() {
         // MENYELAM: view panggung → turun & natap batu asal yg naik di depan podium
         let d = THREE.MathUtils.clamp(br / 0.55, 0, 1)
         d = d * d * (3 - 2 * d)
-        p.set(L(podium.pos.x, 0, d), L(podium.pos.y, -38.8, d), L(podium.pos.z, 9.5, d))
-        t.set(L(podium.look.x, 0, d), L(podium.look.y, -42, d), L(podium.look.z, 5, d))
+        p.set(L(podium.pos.x, 0, d), L(podium.pos.y, -42.8, d), L(podium.pos.z, 9.5, d))
+        t.set(L(podium.look.x, 0, d), L(podium.look.y, -46, d), L(podium.look.z, 5, d))
       } else {
         // MUNCUL (awalnya ketutup wash): emerge di hero, settle naik halus
         let e = THREE.MathUtils.clamp((br - 0.55) / 0.45, 0, 1)
