@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useChat } from './useChat'
+import { renderMarkdown } from './markdown'
 
 // pertanyaan starter — samain sama repo RAG biar konsisten
 const SUGGESTIONS = [
@@ -9,8 +10,28 @@ const SUGGESTIONS = [
   'Nemi suka makanan apa?',
 ]
 
-// ECHO = pintu masuk chatbot RAG. Tombol sonar ping kanan-bawah (selalu keliatan
-// pas idle) + drawer chat dari kanan. Backend-nya /api/chat (di-proxy ke project RAG).
+// ikon kristal es — motif iceberg, dipakai di tombol, header, sama empty state
+function Crystal() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 2.4 4.6 9.2 12 21.6 19.4 9.2 12 2.4Z"
+        stroke="rgba(224,242,255,.92)"
+        strokeWidth="1.1"
+        strokeLinejoin="round"
+        fill="rgba(150,205,245,.16)"
+      />
+      <path
+        d="M4.6 9.2h14.8M12 2.4V21.6M8.3 9.2 12 21.6M15.7 9.2 12 21.6"
+        stroke="rgba(190,225,255,.55)"
+        strokeWidth=".7"
+      />
+    </svg>
+  )
+}
+
+// Chatbot RAG. Tombol "Tanya soal Nehemiah" kanan-bawah (selalu keliatan pas idle)
+// + drawer chat dari kanan. Backend-nya /api/chat (di-proxy ke project RAG).
 export default function ChatDock({ open, onOpen, onClose, hidden }) {
   const { messages, streaming, error, send } = useChat()
   const inputRef = useRef()
@@ -49,22 +70,34 @@ export default function ChatDock({ open, onOpen, onClose, hidden }) {
 
   return (
     <>
-      {/* tombol ECHO floating — titik cyan denyut ala sonar ping */}
+      {/* tombol chatbot floating — "nyala" pelan biar jelas bisa diajak ngobrol */}
       <button
         className={`echo-btn ${hidden || open ? 'is-hidden' : ''}`}
         onClick={onOpen}
-        aria-label="Buka chat, tanya apa aja tentang Nehemiah"
+        aria-label="Buka chatbot AI Nehemiah, tanya apa aja soal dia"
       >
-        <span className="echo-ping" aria-hidden="true" />
-        <span className="echo-label">[ TANYA AKU ]</span>
+        <span className="echo-btn-orb">
+          <Crystal />
+        </span>
+        <span className="echo-btn-txt">
+          <span className="echo-btn-title">Tanya soal Nehemiah</span>
+          <span className="echo-btn-kicker">AI Assistant</span>
+        </span>
       </button>
 
       {/* drawer chat dari kanan — scene 3D masih keliatan separo */}
       <div className={`echo-drawer ${open ? 'is-open' : ''}`} aria-hidden={!open}>
         <div className="echo-head">
-          <div className="echo-head-txt">
-            <div className="echo-code">////// ICEBERG_LINK / ECHO</div>
-            <div className="echo-sub">90% gunung es ada di bawah permukaan. Tanya apa aja soal Nehemiah.</div>
+          <div className="echo-head-id">
+            <span className="echo-head-orb">
+              <Crystal />
+            </span>
+            <div className="echo-head-txt">
+              <div className="echo-title">
+                AI Nehemiah <span className="echo-live">online</span>
+              </div>
+              <div className="echo-sub">Tanya apa aja, aku tau hampir semua soal Nehemiah.</div>
+            </div>
           </div>
           <button className="echo-close" onClick={onClose}>
             <span className="rock-close-br">⌐</span> CLOSE <span className="rock-close-br">¬</span>
@@ -74,10 +107,16 @@ export default function ChatDock({ open, onOpen, onClose, hidden }) {
         <div className="echo-body" ref={bodyRef}>
           {messages.length === 0 && (
             <div className="echo-empty">
-              <div className="echo-avatar">
-                <span className="echo-ping" aria-hidden="true" />
-              </div>
-              <p>Aku ECHO, AI-nya Nehemiah. Aku tau hampir segalanya soal dia. Mau nanya apa?</p>
+              <span className="echo-empty-orb">
+                <Crystal />
+              </span>
+              <p className="echo-empty-lead">
+                Halo, aku <b>AI-nya Nehemiah</b>
+              </p>
+              <p className="echo-empty-p">
+                Aku tau hampir segalanya soal dia: journey, project, skill, sampai hal random. Mau
+                mulai dari mana?
+              </p>
               <div className="echo-chips">
                 {SUGGESTIONS.map((q) => (
                   <button key={q} className="echo-chip" onClick={() => send(q)} disabled={streaming}>
@@ -87,16 +126,21 @@ export default function ChatDock({ open, onOpen, onClose, hidden }) {
               </div>
             </div>
           )}
-          {messages.map((m, i) => (
-            <div key={i} className={`echo-msg echo-msg--${m.role}`}>
-              {m.content}
-              {streaming && i === messages.length - 1 && m.role === 'assistant' && (
-                <span className="echo-caret" aria-hidden="true">
-                  ▍
-                </span>
-              )}
-            </div>
-          ))}
+          {messages.map((m, i) => {
+            const streamingLast =
+              streaming && i === messages.length - 1 && m.role === 'assistant'
+            return (
+              <div key={i} className={`echo-msg echo-msg--${m.role}`}>
+                {m.role === 'assistant' ? (
+                  <div className="echo-md">
+                    {renderMarkdown(streamingLast ? m.content + '▌' : m.content)}
+                  </div>
+                ) : (
+                  m.content
+                )}
+              </div>
+            )
+          })}
           {error && <div className="echo-error">{error}</div>}
         </div>
 
