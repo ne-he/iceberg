@@ -313,9 +313,9 @@ export default function App() {
         if (r.ok && type.includes('video')) setHasVideo(true)
       })
       .catch(() => {})
-    // video loop "dalam glacier" buat background panel batu — kalau Nehemiah udah
-    // taruh filenya, dipakai; kalau belum, panel fallback ke gradient es procedural
-    fetch('/content/glacier.mp4', { method: 'HEAD' })
+    // video loop "dalam glacier" buat background panel batu. File-nya di
+    // public/glacier_inside.mp4; kalau ga ketemu, panel fallback ke gradient es.
+    fetch('/glacier_inside.mp4', { method: 'HEAD' })
       .then((r) => {
         const type = r.headers.get('content-type') || ''
         if (r.ok && type.includes('video')) setHasGlacier(true)

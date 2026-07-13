@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useChat } from './useChat'
 import { renderMarkdown } from './markdown'
+import Crystal3D from './Crystal3D'
 
 // pertanyaan starter — samain sama repo RAG biar konsisten
 const SUGGESTIONS = [
@@ -77,7 +78,7 @@ export default function ChatDock({ open, onOpen, onClose, hidden }) {
         aria-label="Buka chatbot AI Nehemiah, tanya apa aja soal dia"
       >
         <span className="echo-btn-orb">
-          <Crystal />
+          <Crystal3D />
         </span>
         <span className="echo-btn-txt">
           <span className="echo-btn-title">Tanya soal Nehemiah</span>

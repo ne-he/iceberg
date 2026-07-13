@@ -64,6 +64,30 @@ function SocialCarousel() {
 }
 const smooth = (x) => x * x * (3 - 2 * x)
 
+// ikon speaker buat toggle suara video dalam-glacier
+function SpeakerIcon({ on }) {
+  return (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" aria-hidden="true">
+      <path d="M4 9v6h4l5 4V5L8 9H4Z" fill="currentColor" opacity="0.9" />
+      {on ? (
+        <path
+          d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+        />
+      ) : (
+        <path
+          d="M16 9.5l5 5M21 9.5l-5 5"
+          stroke="currentColor"
+          strokeWidth="1.4"
+          strokeLinecap="round"
+        />
+      )}
+    </svg>
+  )
+}
+
 export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
   const hero = useRef()
   const outro = useRef()
@@ -80,6 +104,10 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
   const lastRef = useRef(null)
   if (panel) lastRef.current = panel
   const data = PANELS[lastRef.current]
+
+  // video dalam-glacier: suara nyala default (permintaan Nehemiah), bisa di-toggle
+  const vidRef = useRef(null)
+  const [soundOn, setSoundOn] = useState(true)
 
   useEffect(() => {
     // HUD render only — scrollState di-drive master di App.jsx (infinite loop).
@@ -125,6 +153,25 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
+
+  // play + suara pas masuk kristal, pause pas keluar. Autoplay-with-sound diizinin
+  // karena dipicu klik user (buka kristal). Kalau browser tetep blok suara, fallback
+  // ke muted biar videonya tetep jalan (bukan layar item).
+  useEffect(() => {
+    const v = vidRef.current
+    if (!v) return
+    if (panel) {
+      v.muted = !soundOn
+      const p = v.play()
+      if (p && p.catch)
+        p.catch(() => {
+          v.muted = true
+          v.play().catch(() => {})
+        })
+    } else {
+      v.pause()
+    }
+  }, [panel, soundOn])
 
   return (
     <>
@@ -194,7 +241,7 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
           layar. Muncul pas kamera udah nembus masuk batunya (permintaan Nehemiah) */}
       <div className={`rock-modal ${panel ? 'is-open' : ''}`} aria-hidden={!panel}>
         {hasGlacier ? (
-          <video className="rock-bg" src="/content/glacier.mp4" autoPlay muted loop playsInline />
+          <video ref={vidRef} className="rock-bg" src="/glacier_inside.mp4" loop playsInline preload="auto" />
         ) : (
           <div className="rock-bg rock-bg--fallback" />
         )}
@@ -203,6 +250,16 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
         <button className="rock-close" onClick={onClose}>
           <span className="rock-close-br">⌐</span> CLOSE <span className="rock-close-br">¬</span>
         </button>
+        {hasGlacier && (
+          <button
+            className="rock-sound"
+            onClick={() => setSoundOn((s) => !s)}
+            aria-label={soundOn ? 'Matiin suara' : 'Nyalain suara'}
+          >
+            <SpeakerIcon on={soundOn} />
+            {soundOn ? 'SUARA' : 'BISU'}
+          </button>
+        )}
         {data && (
           <div className="rock-content" key={lastRef.current}>
             <div className="rock-code">////// {data.code}</div>

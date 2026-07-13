@@ -266,6 +266,18 @@ body {
 .rock-row h3 span { opacity: 0.55; font-weight: 400; margin-left: 10px; letter-spacing: 0.14em; }
 .rock-row p { margin-top: 8px; font-size: 14.5px; line-height: 1.85; color: #aebcc7; }
 .rock-foot { margin-top: 40px; font-size: 11px; letter-spacing: 0.2em; color: #6d7b86; text-transform: uppercase; }
+/* toggle suara buat video dalam-glacier */
+.rock-sound {
+  position: absolute; left: 34px; bottom: 28px; z-index: 3;
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(8, 16, 24, 0.4); backdrop-filter: blur(8px);
+  border: 1px solid rgba(150, 200, 240, 0.24); border-radius: 100px;
+  color: #dbe9f4; font: inherit; font-size: 10.5px; letter-spacing: 0.2em; text-transform: uppercase;
+  padding: 8px 15px; cursor: pointer; opacity: 0.85;
+  transition: opacity 0.25s, border-color 0.25s, background 0.25s;
+}
+.rock-sound:hover { opacity: 1; border-color: rgba(180, 220, 255, 0.5); background: rgba(8, 16, 24, 0.6); }
+.rock-sound svg { flex: none; }
 
 /* ---------- ECHO chat (RAG chatbot) ---------- */
 /* tombol chatbot kanan-bawah, "nyala" pelan biar jelas bisa diajak ngobrol */
@@ -289,12 +301,12 @@ body {
 .echo-btn:hover { transform: translateY(-3px) scale(1.02); border-color: rgba(190, 225, 255, 0.72); }
 .echo-btn.is-hidden { opacity: 0; pointer-events: none; transform: translateY(14px); }
 .echo-btn-orb {
-  position: relative; z-index: 1; width: 34px; height: 34px; flex: none;
-  display: grid; place-items: center; border-radius: 11px;
+  position: relative; z-index: 1; width: 38px; height: 38px; flex: none;
+  border-radius: 11px; overflow: visible;
   background: radial-gradient(circle at 50% 34%, rgba(150, 210, 255, 0.5), rgba(60, 120, 180, 0.12));
   box-shadow: inset 0 0 12px rgba(150, 210, 255, 0.5), 0 0 16px rgba(120, 195, 255, 0.35);
 }
-.echo-btn-orb svg { width: 19px; height: 19px; }
+.echo-btn-orb canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; pointer-events: none; }
 .echo-btn-txt { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 2px; }
 .echo-btn-title { font-size: 13px; font-weight: 600; color: #f0f6fb; }
 .echo-btn-kicker { font-size: 9px; letter-spacing: 0.26em; text-transform: uppercase; color: #8fb2c9; }
