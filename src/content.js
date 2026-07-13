@@ -15,6 +15,7 @@ export const CRYSTALS = [
   {
     id: 'about',
     code: 'ICEBERG_SEC_01',
+    tag: '01 / 04',
     name: 'ABOUT',
     position: [3.4, -7, -2],
     scale: 1.1,
@@ -27,6 +28,7 @@ export const CRYSTALS = [
   {
     id: 'journey',
     code: 'ICEBERG_SEC_02',
+    tag: '02 / 04',
     name: 'JOURNEY',
     position: [-3.5, -14.5, -2],
     scale: 1.15,
@@ -39,6 +41,7 @@ export const CRYSTALS = [
   {
     id: 'projects',
     code: 'ICEBERG_SEC_03',
+    tag: '03 / 04',
     name: 'PROJECTS',
     position: [4, -22, -3],
     scale: 1.3,
@@ -51,6 +54,7 @@ export const CRYSTALS = [
   {
     id: 'skills',
     code: 'ICEBERG_SEC_04',
+    tag: '04 / 04',
     name: 'SKILLS',
     position: [-3.2, -29, 0.5],
     scale: 1.05,
@@ -72,6 +76,7 @@ export const SECTION_WORDS = [
 export const PANELS = {
   about: {
     code: 'ICEBERG_SEC_01',
+    kicker: 'a little about me',
     title: 'ABOUT',
     rows: [
       {
@@ -96,6 +101,7 @@ export const PANELS = {
   },
   journey: {
     code: 'ICEBERG_SEC_02',
+    kicker: 'how i got here',
     title: 'JOURNEY',
     rows: [
       {
@@ -116,6 +122,7 @@ export const PANELS = {
   },
   projects: {
     code: 'ICEBERG_SEC_03',
+    kicker: "things i've built",
     title: 'PROJECTS',
     rows: [
       {
@@ -143,6 +150,7 @@ export const PANELS = {
   },
   skills: {
     code: 'ICEBERG_SEC_04',
+    kicker: 'what i work with',
     title: 'SKILLS',
     rows: [
       {

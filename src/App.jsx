@@ -339,6 +339,10 @@ export default function App() {
           gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
           camera={{ fov: 32, position: [0, 1.8, 11], near: 0.1, far: 100 }}
           style={{ touchAction: 'pan-y' }}
+          // pas panel batu kebuka, scene ketutup penuh sama modal + video glacier.
+          // stop render WebGL biar GPU fokus decode video (video gak patah lagi) &
+          // hemat baterai. Balik jalan lagi begitu panel ditutup.
+          frameloop={panel ? 'never' : 'always'}
         >
           <Suspense fallback={null}>
             <Experience onOpen={openRock} hasVideo={hasVideo} />

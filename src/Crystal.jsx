@@ -138,7 +138,7 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
               onPointerOver={() => setHovered(true)}
               onPointerOut={() => setHovered(false)}
             >
-              <div className="anno-code">{data.code}</div>
+              <div className="anno-code">{data.tag}</div>
               <div className="anno-name">{data.name}</div>
               <div className="anno-cta">CLICK TO EXPLORE</div>
             </div>

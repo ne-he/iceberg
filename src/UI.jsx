@@ -262,7 +262,7 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
         )}
         {data && (
           <div className="rock-content" key={lastRef.current}>
-            <div className="rock-code">////// {data.code}</div>
+            <div className="rock-kicker">{data.kicker}</div>
             <h2>{data.title}</h2>
             {data.rows.map((r) => (
               <div className="rock-row" key={r.h}>
@@ -273,7 +273,7 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
                 <p>{r.p}</p>
               </div>
             ))}
-            <div className="rock-foot">/// {data.foot}</div>
+            <div className="rock-foot">{data.foot}</div>
           </div>
         )}
       </div>

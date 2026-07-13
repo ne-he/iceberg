@@ -1,5 +1,8 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* font display buat elemen UI chat — biar beda dari mono HUD & gak berasa template */
+:root { --font-display: 'Space Grotesk', 'Segoe UI', system-ui, sans-serif; }
+
 html, body { background: #b9c0c7; }
 /* scrollbar browser disembunyiin total, scroll tetap jalan (progress bar bawah jadi penunjuknya) */
 html { scrollbar-width: none; -ms-overflow-style: none; }
@@ -255,7 +258,7 @@ body {
 }
 .rock-content::-webkit-scrollbar { display: none; }
 .rock-modal.is-open .rock-content { transform: none; }
-.rock-code { font-size: 12px; letter-spacing: 0.24em; color: #7f8f9c; text-transform: uppercase; }
+.rock-kicker { font-family: var(--font-display); font-size: 14px; font-weight: 400; letter-spacing: 0.005em; color: #8fa2b1; }
 .rock-content h2 {
   font-size: clamp(30px, 5vw, 52px); font-weight: 600; letter-spacing: 0.1em;
   margin: 14px 0 30px; color: #f2f7fb; text-transform: uppercase;
@@ -301,15 +304,37 @@ body {
 .echo-btn:hover { transform: translateY(-3px) scale(1.02); border-color: rgba(190, 225, 255, 0.72); }
 .echo-btn.is-hidden { opacity: 0; pointer-events: none; transform: translateY(14px); }
 .echo-btn-orb {
-  position: relative; z-index: 1; width: 38px; height: 38px; flex: none;
-  border-radius: 11px; overflow: visible;
-  background: radial-gradient(circle at 50% 34%, rgba(150, 210, 255, 0.5), rgba(60, 120, 180, 0.12));
-  box-shadow: inset 0 0 12px rgba(150, 210, 255, 0.5), 0 0 16px rgba(120, 195, 255, 0.35);
+  position: relative; z-index: 1; width: 40px; height: 40px; flex: none;
+  display: grid; place-items: center; perspective: 300px;
+  border-radius: 12px;
+  background: radial-gradient(circle at 50% 32%, rgba(150, 210, 255, 0.42), rgba(60, 120, 180, 0.1));
+  box-shadow: inset 0 0 12px rgba(150, 210, 255, 0.45), 0 0 18px rgba(120, 195, 255, 0.34);
+  animation: echo-orb-glow 3.4s ease-in-out infinite;
 }
-.echo-btn-orb canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; pointer-events: none; }
-.echo-btn-txt { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 2px; }
-.echo-btn-title { font-size: 13px; font-weight: 600; color: #f0f6fb; }
-.echo-btn-kicker { font-size: 9px; letter-spacing: 0.26em; text-transform: uppercase; color: #8fb2c9; }
+/* kristal 3D live: dua bidang SVG nyilang (offset 90deg) diputer bareng lewat CSS.
+   simetris jadi backface-nya kebaca sama = gak ada momen ilang pas edge-on. */
+.echo-gem {
+  position: relative; width: 27px; height: 27px;
+  transform-style: preserve-3d; animation: echo-spin 7.5s linear infinite;
+}
+.echo-gem-face { position: absolute; inset: 0; }
+.echo-gem-face svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 0 5px rgba(130, 200, 250, 0.5)); }
+.echo-gem-face--cross { transform: rotateY(90deg); }
+@keyframes echo-spin { to { transform: rotateY(360deg); } }
+@keyframes echo-orb-glow {
+  0%, 100% { box-shadow: inset 0 0 12px rgba(150, 210, 255, 0.4), 0 0 14px rgba(120, 195, 255, 0.26); }
+  50% { box-shadow: inset 0 0 17px rgba(150, 210, 255, 0.62), 0 0 32px rgba(120, 195, 255, 0.6); }
+}
+.echo-btn-txt { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 3px; }
+.echo-btn-title { font-family: var(--font-display); font-size: 14px; font-weight: 600; letter-spacing: -0.01em; color: #f2f8fd; }
+.echo-btn-kicker {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--font-display); font-size: 11px; font-weight: 400; color: #9dbdd3;
+}
+.echo-btn-dot {
+  width: 6px; height: 6px; flex: none; border-radius: 50%; background: #6fe6b8;
+  box-shadow: 0 0 8px #6fe6b8; animation: echo-blink-soft 2.4s ease-in-out infinite;
+}
 @keyframes echo-breathe {
   0%, 100% { box-shadow: 0 10px 32px rgba(4, 10, 18, 0.5), 0 0 20px rgba(120, 195, 255, 0.14), inset 0 1px 0 rgba(190, 225, 255, 0.16); }
   50% { box-shadow: 0 12px 40px rgba(4, 10, 18, 0.55), 0 0 42px rgba(120, 195, 255, 0.44), inset 0 1px 0 rgba(190, 225, 255, 0.24); }
@@ -345,7 +370,8 @@ body {
 }
 .echo-head-orb svg { width: 21px; height: 21px; }
 .echo-title {
-  font-size: 15px; font-weight: 600; letter-spacing: 0.01em; color: #eef5fb;
+  font-family: var(--font-display);
+  font-size: 15.5px; font-weight: 600; letter-spacing: -0.005em; color: #eef5fb;
   display: flex; align-items: center; gap: 9px;
 }
 .echo-live {
@@ -383,7 +409,7 @@ body {
   0%, 100% { box-shadow: inset 0 0 22px rgba(150, 210, 255, 0.4), 0 0 22px rgba(120, 195, 255, 0.22); }
   50% { box-shadow: inset 0 0 26px rgba(150, 210, 255, 0.5), 0 0 40px rgba(120, 195, 255, 0.42); }
 }
-.echo-empty-lead { font-size: 16px; color: #eaf2f8; font-weight: 500; }
+.echo-empty-lead { font-family: var(--font-display); font-size: 17px; color: #eaf2f8; font-weight: 500; letter-spacing: -0.005em; }
 .echo-empty-lead b { color: #bfe0f6; font-weight: 700; }
 .echo-empty-p { font-size: 12.5px; line-height: 1.7; color: #98a9b6; max-width: 272px; }
 .echo-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 6px; }
@@ -461,7 +487,8 @@ body {
 }
 .echo-inline:hover { opacity: 1; color: #d8ecfb; }
 @media (prefers-reduced-motion: reduce) {
-  .echo-btn, .echo-btn::after, .echo-empty-orb, .echo-live::before { animation: none; }
+  .echo-btn, .echo-btn::after, .echo-empty-orb, .echo-live::before,
+  .echo-gem, .echo-btn-orb, .echo-btn-dot { animation: none; }
 }
 
 /* ---------- depth ruler kiri: penggaris kedalaman yang ikut scroll ---------- */
@@ -520,7 +547,8 @@ body {
   .rock-logo { font-size: 17px; left: 20px; top: 20px; }
   .echo-drawer { width: 100vw; }
   .echo-btn { right: 14px; bottom: 16px; padding: 10px 15px 10px 11px; }
-  .echo-btn-orb { width: 30px; height: 30px; }
-  .echo-btn-orb svg { width: 17px; height: 17px; }
-  .echo-btn-title { font-size: 12px; }
+  .echo-btn-orb { width: 34px; height: 34px; }
+  .echo-gem { width: 23px; height: 23px; }
+  .echo-btn-title { font-size: 13px; }
+  .echo-btn-kicker { font-size: 10.5px; }
 }
