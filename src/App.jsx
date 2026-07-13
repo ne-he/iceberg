@@ -2,7 +2,8 @@ import { Suspense, useEffect, useRef, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import Experience from './Experience'
 import { UI, Loader } from './UI'
-import { beginFocus, dragState, endFocus, focusState, introState, scrollState } from './scrollState'
+import ChatDock from './chat/ChatDock'
+import { beginFocus, chatState, dragState, endFocus, focusState, introState, scrollState } from './scrollState'
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
 
@@ -95,8 +96,19 @@ export default function App() {
   const [panel, setPanel] = useState(null)
   const [hasVideo, setHasVideo] = useState(false)
   const [hasGlacier, setHasGlacier] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
+  const [ready, setReady] = useState(false) // true pas intro emerge kelar (buat munculin tombol ECHO)
   const diveTimer = useRef(null)
   const videoRef = useRef()
+
+  const openChat = () => {
+    setChatOpen(true)
+    chatState.open = true
+  }
+  const closeChat = () => {
+    setChatOpen(false)
+    chatState.open = false
+  }
 
   // klik batu: mulai animasi menyelam, panel konten muncul pas kamera udah nembus
   const openRock = (id, pos) => {
@@ -170,6 +182,7 @@ export default function App() {
           // mendarat di hero → mulai loop normal dari posisi 0
           S.phase = 'idle'
           S.reveal = 1
+          setReady(true) // dunia udah kebentuk → tombol ECHO boleh nongol
           scrollState.progress = scrollState.damped = scrollState.bridge = 0
           scrollState.depthK = scrollState.loopDamped = 0
           loopDamped = 0
@@ -270,20 +283,29 @@ export default function App() {
     }
   }, [])
 
-  // kunci scroll halaman selama panel batu kebuka — biar pas ditutup kamera balik
-  // ke batu yg sama (bukan loncat ke posisi scroll yg berubah di belakang panel)
+  // kunci scroll halaman selama panel batu ATAU chat ECHO kebuka — biar pas ditutup
+  // scene balik ke posisi yg sama (bukan loncat ke posisi scroll yg berubah di belakang)
   useEffect(() => {
-    if (!panel) return
+    if (!panel && !chatOpen) return
     const prev = document.documentElement.style.overflow
     document.documentElement.style.overflow = 'hidden'
     return () => {
       document.documentElement.style.overflow = prev
     }
-  }, [panel])
+  }, [panel, chatOpen])
 
   useEffect(() => {
     // handle debug buat verifikasi otomatis (Playwright) — gak dipakai runtime
-    window.__ice = { introState, scrollState, focusState, open: openRock, close: closeRock }
+    window.__ice = {
+      introState,
+      scrollState,
+      focusState,
+      chatState,
+      open: openRock,
+      close: closeRock,
+      openChat,
+      closeChat,
+    }
     // cek beneran video — dev server Vite ngebales 200 text/html buat file yang gak ada
     fetch('/scene/scene.mp4', { method: 'HEAD' })
       .then((r) => {
@@ -324,7 +346,8 @@ export default function App() {
         </Canvas>
       </div>
       <div ref={scrollSpaceRef} className="scroll-space" aria-hidden="true" />
-      <UI panel={panel} onClose={closeRock} hasGlacier={hasGlacier} />
+      <UI panel={panel} onClose={closeRock} hasGlacier={hasGlacier} onOpenChat={openChat} />
+      <ChatDock open={chatOpen} onOpen={openChat} onClose={closeChat} hidden={!ready || !!panel} />
       <Loader />
     </>
   )

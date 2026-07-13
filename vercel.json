@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://web-portofolio-rag.vercel.app/api/:path*"
+    }
+  ]
+}

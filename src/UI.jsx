@@ -64,7 +64,7 @@ function SocialCarousel() {
 }
 const smooth = (x) => x * x * (3 - 2 * x)
 
-export function UI({ panel, onClose, hasGlacier }) {
+export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
   const hero = useRef()
   const outro = useRef()
   const words = useRef([])
@@ -179,6 +179,11 @@ export function UI({ panel, onClose, hasGlacier }) {
         <a href={`mailto:${CONTACT.email}`}>{CONTACT.email.toUpperCase()}</a>
         {/* carousel ala igloo: pilih platform → partikel morph jadi logonya */}
         <SocialCarousel />
+        {/* pintu masuk chatbot dari klimaks: udah ketemu muka partikel, langsung
+            bisa ngajak ngomong — muka partikel = avatar ECHO */}
+        <button className="echo-inline" onClick={onOpenChat}>
+          &gt; ngobrol langsung sama aku
+        </button>
         {/* petunjuk loop: scroll terus di 100/100 = balik ke permukaan */}
         <div className="loop-hint">KEEP SCROLLING TO RESURFACE ↻</div>
         </div>

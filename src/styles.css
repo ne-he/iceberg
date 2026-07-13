@@ -267,6 +267,129 @@ body {
 .rock-row p { margin-top: 8px; font-size: 14.5px; line-height: 1.85; color: #aebcc7; }
 .rock-foot { margin-top: 40px; font-size: 11px; letter-spacing: 0.2em; color: #6d7b86; text-transform: uppercase; }
 
+/* ---------- ECHO chat (RAG chatbot) ---------- */
+/* tombol sonar ping kanan-bawah — pintu masuk chat, selalu keliatan pas idle */
+.echo-btn {
+  position: fixed; right: 26px; bottom: 46px; z-index: 20;
+  display: flex; align-items: center; gap: 11px;
+  background: rgba(10, 18, 26, 0.44); backdrop-filter: blur(9px);
+  border: 1px solid rgba(150, 200, 240, 0.28); border-radius: 100px;
+  padding: 11px 17px 11px 15px;
+  color: #dbe9f4; font: inherit; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+  cursor: pointer; box-shadow: 0 6px 26px rgba(6, 14, 22, 0.4), 0 0 24px rgba(120, 190, 240, 0.14);
+  transition: opacity 0.6s ease, transform 0.35s ease, border-color 0.3s;
+}
+.echo-btn:hover { border-color: rgba(180, 220, 255, 0.6); transform: translateY(-2px); }
+.echo-btn.is-hidden { opacity: 0; pointer-events: none; transform: translateY(12px); }
+.echo-label { white-space: nowrap; }
+.echo-ping {
+  position: relative; width: 9px; height: 9px; border-radius: 50%; flex: none;
+  background: #9fdcff; box-shadow: 0 0 10px #7cc7ff;
+}
+.echo-ping::after {
+  content: ''; position: absolute; inset: -4px; border-radius: 50%;
+  border: 1px solid rgba(140, 205, 255, 0.7); animation: echo-ping 2.4s ease-out infinite;
+}
+@keyframes echo-ping {
+  0% { transform: scale(0.6); opacity: 0.9; }
+  70%, 100% { transform: scale(2.4); opacity: 0; }
+}
+
+/* drawer chat dari kanan — scene 3D masih keliatan separo */
+.echo-drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 45;
+  width: min(420px, 100vw); display: flex; flex-direction: column;
+  background:
+    radial-gradient(ellipse at 80% 8%, rgba(96, 140, 178, 0.28) 0%, rgba(96, 140, 178, 0) 55%),
+    linear-gradient(162deg, #0c1824 0%, #0a141d 52%, #08111a 100%);
+  border-left: 1px solid rgba(150, 200, 240, 0.22);
+  box-shadow: -18px 0 50px rgba(4, 10, 16, 0.5), inset 1px 0 0 rgba(160, 210, 250, 0.12);
+  transform: translateX(100%); transition: transform 0.5s cubic-bezier(0.22, 0.9, 0.24, 1);
+  color: #c7d2da;
+}
+.echo-drawer.is-open { transform: none; }
+.echo-head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  padding: 26px 22px 18px; border-bottom: 1px solid rgba(180, 205, 224, 0.14);
+}
+.echo-code { font-size: 11px; letter-spacing: 0.22em; color: #7f9bb0; text-transform: uppercase; }
+.echo-sub { margin-top: 9px; font-size: 12px; line-height: 1.6; color: #9fb0bd; max-width: 262px; }
+.echo-close {
+  background: none; border: none; color: #dfe7ec; font: inherit; font-size: 11px;
+  letter-spacing: 0.2em; text-transform: uppercase; cursor: pointer; padding: 4px 2px;
+  display: flex; align-items: center; gap: 8px; opacity: 0.82; transition: opacity 0.25s; flex: none;
+}
+.echo-close:hover { opacity: 1; }
+.echo-body {
+  flex: 1; overflow-y: auto; padding: 20px 22px;
+  display: flex; flex-direction: column; gap: 14px; scrollbar-width: none;
+}
+.echo-body::-webkit-scrollbar { display: none; }
+.echo-empty {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  gap: 16px; margin: auto 0; padding: 10px 0;
+}
+.echo-avatar {
+  width: 54px; height: 54px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(150, 200, 240, 0.3);
+  background: radial-gradient(circle, rgba(120, 190, 240, 0.18) 0%, rgba(120, 190, 240, 0) 70%);
+}
+.echo-avatar .echo-ping { width: 12px; height: 12px; }
+.echo-empty p { font-size: 13.5px; line-height: 1.7; color: #aebcc7; max-width: 280px; }
+.echo-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 4px; }
+.echo-chip {
+  background: rgba(150, 200, 240, 0.08); border: 1px solid rgba(150, 200, 240, 0.22);
+  border-radius: 100px; padding: 8px 13px; color: #cfe0ee; font: inherit; font-size: 12px;
+  cursor: pointer; transition: background 0.2s, border-color 0.2s;
+}
+.echo-chip:hover:not(:disabled) { background: rgba(150, 200, 240, 0.16); border-color: rgba(180, 220, 255, 0.5); }
+.echo-chip:disabled { opacity: 0.4; cursor: default; }
+.echo-msg { max-width: 86%; font-size: 13.5px; line-height: 1.72; white-space: pre-wrap; word-wrap: break-word; }
+.echo-msg--user {
+  align-self: flex-end; background: rgba(150, 200, 240, 0.14);
+  border: 1px solid rgba(150, 200, 240, 0.2); border-radius: 14px 14px 4px 14px;
+  padding: 10px 14px; color: #eaf2f8;
+}
+.echo-msg--assistant {
+  align-self: flex-start; color: #c3d2dd;
+  border-left: 2px solid rgba(140, 200, 245, 0.5); padding: 2px 0 2px 14px;
+}
+.echo-caret { display: inline-block; margin-left: 1px; color: #9fdcff; animation: echo-blink 1s steps(2) infinite; }
+@keyframes echo-blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+.echo-error {
+  align-self: stretch; font-size: 12.5px; line-height: 1.6; color: #ffd7c2;
+  background: rgba(120, 60, 40, 0.18); border: 1px solid rgba(200, 120, 90, 0.3);
+  border-radius: 10px; padding: 10px 13px;
+}
+.echo-input {
+  display: flex; align-items: flex-end; gap: 10px; padding: 14px 16px 18px;
+  border-top: 1px solid rgba(180, 205, 224, 0.14);
+}
+.echo-input textarea {
+  flex: 1; resize: none; background: rgba(8, 15, 22, 0.6);
+  border: 1px solid rgba(150, 200, 240, 0.24); border-radius: 12px;
+  padding: 11px 13px; color: #e6eef4; font: inherit; font-size: 13.5px; line-height: 1.5;
+  max-height: 120px; outline: none; transition: border-color 0.2s;
+}
+.echo-input textarea:focus { border-color: rgba(180, 220, 255, 0.55); }
+.echo-input textarea::placeholder { color: #6f8494; }
+.echo-send {
+  flex: none; width: 42px; height: 42px; border-radius: 12px;
+  background: rgba(150, 200, 240, 0.16); border: 1px solid rgba(150, 200, 240, 0.32);
+  color: #dbeeff; font-size: 18px; cursor: pointer; transition: background 0.2s, transform 0.15s;
+}
+.echo-send:hover:not(:disabled) { background: rgba(150, 200, 240, 0.28); transform: translateY(-1px); }
+.echo-send:disabled { opacity: 0.4; cursor: default; }
+/* anotasi pintu masuk chat di klimaks outro */
+.echo-inline {
+  margin-top: 18px; background: none; border: none;
+  color: #a9c6dc; font: inherit; font-size: 12px; letter-spacing: 0.12em; cursor: pointer;
+  opacity: 0.82; transition: opacity 0.25s, color 0.25s;
+  text-shadow: 0 0 16px rgba(120, 190, 240, 0.4);
+}
+.echo-inline:hover { opacity: 1; color: #d8ecfb; }
+
 /* ---------- depth ruler kiri: penggaris kedalaman yang ikut scroll ---------- */
 .ruler {
   position: fixed; left: 32px; top: 0; bottom: 0; z-index: 9;
@@ -321,4 +444,6 @@ body {
   .rock-content { padding: 15vh 8vw 12vh; }
   .rock-scrim { background: linear-gradient(180deg, rgba(6, 12, 18, 0.55) 0%, rgba(6, 12, 18, 0.86) 100%); }
   .rock-logo { font-size: 17px; left: 20px; top: 20px; }
+  .echo-drawer { width: 100vw; }
+  .echo-btn { right: 16px; bottom: 20px; font-size: 10px; padding: 10px 14px; }
 }

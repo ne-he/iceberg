@@ -15,6 +15,12 @@ export const faceState = { target: 'face' }
 // true selama hero lagi di-drag — CameraRig matiin parallax pointer biar puterannya solid
 export const dragState = { active: false }
 
+// ===== ECHO chat (RAG chatbot) =====
+// open    : panel chat lagi kebuka (dibaca App buat sembunyiin tombol, kunci scroll)
+// streaming: bot lagi ngetik jawaban — dibaca Experience buat bikin aura muka
+//            partikel "denyut" pas lagi ngomong (di section outro). Ditulis useChat.
+export const chatState = { open: false, streaming: false }
+
 // ===== fokus/menyelam ke dalam batu pas diklik (permintaan Nehemiah) =====
 // pas batu (about/journey/projects/skills) diklik: kamera pelan geser batunya ke
 // tengah, lalu NEMBUS masuk ke dalamnya, baru panel konten full-screen (background

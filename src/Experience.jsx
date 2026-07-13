@@ -8,7 +8,7 @@ import { ParticleFace } from './ParticleFace'
 import { Portal } from './Portal'
 import { Glacier } from './Glacier'
 import { CRYSTALS, HERO_CRYSTAL } from './content'
-import { dragState, focusState, introState, scrollState } from './scrollState'
+import { chatState, dragState, focusState, introState, scrollState } from './scrollState'
 
 export const FOG_COLOR = '#b9c0c7'
 // warna kabut di kedalaman: biru gletser — makin dalam makin kerasa di dalam es
@@ -308,17 +308,20 @@ function FaceAura() {
   useFrame((state) => {
     const a = smoothstep(0.92, 0.99, scrollState.damped) * (1 - smoothstep(0, 0.12, scrollState.bridge))
     const t = state.clock.elapsedTime
-    if (glow.current) glow.current.material.opacity = 0.85 * a
+    // pas ECHO (chatbot) lagi ngetik & kita di section wajah: aura "denyut" lebih
+    // terang — kesannya muka partikel lagi ngomong (avatar chatbot hidup)
+    const talk = chatState.streaming ? 1 + 0.28 * (0.5 + 0.5 * Math.sin(t * 7)) : 1
+    if (glow.current) glow.current.material.opacity = 0.85 * a * talk
     // dua cincin tipis pelan berputar = kesan spiral cahaya di ss#4
     if (ring1.current) {
-      ring1.current.material.opacity = 0.3 * a
+      ring1.current.material.opacity = 0.3 * a * talk
       ring1.current.rotation.z = t * 0.05
     }
     if (ring2.current) {
-      ring2.current.material.opacity = 0.18 * a
+      ring2.current.material.opacity = 0.18 * a * talk
       ring2.current.rotation.z = -t * 0.035
     }
-    if (light.current) light.current.intensity = 3.4 * a
+    if (light.current) light.current.intensity = 3.4 * a * talk
   })
   return (
     <group position={[0, -40.4, -3.5]}>
