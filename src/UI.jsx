@@ -241,7 +241,7 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
           layar. Muncul pas kamera udah nembus masuk batunya (permintaan Nehemiah) */}
       <div className={`rock-modal ${panel ? 'is-open' : ''}`} aria-hidden={!panel}>
         {hasGlacier ? (
-          <video ref={vidRef} className="rock-bg" src="/glacier_inside.mp4" loop playsInline preload="auto" />
+          <video ref={vidRef} className="rock-bg" src="/glacier_inside.mp4" loop playsInline preload="metadata" />
         ) : (
           <div className="rock-bg rock-bg--fallback" />
         )}
