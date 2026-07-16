@@ -241,7 +241,9 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
           layar. Muncul pas kamera udah nembus masuk batunya (permintaan Nehemiah) */}
       <div className={`rock-modal ${panel ? 'is-open' : ''}`} aria-hidden={!panel}>
         {hasGlacier ? (
-          <video ref={vidRef} className="rock-bg" src="/glacier_inside.mp4" loop playsInline preload="metadata" />
+          // videonya udah dikompres ke <1MB, jadi aman di-preload penuh:
+          // ke-buffer semua sebelum user klik kristal = main tanpa patah
+          <video ref={vidRef} className="rock-bg" src="/glacier_inside.mp4" loop playsInline preload="auto" />
         ) : (
           <div className="rock-bg rock-bg--fallback" />
         )}
