@@ -94,7 +94,6 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
   const words = useRef([])
   const depth = useRef()
   const temp = useRef()
-  const num = useRef()
   const bar = useRef()
   const hint = useRef()
   const ruler = useRef()
@@ -134,8 +133,6 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
       })
       if (depth.current) depth.current.textContent = `DPT ${String(Math.round(dk * 380)).padStart(3, '0')}M`
       if (temp.current) temp.current.textContent = `TEMP ${(-1.2 - dk * 27.3).toFixed(2)}`
-      // counter jalan penuh sampai 120 (100..120 = jembatan balik ke start)
-      if (num.current) num.current.textContent = `${String(Math.round(lp * 120)).padStart(3, '0')} / 120`
       if (bar.current) bar.current.style.transform = `scaleX(${lp})`
       if (hint.current) hint.current.style.opacity = clamp(1 - (dk - 0.82) / 0.06, 0, 1) * rv
       if (ruler.current) {
@@ -202,9 +199,6 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
         </div>
         <div className="hint" ref={hint}>
           <span className="hint-inner">SCROLL TO DESCEND ▾</span>
-        </div>
-        <div className="progress-num" ref={num}>
-          00 / 100
         </div>
         <div className="progress-bar" ref={bar} />
       </div>

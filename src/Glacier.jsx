@@ -2,6 +2,16 @@ import * as THREE from 'three'
 import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
+import { scrollState } from './scrollState'
+
+// plane dekorasi (arus/caustic/shaft) tingginya nyampe viewport hero dan keliatan
+// kayak "dinding jalan" ganggu di belakang nama (komplain Nehemiah). 0 pas di
+// hero, baru fade in setelah hero text ilang (dk 0.07), penuh di dk 0.14.
+// depthK retrace ke 0 pas bridge, jadi pas balik ke atas mereka ikut ilang lagi.
+export function heroFade() {
+  const k = Math.min(Math.max((scrollState.depthK - 0.07) / 0.07, 0), 1)
+  return k * k * (3 - 2 * k)
+}
 
 // ===== suasana "di dalam glacier" (permintaan Nehemiah) =====
 // dinding es crevasse kiri-kanan (dimodel di Blender: grid ke-displace jadi
@@ -113,12 +123,13 @@ function Currents() {
   ]
   useFrame((state) => {
     const t = state.clock.elapsedTime
+    const vis = heroFade()
     mats.current.forEach((m, i) => {
       if (!m) return
       // drift horizontal beda-beda kecepatan tiap layer = paralaks arus
       m.map.offset.x = (t * (0.008 + i * 0.004)) % 1
       m.map.offset.y = Math.sin(t * 0.05 + i) * 0.02
-      m.opacity = 0.09 + Math.sin(t * 0.25 + i * 1.7) * 0.03
+      m.opacity = (0.09 + Math.sin(t * 0.25 + i * 1.7) * 0.03) * vis
     })
   })
   return planes.map((p, i) => (
@@ -150,11 +161,12 @@ function Caustics() {
   ]
   useFrame((state) => {
     const t = state.clock.elapsedTime
+    const vis = heroFade()
     mats.current.forEach((m, i) => {
       if (!m) return
       m.map.offset.y = (t * 0.02 + i * 0.3) % 1
       m.map.offset.x = Math.sin(t * 0.05 + i) * 0.1
-      m.opacity = 0.16 + Math.sin(t * 0.4 + i * 2) * 0.06
+      m.opacity = (0.16 + Math.sin(t * 0.4 + i * 2) * 0.06) * vis
     })
   })
   return planes.map((p, i) => (

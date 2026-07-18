@@ -6,7 +6,7 @@ import { easing } from 'maath'
 import { Crystal } from './Crystal'
 import { ParticleFace } from './ParticleFace'
 import { Portal } from './Portal'
-import { Glacier } from './Glacier'
+import { Glacier, heroFade } from './Glacier'
 import { CRYSTALS, HERO_CRYSTAL } from './content'
 import { chatState, dragState, focusState, introState, scrollState } from './scrollState'
 
@@ -461,10 +461,16 @@ function LightShafts() {
     { pos: [-4.5, -26, -8], rot: 0.1, w: 2.2 },
     { pos: [2.5, -33.5, -6], rot: -0.08, w: 3.2 },
   ]
+  // shaft tingginya 36 jadi nyampe area hero — sembunyiin di atas biar nama bersih
+  const mats = useRef([])
+  useFrame(() => {
+    const vis = heroFade()
+    mats.current.forEach((m) => { if (m) m.opacity = 0.14 * vis })
+  })
   return shafts.map((s, i) => (
     <mesh key={i} position={s.pos} rotation={[0, 0, s.rot]}>
       <planeGeometry args={[s.w, 36]} />
-      <meshBasicMaterial map={tex} transparent opacity={0.14} blending={THREE.AdditiveBlending} depthWrite={false} />
+      <meshBasicMaterial ref={(el) => (mats.current[i] = el)} map={tex} transparent opacity={0.14} blending={THREE.AdditiveBlending} depthWrite={false} />
     </mesh>
   ))
 }

@@ -91,7 +91,6 @@ body {
 }
 .hint-inner { display: inline-block; animation: pulse 2.4s ease-in-out infinite; }
 @keyframes pulse { 0%, 100% { opacity: 0.75; } 50% { opacity: 0.25; } }
-.progress-num { position: absolute; bottom: 24px; right: 32px; font-size: 10px; letter-spacing: 0.14em; opacity: 0.9; }
 .progress-bar {
   position: absolute; bottom: 0; left: 0; height: 2px; width: 100%;
   background: rgba(255, 255, 255, 0.85); transform-origin: 0 50%; transform: scaleX(0);
