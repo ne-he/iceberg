@@ -3,7 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import Experience from './Experience'
 import { UI, Loader } from './UI'
 import ChatDock from './chat/ChatDock'
-import { beginFocus, chatState, dragState, endFocus, focusState, introState, scrollState } from './scrollState'
+import { beginFocus, bgVideoState, chatState, dragState, endFocus, focusState, introState, scrollState } from './scrollState'
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
 
@@ -311,8 +311,11 @@ export default function App() {
       .then((r) => {
         const type = r.headers.get('content-type') || ''
         if (r.ok && type.includes('video')) setHasVideo(true)
+        else bgVideoState.ready = true // gak ada video langit = gak usah ditunggu
       })
-      .catch(() => {})
+      .catch(() => {
+        bgVideoState.ready = true
+      })
     // video loop "dalam glacier" buat background panel batu. File-nya di
     // public/glacier_inside.mp4; kalau ga ketemu, panel fallback ke gradient es.
     fetch('/glacier_inside.mp4', { method: 'HEAD' })
@@ -325,7 +328,20 @@ export default function App() {
 
   return (
     <>
-      {hasVideo && <video ref={videoRef} className="bg-video" src="/scene/scene.mp4" autoPlay muted loop playsInline />}
+      {hasVideo && (
+        <video
+          ref={videoRef}
+          className="bg-video"
+          src="/scene/scene.mp4"
+          autoPlay
+          muted
+          loop
+          playsInline
+          // loadeddata = frame pertama udah kelar decode → loader boleh buka tirai
+          onLoadedData={() => (bgVideoState.ready = true)}
+          onError={() => (bgVideoState.ready = true)}
+        />
+      )}
       {hasVideo && <div ref={veilRef} className="fog-veil" aria-hidden="true" />}
       {/* tint biru gletser di backdrop, makin dalam makin pekat */}
       <div ref={depthTintRef} className="depth-tint" aria-hidden="true" />

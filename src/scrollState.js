@@ -52,6 +52,11 @@ export const introState = {
   reveal: 0, // 0..1 kemunculan background/video/UI — 0 pas wait, 1 pas emerge/idle
 }
 
+// video langit bg (scene.mp4): loader nunggu frame pertamanya kelar decode biar
+// pas tirai loader kebuka gak ada flash putih sebentar sebelum videonya nongol.
+// Di-set true juga kalau videonya gak ada / gagal load, biar loader gak ngegantung.
+export const bgVideoState = { ready: false }
+
 // dipanggil Loader pas selesai — mulai animasi emerge pertama kali
 export function beginIntro() {
   if (introState.phase !== 'wait') return

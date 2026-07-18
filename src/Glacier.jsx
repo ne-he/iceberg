@@ -4,12 +4,13 @@ import { useFrame } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import { scrollState } from './scrollState'
 
-// plane dekorasi (arus/caustic/shaft) tingginya nyampe viewport hero dan keliatan
-// kayak "dinding jalan" ganggu di belakang nama (komplain Nehemiah). 0 pas di
-// hero, baru fade in setelah hero text ilang (dk 0.07), penuh di dk 0.14.
-// depthK retrace ke 0 pas bridge, jadi pas balik ke atas mereka ikut ilang lagi.
+// plane dekorasi (arus/caustic/shaft) + dinding gletser keliatan kayak "dinding
+// jalan" samar yang ganggu di zona atas (komplain Nehemiah, masih kebaca sampai
+// sekitar 100M). 0 sampai dk 0.28 (~106M), penuh di dk 0.40 (~152M) — crevasse
+// emang baru mulai di kedalaman segitu. depthK retrace ke 0 pas bridge, jadi
+// pas balik ke atas mereka ikut ilang lagi.
 export function heroFade() {
-  const k = Math.min(Math.max((scrollState.depthK - 0.07) / 0.07, 0), 1)
+  const k = Math.min(Math.max((scrollState.depthK - 0.28) / 0.12, 0), 1)
   return k * k * (3 - 2 * k)
 }
 
@@ -57,10 +58,20 @@ function GlacierWall({ side }) {
   const geo = useMemo(() => Object.values(nodes).find((n) => n.isMesh)?.geometry, [nodes])
   // kiri: normal +Z diputar ke +X (ngadep ke tengah). kanan: kebalikannya
   const rotY = side < 0 ? Math.PI / 2 : -Math.PI / 2
+  // puncak dinding nyampe zona atas dan siluet faceted-nya kebaca samar di kabut —
+  // ikut heroFade kayak dekorasi lain biar zona atas beneran bersih
+  const m1 = useRef()
+  const m2 = useRef()
+  useFrame(() => {
+    const vis = heroFade()
+    if (m1.current) m1.current.opacity = 0.8 * vis
+    if (m2.current) m2.current.opacity = 0.06 * vis
+  })
   return (
     <group position={[side * 12, -20, -5]} rotation={[0, rotY, side * 0.07]} scale={[1, 1.12, 1]}>
       <mesh geometry={geo}>
         <meshStandardMaterial
+          ref={m1}
           color="#6f9ec2"
           roughness={0.42}
           metalness={0}
@@ -73,7 +84,7 @@ function GlacierWall({ side }) {
       </mesh>
       {/* shell tipis lebih terang = rim subsurface, kesan cahaya nembus es */}
       <mesh geometry={geo} scale={1.008}>
-        <meshBasicMaterial color="#bfe0f5" transparent opacity={0.06} depthWrite={false} />
+        <meshBasicMaterial ref={m2} color="#bfe0f5" transparent opacity={0.06} depthWrite={false} />
       </mesh>
     </group>
   )

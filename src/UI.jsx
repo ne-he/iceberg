@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useProgress } from '@react-three/drei'
-import { beginIntro, faceState, introState, scrollState } from './scrollState'
+import { beginIntro, bgVideoState, faceState, introState, scrollState } from './scrollState'
 import { CONTACT, PANELS, SECTION_WORDS } from './content'
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
@@ -283,14 +283,22 @@ export function Loader() {
   useEffect(() => {
     // selesai kalau progress 100 ATAU gak ada loader yang aktif lagi —
     // useProgress kadang mentok di bawah 100 padahal asset udah kelar semua.
-    // Delay 600ms: kalau ternyata masih ada asset nyusul (active balik true),
-    // timer-nya ke-cancel duluan, jadi gak kecolongan mulai intro kepagian
+    // Delay minimal 600ms: kalau ternyata masih ada asset nyusul (active balik
+    // true), interval ke-cancel duluan, jadi gak kecolongan mulai intro kepagian.
+    // useProgress cuma ngitung asset three.js — video langit (scene.mp4) di luar
+    // itu, jadi ditunggu juga (bgVideoState) biar pas tirai kebuka videonya udah
+    // nongol, bukan putih dulu sedetik. Batas nunggu video 3 detik.
     if (progress >= 100 || !active) {
-      const id = setTimeout(() => {
-        setDone(true)
-        beginIntro() // loader kelar → batu hero mulai jatuh
-      }, 600)
-      return () => clearTimeout(id)
+      const t0 = performance.now()
+      const id = setInterval(() => {
+        const el = performance.now() - t0
+        if (el >= 600 && (bgVideoState.ready || el > 3000)) {
+          clearInterval(id)
+          setDone(true)
+          beginIntro() // loader kelar → batu hero mulai jatuh
+        }
+      }, 80)
+      return () => clearInterval(id)
     }
   }, [active, progress])
   // jaring pengaman: apapun yang terjadi, loader hilang setelah 5 detik
