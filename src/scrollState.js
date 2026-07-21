@@ -26,7 +26,11 @@ export const chatState = { open: false, streaming: false }
 // tengah, lalu NEMBUS masuk ke dalamnya, baru panel konten full-screen (background
 // dalam-glacier + teks) muncul. phase: 'idle' | 'in' (nyelam masuk) | 'open'
 // (nembus, panel kebuka) | 'out' (mundur balik). pos = posisi batu dunia.
-export const focusState = { id: null, pos: [0, 0, 0], phase: 'idle', t0: 0 }
+// panelOpen ditulis App pas modal batu bener-bener nongol/ketutup. Dipisah dari
+// phase karena pas panel kebuka frameloop R3F di-stop → phase bisa beku di 'in'
+// (useFrame yang naikin ke 'open' ikut berhenti), jadi phase gak bisa dipakai
+// buat deteksi "panel lagi kebuka" di master loop
+export const focusState = { id: null, pos: [0, 0, 0], phase: 'idle', t0: 0, panelOpen: false }
 
 // dipanggil pas batu diklik — mulai animasi menyelam
 export function beginFocus(id, pos) {

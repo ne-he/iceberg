@@ -118,11 +118,15 @@ export default function App() {
     if (focusState.phase !== 'idle') return // lagi nyelam/kebuka — abaikan klik dobel
     beginFocus(id, pos ?? [0, 0, 0])
     clearTimeout(diveTimer.current)
-    diveTimer.current = setTimeout(() => setPanel(id), 1150) // sinkron sama durasi nembus
+    diveTimer.current = setTimeout(() => {
+      setPanel(id) // sinkron sama durasi nembus
+      focusState.panelOpen = true
+    }, 1150)
   }
   const closeRock = () => {
     clearTimeout(diveTimer.current)
     setPanel(null)
+    focusState.panelOpen = false
     endFocus()
   }
   const veilRef = useRef()
@@ -142,6 +146,7 @@ export default function App() {
     let snapTween = null // tween GSAP yg lagi jalan (null = gak ada)
     let prevLoopRaw = 0 // buat ngedeteksi arah scroll terakhir
     let dir = 0 // -1 naik, +1 turun, 0 belum gerak
+    let gradOn = null // status display .grad-depth (biar gak nulis style tiap frame)
 
     const sizeSpace = () => {
       P = periodPx()
@@ -298,6 +303,15 @@ export default function App() {
       // gantiin rasa tint biru datar jadi air yang gerak. Di hero opacity 0
       if (gradRef.current) {
         gradRef.current.style.opacity = clamp((dk - 0.24) / 0.4, 0, 1) * 0.5 * rv
+        // canvas-nya render full-screen TIAP frame walau opacity 0 — di hero itu
+        // buang GPU sia-sia. display:none bikin R3F nge-resize canvas ke 0x0
+        // (nyaris gratis); baru dinyalain pas mulai turun, jauh sebelum
+        // opacity-nya keliatan (0.24) jadi gak ada pop
+        const on = dk > 0.05 && !focusState.panelOpen
+        if (on !== gradOn) {
+          gradOn = on
+          gradRef.current.style.display = on ? '' : 'none'
+        }
       }
       const veil = veilRef.current
       if (veil) {
@@ -308,7 +322,12 @@ export default function App() {
       if (el) {
         const fade = clamp(1 - (dk - 0.12) / 0.24, 0, 1)
         el.style.opacity = (0.3 + 0.7 * fade) * rv
-        if (el.paused) el.play().catch(() => {})
+        // pas panel batu kebuka, layar ketutup penuh modal + video glacier —
+        // video langit di-pause biar gak ada DUA video rebutan decoder
+        // (biang video panel kadang patah). Balik play pas panel ditutup
+        if (focusState.panelOpen) {
+          if (!el.paused) el.pause()
+        } else if (el.paused) el.play().catch(() => {})
       }
       raf = requestAnimationFrame(tick)
     }
@@ -389,7 +408,9 @@ export default function App() {
       {/* gradient shader air-dalam (eksperimen ShaderGradient): waterPlane biru
           es yang mengalir pelan di balik scene, muncul cuma di zona dalam */}
       <div ref={gradRef} className="grad-depth" aria-hidden="true">
-        <ShaderGradientCanvas pixelDensity={1} fov={45} pointerEvents="none" lazyLoad={false}>
+        {/* pixelDensity diturunin 1 → 0.6: gradient-nya blur lembut, downscale
+            gak kebaca mata tapi beban fragment shader-nya turun ~3x */}
+        <ShaderGradientCanvas pixelDensity={0.6} fov={45} pointerEvents="none" lazyLoad={false}>
           <ShaderGradient
             type="waterPlane"
             animate="on"
