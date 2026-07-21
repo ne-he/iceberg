@@ -60,6 +60,10 @@ body {
   background: radial-gradient(ellipse at 50% 30%, rgba(70, 116, 150, 0.55) 0%, rgba(40, 74, 104, 0.9) 75%);
   pointer-events: none;
 }
+/* huruf yang masih "keenkripsi" pas efek decode judul — sedikit redup
+   biar kebedain dari huruf yang udah kebuka */
+.dt-enc { opacity: 0.5; }
+
 /* gradient shader air-dalam (ShaderGradient) — di atas tint, di bawah scene 3D.
    opacity digerakin JS ngikut depthK, 0 pas di hero */
 .grad-depth {

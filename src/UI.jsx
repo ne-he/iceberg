@@ -2,6 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { useProgress } from '@react-three/drei'
 import { beginIntro, bgVideoState, faceState, introState, scrollState } from './scrollState'
 import { CONTACT, PANELS, SECTION_WORDS } from './content'
+import DecryptedText from './components/DecryptedText'
+
+// glyph acak buat efek decode judul — huruf kapital + angka + simbol instrumen,
+// senada sama kode section '//////' dan readout HUD
+const DECRYPT_GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#/<>-'
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
 
@@ -104,6 +109,14 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
   if (panel) lastRef.current = panel
   const data = PANELS[lastRef.current]
 
+  // pemicu efek decode (DecryptedText): counter naik tiap elemen teksnya
+  // TRANSISI dari sembunyi ke keliatan. State React di sini aman karena
+  // cuma berubah pas ganti section, bukan tiap frame
+  const [wordPlay, setWordPlay] = useState(() => SECTION_WORDS.map(() => 0))
+  const [heroPlay, setHeroPlay] = useState(0)
+  const wordVis = useRef(SECTION_WORDS.map(() => false))
+  const heroVis = useRef(false)
+
   // video dalam-glacier: suara nyala default (permintaan Nehemiah), bisa di-toggle
   const vidRef = useRef(null)
   const [soundOn, setSoundOn] = useState(true)
@@ -120,7 +133,15 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
       const lp = scrollState.loopDamped
       const rv = introState.phase === 'idle' ? 1 : introState.reveal
       // hero text nongol pas dangkal (dk kecil) — otomatis balik muncul di ujung bridge
-      if (hero.current) hero.current.style.opacity = clamp(1 - dk / 0.07, 0, 1) * rv
+      if (hero.current) {
+        const ho = clamp(1 - dk / 0.07, 0, 1) * rv
+        hero.current.style.opacity = ho
+        const hv = ho > 0.3
+        if (hv !== heroVis.current) {
+          heroVis.current = hv
+          if (hv) setHeroPlay((v) => v + 1) // baru nongol → judul decode
+        }
+      }
       if (outro.current) {
         // muncul pas mendarat, FADE OUT pas bridge mulai (mau balik ke atas)
         const o = clamp((t - 0.974) / 0.022, 0, 1) * (1 - smooth(clamp(br / 0.3, 0, 1)))
@@ -129,7 +150,15 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
       }
       SECTION_WORDS.forEach((w, i) => {
         const el = words.current[i]
-        if (el) el.style.opacity = clamp(1 - Math.abs(t - w.center) / 0.12, 0, 1)
+        if (el) {
+          const o = clamp(1 - Math.abs(t - w.center) / 0.12, 0, 1)
+          el.style.opacity = o
+          const vis = o > 0.15
+          if (vis !== wordVis.current[i]) {
+            wordVis.current[i] = vis
+            if (vis) setWordPlay((p) => p.map((v, j) => (j === i ? v + 1 : v)))
+          }
+        }
       })
       if (depth.current) depth.current.textContent = `DPT ${String(Math.round(dk * 380)).padStart(3, '0')}M`
       if (temp.current) temp.current.textContent = `TEMP ${(-1.2 - dk * 27.3).toFixed(2)}`
@@ -205,12 +234,32 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
 
       {SECTION_WORDS.map((w, i) => (
         <div key={w.word} className="bigword" ref={(el) => (words.current[i] = el)}>
-          {w.word}
+          <DecryptedText
+            text={w.word}
+            animateOn="manual"
+            playKey={wordPlay[i]}
+            sequential
+            revealDirection="center"
+            speed={55}
+            characters={DECRYPT_GLYPHS}
+            encryptedClassName="dt-enc"
+          />
         </div>
       ))}
 
       <div className="hero" ref={hero}>
-        <h1>NEHEMIAH</h1>
+        <h1>
+          <DecryptedText
+            text="NEHEMIAH"
+            animateOn="manual"
+            playKey={heroPlay}
+            sequential
+            revealDirection="center"
+            speed={70}
+            characters={DECRYPT_GLYPHS}
+            encryptedClassName="dt-enc"
+          />
+        </h1>
         <p>DATA SCIENCE PORTFOLIO / DESCEND TO EXPLORE</p>
       </div>
 
