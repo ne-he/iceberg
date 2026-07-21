@@ -7,20 +7,112 @@ import { dragState, focusState, scrollState } from './scrollState'
 
 const MODEL = '/models/iceberg.glb'
 
+// ===== selubung wireframe LOKAL pas hover (permintaan Nehemiah) =====
+// dulu: hover = wireframe nyala di SELURUH batu (keliatan kayak model 3D telanjang).
+// sekarang: garis geometri cuma "kebuka" di sekitar titik kursor, disapu
+// gelombang cincin keluar = lapisan-lapisan yang bergerak melapisi batunya.
+// Teknik: barycentric wireframe (tiap vertex dikasih koordinat sudut segitiga,
+// fragment deket tepi segitiga = garis) di-mask jarak ke titik hover.
+const veilVert = /* glsl */ `
+  attribute vec3 aBary;
+  varying vec3 vBary;
+  varying vec3 vPos;
+  uniform vec3 uPoint;
+  uniform float uTime;
+  uniform float uRadius;
+  uniform float uReach;
+  void main() {
+    vBary = aBary;
+    vPos = position;
+    float d = distance(position, uPoint) / uRadius;
+    float mask = 1.0 - smoothstep(0.0, 1.0, d);
+    // "napas" lapisan: permukaan veil ngangkat tipis ngikutin gelombang yang
+    // nyapu keluar dari titik hover — kerasa ada selubung yang gerak, bukan tempelan
+    float wave = 0.5 + 0.5 * sin(d * 16.0 - uTime * 4.5);
+    vec3 p = position + normal * (0.004 + 0.03 * mask * wave) * uReach;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+  }
+`
+const veilFrag = /* glsl */ `
+  varying vec3 vBary;
+  varying vec3 vPos;
+  uniform vec3 uPoint;
+  uniform vec3 uColor;
+  uniform float uTime;
+  uniform float uRadius;
+  uniform float uReach;
+  void main() {
+    float d = distance(vPos, uPoint) / uRadius;
+    float mask = 1.0 - smoothstep(0.3, 1.0, d);
+    float k = mask * uReach;
+    if (k < 0.004) discard;
+    // jarak fragment ke tepi segitiga terdekat → garis wireframe anti-alias
+    float w = min(vBary.x, min(vBary.y, vBary.z));
+    float line = 1.0 - smoothstep(0.0, fwidth(w) * 1.7, w);
+    // cincin cahaya nyapu keluar: garis di jalur cincin nyala lebih terang
+    float ring = pow(0.5 + 0.5 * sin(d * 16.0 - uTime * 4.5), 3.0);
+    // titik kontak dikasih glow lembut biar ada "sentuhan"
+    float glow = (1.0 - smoothstep(0.0, 0.38, d)) * 0.14;
+    gl_FragColor = vec4(uColor, (line * (0.4 + 0.6 * ring) + glow) * k);
+  }
+`
+
 export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
   const { nodes } = useGLTF(data.model ?? MODEL)
   const group = useRef()
   const spinner = useRef()
-  const shineMat = useRef()
+  const veil = useRef()
   const dragging = useRef(null)
   const dragMoved = useRef(false) // true kalau gesture terakhir beneran muter (bukan klik)
   const [hovered, setHovered] = useState(false)
   const [near, setNear] = useState(!interactive)
   const wp = useMemo(() => new THREE.Vector3(), [])
+  const hoverPt = useRef(new THREE.Vector3()) // titik hover terakhir (world space)
+  const lv = useMemo(() => new THREE.Vector3(), []) // kerja: world → local
   const draggable = !!data.draggable
   useCursor(hovered && (interactive || draggable))
 
   const geometry = useMemo(() => Object.values(nodes).find((n) => n.isMesh)?.geometry, [nodes])
+
+  // geometri veil: non-indexed + attribute barycentric (tiap segitiga dapet
+  // (1,0,0)(0,1,0)(0,0,1)) — syarat wireframe shader di atas
+  const veilGeo = useMemo(() => {
+    if (!geometry) return null
+    const g = geometry.index ? geometry.toNonIndexed() : geometry.clone()
+    const n = g.attributes.position.count
+    const bary = new Float32Array(n * 3)
+    for (let i = 0; i < n; i += 3) {
+      bary[i * 3] = 1
+      bary[(i + 1) * 3 + 1] = 1
+      bary[(i + 2) * 3 + 2] = 1
+    }
+    g.setAttribute('aBary', new THREE.BufferAttribute(bary, 3))
+    g.computeBoundingSphere()
+    return g
+  }, [geometry])
+
+  const veilMat = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        uniforms: {
+          uPoint: { value: new THREE.Vector3(0, 999, 0) },
+          uColor: { value: new THREE.Color('#dff1ff') },
+          uTime: { value: 0 },
+          uRadius: { value: 1 },
+          uReach: { value: 0 },
+        },
+        vertexShader: veilVert,
+        fragmentShader: veilFrag,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    []
+  )
+  useEffect(() => {
+    // radius area yang kebuka ~ separuh badan batu — cukup buat kerasa "lokal"
+    if (veilGeo) veilMat.uniforms.uRadius.value = (veilGeo.boundingSphere?.radius ?? 1) * 0.55
+  }, [veilGeo, veilMat])
 
   useFrame((state, delta) => {
     if (!group.current || !spinner.current) return
@@ -29,8 +121,17 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
     if (!dragging.current) spinner.current.rotation.y += delta * (data.spin ?? 0.06)
     const s = (data.scale ?? 1) * (interactive && hovered ? 1.07 : 1)
     easing.damp3(group.current.scale, [s, s, s], 0.25, delta)
-    // kilau wireframe pas hover — glint facet ala igloo
-    if (shineMat.current) easing.damp(shineMat.current, 'opacity', hovered ? 0.3 : 0, 0.18, delta)
+    // selubung wireframe lokal: fade in/out + titik hover dikejar pake damping
+    // (batunya muter, jadi titik world harus dikonversi ulang ke local tiap frame)
+    if (veil.current) {
+      const u = veilMat.uniforms
+      u.uTime.value += delta
+      easing.damp(u.uReach, 'value', hovered ? 1 : 0, 0.22, delta)
+      if (u.uReach.value > 0.002) {
+        veil.current.worldToLocal(lv.copy(hoverPt.current))
+        easing.damp3(u.uPoint.value, lv, 0.1, delta)
+      }
+    }
     if (interactive) {
       group.current.getWorldPosition(wp)
       const n = state.camera.position.distanceTo(wp) < 14
@@ -42,6 +143,13 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
     onPointerOver: (e) => {
       e.stopPropagation()
       setHovered(true)
+      // titik masuk langsung di-snap (tanpa damping) biar veil-nya nongol pas
+      // di tempat kursor nyentuh, bukan nyapu dari posisi hover sebelumnya
+      hoverPt.current.copy(e.point)
+      if (veil.current) veilMat.uniforms.uPoint.value.copy(veil.current.worldToLocal(lv.copy(e.point)))
+    },
+    onPointerMove: (e) => {
+      hoverPt.current.copy(e.point)
     },
     onPointerOut: () => setHovered(false),
   }
@@ -123,10 +231,9 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
               envMapIntensity={1.1}
             />
           </mesh>
-          {/* overlay kilau: wireframe putih yang nyala pas hover */}
-          <mesh geometry={geometry} scale={1.002}>
-            <meshBasicMaterial ref={shineMat} wireframe transparent opacity={0} color="#ffffff" toneMapped={false} depthWrite={false} />
-          </mesh>
+          {/* selubung wireframe lokal: cuma sekitar kursor yang kebuka garis
+              geometrinya, disapu gelombang cincin keluar (shader di atas) */}
+          <mesh ref={veil} geometry={veilGeo} material={veilMat} scale={1.004} />
           <Artifact type={data.artifact} />
         </group>
         {interactive && (
