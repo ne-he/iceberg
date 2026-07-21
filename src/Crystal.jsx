@@ -13,49 +13,206 @@ const MODEL = '/models/iceberg.glb'
 // gelombang cincin keluar = lapisan-lapisan yang bergerak melapisi batunya.
 // Teknik: barycentric wireframe (tiap vertex dikasih koordinat sudut segitiga,
 // fragment deket tepi segitiga = garis) di-mask jarak ke titik hover.
+//
+// Yang bikin versi pertama masih kerasa "kerangka Blender": SEMUA edge segitiga
+// kegambar, termasuk diagonal hasil triangulasi yang bukan bentuk asli objek.
+// Sekarang tiap edge dikasih flag (aEdge): cuma crease & siluet yang digambar
+// (lihat buildVeilGeometry), plus garisnya dikasih fresnel, simpul di sudut,
+// dan cincin scan bertepi tajam — jadi kebaca kayak struktur/HUD, bukan mesh mentah.
 const veilVert = /* glsl */ `
   attribute vec3 aBary;
+  attribute vec3 aEdge;
   varying vec3 vBary;
+  varying vec3 vEdge;
   varying vec3 vPos;
+  varying vec3 vN;
+  varying vec3 vView;
   uniform vec3 uPoint;
   uniform float uTime;
   uniform float uRadius;
   uniform float uReach;
   void main() {
     vBary = aBary;
+    vEdge = aEdge;
     vPos = position;
+    vN = normalize(normalMatrix * normal);
     float d = distance(position, uPoint) / uRadius;
     float mask = 1.0 - smoothstep(0.0, 1.0, d);
     // "napas" lapisan: permukaan veil ngangkat tipis ngikutin gelombang yang
     // nyapu keluar dari titik hover — kerasa ada selubung yang gerak, bukan tempelan
-    float wave = 0.5 + 0.5 * sin(d * 16.0 - uTime * 4.5);
-    vec3 p = position + normal * (0.004 + 0.03 * mask * wave) * uReach;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+    float wave = 0.5 + 0.5 * sin(d * 13.0 - uTime * 3.2);
+    vec3 p = position + normal * (0.004 + 0.022 * mask * wave) * uReach;
+    vec4 mv = modelViewMatrix * vec4(p, 1.0);
+    vView = normalize(-mv.xyz);
+    gl_Position = projectionMatrix * mv;
   }
 `
 const veilFrag = /* glsl */ `
   varying vec3 vBary;
+  varying vec3 vEdge;
   varying vec3 vPos;
+  varying vec3 vN;
+  varying vec3 vView;
   uniform vec3 uPoint;
   uniform vec3 uColor;
+  uniform vec3 uHot;
   uniform float uTime;
   uniform float uRadius;
   uniform float uReach;
   void main() {
     float d = distance(vPos, uPoint) / uRadius;
-    float mask = 1.0 - smoothstep(0.3, 1.0, d);
+    float mask = 1.0 - smoothstep(0.26, 1.0, d);
     float k = mask * uReach;
     if (k < 0.004) discard;
-    // jarak fragment ke tepi segitiga terdekat → garis wireframe anti-alias
-    float w = min(vBary.x, min(vBary.y, vBary.z));
-    float line = 1.0 - smoothstep(0.0, fwidth(w) * 1.7, w);
-    // cincin cahaya nyapu keluar: garis di jalur cincin nyala lebih terang
-    float ring = pow(0.5 + 0.5 * sin(d * 16.0 - uTime * 4.5), 3.0);
-    // titik kontak dikasih glow lembut biar ada "sentuhan"
-    float glow = (1.0 - smoothstep(0.0, 0.38, d)) * 0.14;
-    gl_FragColor = vec4(uColor, (line * (0.4 + 0.6 * ring) + glow) * k);
+
+    // edge yang dimatiin (diagonal triangulasi) jaraknya dipaksa jauh, jadi
+    // gak pernah kegambar. Sisanya: jarak fragment ke edge terdekat → garis AA
+    vec3 b = mix(vec3(4.0), vBary, step(0.5, vEdge));
+    float w = min(b.x, min(b.y, b.z));
+    float aa = max(fwidth(w), 1e-5);
+    float line = 1.0 - smoothstep(0.0, aa * 2.0, w);
+    float halo = 1.0 - smoothstep(0.0, aa * 9.0, w); // pendar tipis di sekitar garis
+
+    // simpul kecil di titik sudut mesh (cuma sudut yang punya edge aktif)
+    float c = max(vBary.x, max(vBary.y, vBary.z));
+    float node = smoothstep(0.978, 0.999, c) * max(vEdge.x, max(vEdge.y, vEdge.z));
+
+    // fresnel: garis yang miring ngadep tepi siluet lebih nyala — kesan selubung
+    // beneran MEMBUNGKUS permukaan, bukan tekstur garis yang ditempel datar
+    float fres = pow(1.0 - abs(dot(normalize(vN), normalize(vView))), 2.0);
+
+    // cincin scan nyapu keluar dari titik sentuh: tepi depan tajam, ekor meredup
+    float ph = fract(d * 2.4 - uTime * 0.5);
+    float scan = pow(1.0 - ph, 9.0);
+
+    // garis kontur konsentris yang ngikutin lekuk permukaan (kayak garis
+    // topografi) — ini yang bikin kebaca "lagi dipindai berlapis", bukan
+    // kerangka mesh. Tebalnya dihitung dari turunan biar tetep tipis rata
+    float cd = d * 7.5 - uTime * 0.42;
+    float cw = fwidth(cd) * 1.3;
+    float contour = smoothstep(0.5 - cw, 0.5, abs(fract(cd) - 0.5));
+    contour *= 1.0 - smoothstep(0.55, 0.95, d); // ngilang mulus di tepi selubung
+    // tepi selubungnya sendiri ikut bergaris = "lapisan" punya batas yang kebaca
+    float rim = smoothstep(0.82, 0.96, d) * (1.0 - smoothstep(0.96, 1.04, d));
+
+    float energy = 0.5 + 0.65 * fres + 1.5 * scan;
+    // warna dinaikin di puncak cincin sampai lewat ambang bloom (0.88) —
+    // jadi garisnya dapet pendar GPU beneran, bukan cuma putih datar
+    vec3 col = mix(uColor, uHot, clamp(scan * 1.15 + fres * 0.3, 0.0, 1.0)) * (1.0 + 1.5 * scan);
+    float a = line * energy + halo * 0.1 * (0.35 + fres) + node * 0.9 + rim * 0.3 + fres * 0.06
+            + contour * 0.32 * (0.45 + 0.55 * fres);
+    gl_FragColor = vec4(col, a * k);
   }
 `
+
+// geometri veil dipakai bareng antar batu yang modelnya sama → cache biar
+// analisis crease-nya cuma sekali per model
+const veilCache = new WeakMap()
+
+// Bangun geometri selubung: non-indexed + koordinat barycentric + flag edge.
+// Flag-nya nentuin edge mana yang layak digambar: edge batas (cuma dipunya 1
+// segitiga) selalu ikut, sisanya dinilai dari sudut dihedral antar dua muka.
+// Ambangnya diambil dari persentil (bukan angka mati) biar densitas garisnya
+// konsisten dipakai di model manapun: rapat atau jarang triangulasinya.
+function buildVeilGeometry(src) {
+  const cached = veilCache.get(src)
+  if (cached) return cached
+
+  const g = src.index ? src.toNonIndexed() : src.clone()
+  const pos = g.attributes.position.array
+  const n = g.attributes.position.count
+  const tri = n / 3
+
+  // vertex dikuantisasi biar duplikat hasil non-index nyatu jadi satu simpul
+  const keys = new Array(n)
+  for (let i = 0; i < n; i++) {
+    keys[i] =
+      `${Math.round(pos[i * 3] * 1e4)},${Math.round(pos[i * 3 + 1] * 1e4)},${Math.round(pos[i * 3 + 2] * 1e4)}`
+  }
+  const ek = (i, j) => (keys[i] < keys[j] ? `${keys[i]}|${keys[j]}` : `${keys[j]}|${keys[i]}`)
+
+  // normal per muka
+  const fn = new Float32Array(tri * 3)
+  const va = new THREE.Vector3()
+  const vb = new THREE.Vector3()
+  const vc = new THREE.Vector3()
+  const e1 = new THREE.Vector3()
+  const e2 = new THREE.Vector3()
+  const nr = new THREE.Vector3()
+  for (let t = 0; t < tri; t++) {
+    va.fromArray(pos, t * 9)
+    vb.fromArray(pos, t * 9 + 3)
+    vc.fromArray(pos, t * 9 + 6)
+    nr.crossVectors(e1.subVectors(vb, va), e2.subVectors(vc, va)).normalize()
+    fn[t * 3] = nr.x
+    fn[t * 3 + 1] = nr.y
+    fn[t * 3 + 2] = nr.z
+  }
+
+  // muka-muka yang berbagi tiap edge. Barycentric x=0 di edge SEBERANG vertex 0,
+  // makanya urutannya (v1,v2), (v2,v0), (v0,v1)
+  const share = new Map()
+  for (let t = 0; t < tri; t++) {
+    const i0 = t * 3
+    const pairs = [
+      [i0 + 1, i0 + 2],
+      [i0 + 2, i0],
+      [i0, i0 + 1],
+    ]
+    for (let e = 0; e < 3; e++) {
+      const k = ek(pairs[e][0], pairs[e][1])
+      const rec = share.get(k)
+      if (rec) rec.push(t)
+      else share.set(k, [t])
+    }
+  }
+
+  // sudut dihedral per edge (edge batas = tak hingga, selalu digambar)
+  const angle = new Map()
+  const inner = []
+  share.forEach((ts, k) => {
+    if (ts.length < 2) {
+      angle.set(k, Infinity)
+      return
+    }
+    const a = ts[0] * 3
+    const b = ts[1] * 3
+    const dot = Math.min(1, Math.max(-1, fn[a] * fn[b] + fn[a + 1] * fn[b + 1] + fn[a + 2] * fn[b + 2]))
+    const ang = Math.acos(dot)
+    angle.set(k, ang)
+    inner.push(ang)
+  })
+  // ambang = persentil 52 (kira-kira separuh edge kebuang), dikurung 3.5°..20°
+  // biar mesh halus gak jadi kosong melompong dan mesh faceted gak ramai lagi
+  inner.sort((a, b) => a - b)
+  const p52 = inner.length ? inner[Math.floor(inner.length * 0.52)] : 0.2
+  const limit = Math.min(0.35, Math.max(0.06, p52))
+
+  const bary = new Float32Array(n * 3)
+  const emask = new Float32Array(n * 3)
+  for (let t = 0; t < tri; t++) {
+    const i0 = t * 3
+    const on = [
+      angle.get(ek(i0 + 1, i0 + 2)) >= limit ? 1 : 0,
+      angle.get(ek(i0 + 2, i0)) >= limit ? 1 : 0,
+      angle.get(ek(i0, i0 + 1)) >= limit ? 1 : 0,
+    ]
+    for (let v = 0; v < 3; v++) {
+      const o = (i0 + v) * 3
+      bary[o + v] = 1
+      // flag edge konstan sepanjang muka (tiga vertex isinya sama)
+      emask[o] = on[0]
+      emask[o + 1] = on[1]
+      emask[o + 2] = on[2]
+    }
+  }
+
+  g.setAttribute('aBary', new THREE.BufferAttribute(bary, 3))
+  g.setAttribute('aEdge', new THREE.BufferAttribute(emask, 3))
+  g.computeBoundingSphere()
+  veilCache.set(src, g)
+  return g
+}
 
 export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
   const { nodes } = useGLTF(data.model ?? MODEL)
@@ -74,29 +231,16 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
 
   const geometry = useMemo(() => Object.values(nodes).find((n) => n.isMesh)?.geometry, [nodes])
 
-  // geometri veil: non-indexed + attribute barycentric (tiap segitiga dapet
-  // (1,0,0)(0,1,0)(0,0,1)) — syarat wireframe shader di atas
-  const veilGeo = useMemo(() => {
-    if (!geometry) return null
-    const g = geometry.index ? geometry.toNonIndexed() : geometry.clone()
-    const n = g.attributes.position.count
-    const bary = new Float32Array(n * 3)
-    for (let i = 0; i < n; i += 3) {
-      bary[i * 3] = 1
-      bary[(i + 1) * 3 + 1] = 1
-      bary[(i + 2) * 3 + 2] = 1
-    }
-    g.setAttribute('aBary', new THREE.BufferAttribute(bary, 3))
-    g.computeBoundingSphere()
-    return g
-  }, [geometry])
+  // geometri veil (barycentric + flag edge) — di-cache per model
+  const veilGeo = useMemo(() => (geometry ? buildVeilGeometry(geometry) : null), [geometry])
 
   const veilMat = useMemo(
     () =>
       new THREE.ShaderMaterial({
         uniforms: {
           uPoint: { value: new THREE.Vector3(0, 999, 0) },
-          uColor: { value: new THREE.Color('#dff1ff') },
+          uColor: { value: new THREE.Color('#bfe2ff') }, // garis: biru es
+          uHot: { value: new THREE.Color('#ffffff') }, // puncak cincin scan
           uTime: { value: 0 },
           uRadius: { value: 1 },
           uReach: { value: 0 },
