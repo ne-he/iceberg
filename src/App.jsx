@@ -1,5 +1,6 @@
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
+import { gsap } from 'gsap'
 import Experience from './Experience'
 import { UI, Loader } from './UI'
 import ChatDock from './chat/ChatDock'
@@ -135,8 +136,9 @@ export default function App() {
     let loopDamped = 0 // posisi loop ter-smoothing (0..1), damping SIRKULAR
     let lastNow = performance.now()
     let lastUser = performance.now()
-    let snapAnim = null
-    let snapping = false
+    let snapTween = null // tween GSAP yg lagi jalan (null = gak ada)
+    let prevLoopRaw = 0 // buat ngedeteksi arah scroll terakhir
+    let dir = 0 // -1 naik, +1 turun, 0 belum gerak
 
     const sizeSpace = () => {
       P = periodPx()
@@ -146,8 +148,11 @@ export default function App() {
     }
     const bump = () => {
       lastUser = performance.now()
-      snapping = false
-      snapAnim = null
+      // user nyentuh input apa pun = snap batal seketika (jangan lawan tangan user)
+      if (snapTween) {
+        snapTween.kill()
+        snapTween = null
+      }
     }
     window.addEventListener('resize', sizeSpace)
     window.addEventListener('wheel', bump, { passive: true })
@@ -203,26 +208,53 @@ export default function App() {
         }
         const loopRaw = frac(y / P)
 
-        // auto-center ala igloo — cuma di zona descend, ke anchor terdekat
-        if (!snapAnim && now - lastUser > 1000 && !dragState.active && loopRaw <= DESCEND + 1e-3) {
-          let A = LOOP_ANCHORS[0]
-          for (const a of LOOP_ANCHORS) if (Math.abs(a - loopRaw) < Math.abs(A - loopRaw)) A = a
-          if (Math.abs(A - loopRaw) < 0.08) {
-            const targetY = (Math.round(y / P - A) + A) * P
-            if (Math.abs(targetY - y) > 2) snapAnim = { from: y, to: targetY, start: now, dur: Math.min(2200, 700 + Math.abs(targetY - y) * 1.1) }
+        // arah scroll terakhir (jalur sirkular terdekat) — cuma dicatat dari
+        // gerakan user, bukan dari tween snap yg lagi jalan
+        if (!snapTween) {
+          let dm = loopRaw - prevLoopRaw
+          if (dm > 0.5) dm -= 1
+          if (dm < -0.5) dm += 1
+          if (Math.abs(dm) > 0.00005) dir = Math.sign(dm)
+        }
+        prevLoopRaw = loopRaw
+
+        // snap antar section (teknik dari video snap-on-scroll Nicolai Palmkvist:
+        // fullPage scrollingSpeed 1000ms + transisi GSAP power2.out). Diadaptasi
+        // ke infinite loop kita: idle 450ms → SELALU dikunci ke anchor (gak ada
+        // posisi nyangkut di tengah section), dan DIRECTIONAL — lewat 22% gap
+        // searah gerakan terakhir udah dianggap "niat pindah section"
+        if (!snapTween && now - lastUser > 450 && !dragState.active && focusState.phase === 'idle' && loopRaw <= DESCEND + 1e-3) {
+          // dua anchor pengapit posisi sekarang
+          let lo = LOOP_ANCHORS[0]
+          let hi = LOOP_ANCHORS[LOOP_ANCHORS.length - 1]
+          for (let i = 0; i < LOOP_ANCHORS.length - 1; i++) {
+            if (loopRaw >= LOOP_ANCHORS[i] - 1e-6 && loopRaw <= LOOP_ANCHORS[i + 1] + 1e-6) {
+              lo = LOOP_ANCHORS[i]
+              hi = LOOP_ANCHORS[i + 1]
+              break
+            }
+          }
+          const g = hi > lo ? (loopRaw - lo) / (hi - lo) : 0
+          let A
+          if (dir > 0) A = g > 0.22 ? hi : lo
+          else if (dir < 0) A = g < 0.78 ? lo : hi
+          else A = g < 0.5 ? lo : hi
+          const targetY = (Math.round(y / P - A) + A) * P
+          if (Math.abs(targetY - y) > 2) {
+            const proxy = { y }
+            snapTween = gsap.to(proxy, {
+              y: targetY,
+              // ~1 detik ala scrollingSpeed fullPage, dikit lebih lama kalau jauh
+              duration: Math.min(1.5, 0.85 + (Math.abs(targetY - y) / P) * 1.2),
+              ease: 'power2.out', // tarikan tegas di awal, mendarat lembut
+              onUpdate: () => window.scrollTo(0, proxy.y),
+              onComplete: () => {
+                snapTween = null
+              },
+            })
           }
         }
-        if (snapAnim) {
-          const u = Math.min(1, (now - snapAnim.start) / snapAnim.dur)
-          const e = u < 0.5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2
-          snapping = true
-          window.scrollTo(0, snapAnim.from + (snapAnim.to - snapAnim.from) * e)
-          y = window.scrollY
-          if (u >= 1) {
-            snapAnim = null
-            snapping = false
-          }
-        }
+        if (snapTween) y = window.scrollY
 
         // damping SIRKULAR (jalur terdekat) — biar seam 0.99→0.00 gak nge-scrub mundur
         let d = frac(y / P) - loopDamped
@@ -275,6 +307,7 @@ export default function App() {
     raf = requestAnimationFrame(tick)
     return () => {
       cancelAnimationFrame(raf)
+      if (snapTween) snapTween.kill()
       window.removeEventListener('resize', sizeSpace)
       window.removeEventListener('wheel', bump)
       window.removeEventListener('touchmove', bump)
