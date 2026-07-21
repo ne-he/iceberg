@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { Suspense, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Environment, Sparkles, useGLTF } from '@react-three/drei'
+import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import { easing } from 'maath'
 import { Crystal } from './Crystal'
 import { ParticleFace } from './ParticleFace'
@@ -79,6 +80,15 @@ export default function Experience({ onOpen, hasVideo }) {
 
       {/* kolom-kolom cahaya samar menembus kabut */}
       <LightShafts />
+
+      {/* eksperimen post-processing: bloom halus — threshold tinggi biar cuma
+          highlight kristal/portal yang "nyala", kabut putih gak ikut meledak.
+          multisampling 0 = hemat GPU (AA-nya udah ketutup fog + grain CSS) */}
+      {/* DOF sempet dicoba di sini dan DIBUANG: subjek utama ikut ke-blur, ada
+          halo di siluet batu, fps drop ke 28 — kabut udah ngasih depth blur alami */}
+      <EffectComposer multisampling={0}>
+        <Bloom intensity={0.38} luminanceThreshold={0.88} luminanceSmoothing={0.22} mipmapBlur />
+      </EffectComposer>
     </>
   )
 }
