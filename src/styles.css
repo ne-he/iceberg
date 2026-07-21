@@ -64,6 +64,13 @@ body {
    biar kebedain dari huruf yang udah kebuka */
 .dt-enc { opacity: 0.5; }
 
+/* kursor custom (TargetCursor): kursor asli disembunyiin di device ber-mouse.
+   !important perlu biar menang lawan inline style 'pointer' yang ditulis drei
+   useCursor pas hover batu (nilai inline-nya tetep kepake sebagai sinyal hover) */
+@media (hover: hover) and (pointer: fine) {
+  html, body, * { cursor: none !important; }
+}
+
 /* gradient shader air-dalam (ShaderGradient) — di atas tint, di bawah scene 3D.
    opacity digerakin JS ngikut depthK, 0 pas di hero */
 .grad-depth {

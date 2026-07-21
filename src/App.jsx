@@ -5,6 +5,7 @@ import { ShaderGradientCanvas, ShaderGradient } from '@shadergradient/react'
 import Experience from './Experience'
 import { UI, Loader } from './UI'
 import ChatDock from './chat/ChatDock'
+import TargetCursor from './components/TargetCursor/TargetCursor'
 import { beginFocus, bgVideoState, chatState, dragState, endFocus, focusState, introState, scrollState } from './scrollState'
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
@@ -438,6 +439,14 @@ export default function App() {
       <div ref={scrollSpaceRef} className="scroll-space" aria-hidden="true" />
       <UI panel={panel} onClose={closeRock} hasGlacier={hasGlacier} onOpenChat={openChat} />
       <ChatDock open={chatOpen} onOpen={openChat} onClose={closeChat} hidden={!ready || !!panel} />
+      {/* kursor bracket 4 sudut (React Bits TargetCursor): ngunci ke elemen
+          interaktif DOM, membesar pas hover batu 3D. Desktop doang, di mobile
+          komponennya balikin null sendiri */}
+      <TargetCursor
+        spinDuration={6}
+        cursorColor="#e8f4ff"
+        targetSelector=".cursor-target, .soc-side, .soc-current, .echo-inline, .rock-close, .rock-sound, .echo-btn, .echo-close, .echo-chip, .echo-send, .outro a"
+      />
       <Loader />
     </>
   )
