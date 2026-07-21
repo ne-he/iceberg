@@ -60,6 +60,12 @@ body {
   background: radial-gradient(ellipse at 50% 30%, rgba(70, 116, 150, 0.55) 0%, rgba(40, 74, 104, 0.9) 75%);
   pointer-events: none;
 }
+/* gradient shader air-dalam (ShaderGradient) — di atas tint, di bawah scene 3D.
+   opacity digerakin JS ngikut depthK, 0 pas di hero */
+.grad-depth {
+  position: fixed; inset: 0; z-index: 0; opacity: 0;
+  pointer-events: none;
+}
 .canvas-wrap { position: fixed; inset: 0; z-index: 1; }
 .canvas-wrap canvas { display: block; }
 /* 480vh untuk 5 segmen = ±1 layar scroll per batu — dulunya 600vh/4 segmen,

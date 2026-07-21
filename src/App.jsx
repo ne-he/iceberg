@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { gsap } from 'gsap'
+import { ShaderGradientCanvas, ShaderGradient } from '@shadergradient/react'
 import Experience from './Experience'
 import { UI, Loader } from './UI'
 import ChatDock from './chat/ChatDock'
@@ -126,6 +127,7 @@ export default function App() {
   const veilRef = useRef()
   const washRef = useRef()
   const depthTintRef = useRef()
+  const gradRef = useRef()
   const scrollSpaceRef = useRef()
 
   // ===== master: intro batu jatuh (sekali) + infinite loop scroll dua arah =====
@@ -291,6 +293,11 @@ export default function App() {
       if (depthTintRef.current) {
         depthTintRef.current.style.opacity = clamp((dk - 0.2) / 0.5, 0, 1) * 0.68 * rv
       }
+      // gradient shader "arus dalam" (ShaderGradient): idup cuma pas dalem,
+      // gantiin rasa tint biru datar jadi air yang gerak. Di hero opacity 0
+      if (gradRef.current) {
+        gradRef.current.style.opacity = clamp((dk - 0.24) / 0.4, 0, 1) * 0.5 * rv
+      }
       const veil = veilRef.current
       if (veil) {
         const k = clamp((dk - 0.02) / 0.13, 0, 1)
@@ -378,6 +385,36 @@ export default function App() {
       {hasVideo && <div ref={veilRef} className="fog-veil" aria-hidden="true" />}
       {/* tint biru gletser di backdrop, makin dalam makin pekat */}
       <div ref={depthTintRef} className="depth-tint" aria-hidden="true" />
+      {/* gradient shader air-dalam (eksperimen ShaderGradient): waterPlane biru
+          es yang mengalir pelan di balik scene, muncul cuma di zona dalam */}
+      <div ref={gradRef} className="grad-depth" aria-hidden="true">
+        <ShaderGradientCanvas pixelDensity={1} fov={45} pointerEvents="none" lazyLoad={false}>
+          <ShaderGradient
+            type="waterPlane"
+            animate="on"
+            uSpeed={0.12}
+            uStrength={1.6}
+            uDensity={1.4}
+            uFrequency={5.5}
+            color1="#0c2436"
+            color2="#1d4a6a"
+            color3="#7fb4d8"
+            brightness={1.1}
+            grain="off"
+            lightType="3d"
+            cDistance={2.8}
+            cPolarAngle={95}
+            cameraZoom={1}
+            positionX={0}
+            positionY={0}
+            positionZ={0}
+            rotationX={0}
+            rotationY={0}
+            rotationZ={0}
+            reflection={0.1}
+          />
+        </ShaderGradientCanvas>
+      </div>
       {/* tirai biru penutup layar buat transisi loop 100/100 → 0/100 */}
       <div ref={washRef} className="loop-wash" aria-hidden="true" />
       {/* salju jatuh di atas biru pas transisi — biar gak kerasa biru kosong */}
