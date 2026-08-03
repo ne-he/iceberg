@@ -316,6 +316,18 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
                   {r.tag ? <span>{r.tag}</span> : null}
                 </h3>
                 <p>{r.p}</p>
+                {r.links?.length ? (
+                  <div className="rock-links">
+                    {r.links.map((l) => (
+                      <a key={l.href} href={l.href} target="_blank" rel="noreferrer">
+                        {l.label}
+                        <svg width="9" height="9" viewBox="0 0 9 9" fill="none" aria-hidden="true">
+                          <path d="M1 8L8 1M8 1H2.5M8 1V6.5" stroke="currentColor" strokeWidth="1.2" />
+                        </svg>
+                      </a>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             ))}
             <div className="rock-foot">{data.foot}</div>

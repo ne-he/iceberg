@@ -281,9 +281,26 @@ body {
   text-shadow: 0 2px 30px rgba(120, 170, 210, 0.35);
 }
 .rock-row { border-top: 1px solid rgba(180, 205, 224, 0.16); padding: 20px 0; }
-.rock-row h3 { font-size: 14px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #e6eef4; }
-.rock-row h3 span { opacity: 0.55; font-weight: 400; margin-left: 10px; letter-spacing: 0.14em; }
+.rock-row h3 {
+  font-size: 14px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #e6eef4;
+  /* flex + nowrap di tag: kalau kepanjangan, tag-nya TURUN UTUH ke baris bawah,
+     bukan pecah di tengah kata ("... ML / ENG") */
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px;
+}
+.rock-row h3 span { opacity: 0.55; font-weight: 400; letter-spacing: 0.14em; white-space: nowrap; }
 .rock-row p { margin-top: 8px; font-size: 14.5px; line-height: 1.85; color: #aebcc7; }
+/* link repo/live per projek: chip mono kecil biar tetep minimalis */
+.rock-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.rock-links a {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 11px; border: 1px solid rgba(150, 200, 240, 0.28);
+  color: #cfe2f0; text-decoration: none;
+  font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+  transition: border-color 0.22s, color 0.22s, background 0.22s;
+}
+.rock-links a:hover { border-color: rgba(190, 228, 255, 0.7); color: #f2f9ff; background: rgba(150, 200, 240, 0.1); }
+.rock-links a svg { opacity: 0.6; }
+.rock-links a:hover svg { opacity: 1; }
 .rock-foot { margin-top: 40px; font-size: 11px; letter-spacing: 0.2em; color: #6d7b86; text-transform: uppercase; }
 /* toggle suara buat video dalam-glacier */
 .rock-sound {
