@@ -70,8 +70,12 @@ export default function Experience({ onOpen, hasVideo }) {
       <FaceAura />
       <ParticleFace position={[0, -40.55, 1.5]} />
       <OutroStage />
-      {/* batu asal yang naik dari bawah podium saat transisi loop (100→120) */}
-      <HeroEcho />
+      {/* batu asal yang naik dari bawah podium saat transisi loop (100→120).
+          Suspense sendiri: batunya baru kepake pas bridge, jadi jangan sampai
+          nahan SELURUH scene nunggu ice_gen.glb kelar download */}
+      <Suspense fallback={null}>
+        <HeroEcho />
+      </Suspense>
 
       {/* debu es yang melayang di sepanjang jalur turun */}
       <Sparkles count={260} scale={[18, 48, 12]} position={[0, -17, 0]} size={2} speed={0.3} opacity={0.5} color="#ffffff" />
@@ -159,14 +163,23 @@ const ECHO_S = 3.5
 function HeroEcho() {
   // pakai ice_gen.glb (model es detail hasil generate Nehemiah) — di-clone &
   // center biar poros-nya pas di tengah grup. Cuma dirender pas bridge (hemat)
-  const { nodes } = useGLTF('/models/ice_gen.glb')
+  const { scene } = useGLTF('/models/ice_gen.glb')
   const geo = useMemo(() => {
-    const src = Object.values(nodes).find((n) => n.isMesh)?.geometry
+    let src = null
+    scene.traverse((o) => {
+      if (!src && o.isMesh) src = o
+    })
     if (!src) return null
-    const g = src.clone()
+    const g = src.geometry.clone()
+    // WAJIB pakai matrixWorld node-nya, jangan geometry mentah: GLB-nya
+    // dikompresi meshopt + KHR_mesh_quantization, yang naruh POSITION di
+    // rentang integer dan naruh skala kompensasinya di transform node. Ambil
+    // geometry doang = batunya ke-render ribuan kali kegedean.
+    src.updateWorldMatrix(true, false)
+    g.applyMatrix4(src.matrixWorld)
     g.center()
     return g
-  }, [nodes])
+  }, [scene])
   const grp = useRef()
   const mat = useRef()
   useFrame((state) => {
@@ -614,4 +627,5 @@ function CameraRig() {
 
 useGLTF.preload('/models/podium.glb')
 useGLTF.preload('/models/ice_rock.glb')
-useGLTF.preload('/models/ice_gen.glb')
+// ice_gen.glb SENGAJA gak di-preload: cuma nongol pas transisi bridge, jauh
+// setelah frame pertama. Biar gak ikut rebutan bandwidth pas initial load.
