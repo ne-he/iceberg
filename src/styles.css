@@ -568,9 +568,19 @@ body {
 
 @media (max-width: 640px) {
   .logo { left: 20px; top: 20px; font-size: 20px; }
-  .meta { right: 20px; top: 24px; }
+  /* di layar HP logo sama blok nama rebutan baris atas yang sama dan tulisannya
+     saling tindih (paling parah di 360px). Nama diturunin ke bawah logo, tetep
+     rata kanan biar bacaannya masih kaya HUD instrumen */
+  .meta { right: 20px; top: 52px; font-size: 10.5px; letter-spacing: 0.1em; }
   .readout { display: none; }
   .ruler { display: none; }
+  /* sub judul jangan nempel dua tepi layar, kasih napas biar wrap-nya wajar */
+  .hero p { padding: 0 26px; }
+  /* tombol chat nangkring di pojok kanan bawah dan nutupin dua petunjuk ini.
+     Padahal "scroll to descend" satu-satunya aba-aba cara mulai, jadi
+     dua-duanya dinaikin sampai lewat atas tombol */
+  .hint { bottom: 88px; }
+  .outro { padding-bottom: 100px; }
   .bigword { right: 2vw; }
   .anno-name { font-size: 15px; }
   .rock-content { padding: 15vh 8vw 12vh; }
