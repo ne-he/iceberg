@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { Suspense, useMemo, useRef } from 'react'
+import { Suspense, useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Environment, Sparkles, useGLTF } from '@react-three/drei'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
@@ -9,6 +9,7 @@ import { ParticleFace } from './ParticleFace'
 import { Portal } from './Portal'
 import { Glacier, heroFade } from './Glacier'
 import { CRYSTALS, HERO_CRYSTAL } from './content'
+import { LOW } from './perf'
 import { chatState, dragState, focusState, introState, scrollState } from './scrollState'
 
 export const FOG_COLOR = '#b9c0c7'
@@ -28,6 +29,7 @@ export default function Experience({ onOpen, hasVideo }) {
       {/* nilai awal aja — FogRig yang ngatur tebal-tipisnya ngikutin kedalaman scroll */}
       <fog attach="fog" args={[FOG_COLOR, 16, 50]} />
       <FogRig />
+      <Probe />
 
       <ambientLight intensity={1.1} />
       <directionalLight position={[6, 10, 4]} intensity={1.6} />
@@ -77,10 +79,12 @@ export default function Experience({ onOpen, hasVideo }) {
         <HeroEcho />
       </Suspense>
 
-      {/* debu es yang melayang di sepanjang jalur turun */}
-      <Sparkles count={260} scale={[18, 48, 12]} position={[0, -17, 0]} size={2} speed={0.3} opacity={0.5} color="#ffffff" />
-      <Sparkles count={80} scale={[10, 7, 8]} position={[0, 0, 2]} size={2.6} speed={0.2} opacity={0.4} color="#ffffff" />
-      <Sparkles count={90} scale={[14, 46, 6]} position={[0, -18, -6]} size={4} speed={0.15} opacity={0.25} color="#ffffff" />
+      {/* debu es yang melayang di sepanjang jalur turun. Di HP jumlahnya dipotong
+          ~sepertiga: tiap sparkle itu sprite transparan yang di-blend, dan
+          overdraw transparan justru yang paling nyekek GPU HP */}
+      <Sparkles count={LOW ? 90 : 260} scale={[18, 48, 12]} position={[0, -17, 0]} size={2} speed={0.3} opacity={0.5} color="#ffffff" />
+      <Sparkles count={LOW ? 30 : 80} scale={[10, 7, 8]} position={[0, 0, 2]} size={2.6} speed={0.2} opacity={0.4} color="#ffffff" />
+      <Sparkles count={LOW ? 30 : 90} scale={[14, 46, 6]} position={[0, -18, -6]} size={4} speed={0.15} opacity={0.25} color="#ffffff" />
 
       {/* kolom-kolom cahaya samar menembus kabut */}
       <LightShafts />
@@ -90,11 +94,28 @@ export default function Experience({ onOpen, hasVideo }) {
           multisampling 0 = hemat GPU (AA-nya udah ketutup fog + grain CSS) */}
       {/* DOF sempet dicoba di sini dan DIBUANG: subjek utama ikut ke-blur, ada
           halo di siluet batu, fps drop ke 28 — kabut udah ngasih depth blur alami */}
-      <EffectComposer multisampling={0}>
-        <Bloom intensity={0.38} luminanceThreshold={0.88} luminanceSmoothing={0.22} mipmapBlur />
-      </EffectComposer>
+      {/* Di HP seluruh composer DIMATIIN. mipmapBlur itu rantai downsample +
+          upsample full-screen tiap frame, dan dia maksa scene dirender ke FBO
+          dulu, padahal di frame yang sama transmission material juga lagi
+          nge-render scene ke render target sendiri. Dua-duanya rebutan render
+          target, dan itu yang bikin batunya kelap-kelip di HP. */}
+      {!LOW && (
+        <EffectComposer multisampling={0}>
+          <Bloom intensity={0.38} luminanceThreshold={0.88} luminanceSmoothing={0.22} mipmapBlur />
+        </EffectComposer>
+      )}
     </>
   )
+}
+
+// nyambungin renderer ke handle debug window.__ice, dipakai buat ngukur
+// draw call & segitiga per frame pas verifikasi, gak kepake pas runtime
+function Probe() {
+  const gl = useThree((s) => s.gl)
+  useEffect(() => {
+    if (window.__ice) window.__ice.gl = gl
+  }, [gl])
+  return null
 }
 
 // kabut bertingkat: di hero (atas) JELAS BANGET, makin turun makin berkabut —
@@ -237,7 +258,7 @@ function DriftingIce() {
       const x = Math.sin(i * 91.7 + n * 269.5) * 43758.5453
       return x - Math.floor(x)
     }
-    return Array.from({ length: 18 }, (_, i) => ({
+    return Array.from({ length: LOW ? 8 : 18 }, (_, i) => ({
       x: (rand(i, 1) - 0.5) * 22,
       y0: 8 - rand(i, 2) * 54,
       z: -4 - rand(i, 3) * 9,
@@ -407,7 +428,9 @@ function BackgroundField() {
       const x = Math.sin(i * 127.1 + n * 311.7) * 43758.5453
       return x - Math.floor(x)
     }
-    return Array.from({ length: 28 }, (_, i) => {
+    // 28 bongkahan × 2 mesh = 56 draw call cuma buat hiasan latar yang ketutup
+    // kabut. Di HP dipotong jadi 16, dan shell-nya dilepas (lihat BgChunk)
+    return Array.from({ length: LOW ? 16 : 28 }, (_, i) => {
       const side = i % 2 === 0 ? 1 : -1
       return {
         position: [side * (7 + rand(i, 1) * 10), 5 - i * 1.75 - rand(i, 2) * 2, -7 - rand(i, 3) * 11],
@@ -449,7 +472,9 @@ function BgChunk({ geometry, material, shellMaterial, speed, ...props }) {
   return (
     <group ref={ref} {...props}>
       <mesh geometry={geometry} material={material} />
-      <mesh geometry={geometry} material={shellMaterial} scale={1.05} />
+      {/* shell "fake DOF" dilepas di HP: efeknya halus banget tapi harganya
+          satu draw call transparan penuh layar per bongkahan */}
+      {!LOW && <mesh geometry={geometry} material={shellMaterial} scale={1.05} />}
     </group>
   )
 }

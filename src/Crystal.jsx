@@ -4,8 +4,36 @@ import { useFrame } from '@react-three/fiber'
 import { Float, Html, MeshTransmissionMaterial, useCursor, useGLTF } from '@react-three/drei'
 import { easing } from 'maath'
 import { dragState, focusState, scrollState } from './scrollState'
+import { LOW } from './perf'
 
 const MODEL = '/models/iceberg.glb'
+
+// setelan material es. Versi HP ngebuang semua ornamen fragment shader yang
+// mahal (aberasi kromatik, distorsi, clearcoat) dan motong jumlah sampling
+// refraksi jadi 2. Hasilnya tetep refraksi es beneran, cuma gak sedetail desktop
+const ICE = LOW
+  ? {
+      samples: 2,
+      resolution: 128,
+      chromaticAberration: 0,
+      anisotropy: 0,
+      distortion: 0,
+      distortionScale: 0,
+      temporalDistortion: 0,
+      clearcoat: 0,
+      clearcoatRoughness: 0,
+    }
+  : {
+      samples: 4,
+      resolution: 256,
+      chromaticAberration: 0.05,
+      anisotropy: 0.15,
+      distortion: 0.08,
+      distortionScale: 0.2,
+      temporalDistortion: 0.03,
+      clearcoat: 1,
+      clearcoatRoughness: 0.12,
+    }
 
 // ===== selubung wireframe LOKAL pas hover (permintaan Nehemiah) =====
 // dulu: hover = wireframe nyala di SELURUH batu (keliatan kayak model 3D telanjang).
@@ -231,8 +259,11 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
 
   const geometry = useMemo(() => Object.values(nodes).find((n) => n.isMesh)?.geometry, [nodes])
 
-  // geometri veil (barycentric + flag edge) — di-cache per model
-  const veilGeo = useMemo(() => (geometry ? buildVeilGeometry(geometry) : null), [geometry])
+  // geometri veil (barycentric + flag edge), di-cache per model.
+  // Di HP gak dibangun sama sekali: ini efek HOVER, dan layar sentuh gak punya
+  // hover. Lagipula buildVeilGeometry itu analisis crease per-segitiga (bikin
+  // string key tiap vertex + Map antar muka) yang bikin loading nyendat di HP
+  const veilGeo = useMemo(() => (geometry && !LOW ? buildVeilGeometry(geometry) : null), [geometry])
 
   const veilMat = useMemo(
     () =>
@@ -286,6 +317,11 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
   const events = {
     onPointerOver: (e) => {
       e.stopPropagation()
+      // di layar sentuh, pointerOver ikut kepicu pas jari nyentuh TAPI pointerOut
+      // sering gak pernah dateng, jadi hover-nya nyangkut nyala selamanya:
+      // batu ke-scale 1.07 terus dan shader veil terus jalan. Sekalian percuma,
+      // HP emang gak punya hover.
+      if (e.pointerType === 'touch') return
       setHovered(true)
       // titik masuk langsung di-snap (tanpa damping) biar veil-nya nongol pas
       // di tempat kursor nyentuh, bukan nyapu dari posisi hover sebelumnya
@@ -293,9 +329,11 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
       if (veil.current) veilMat.uniforms.uPoint.value.copy(veil.current.worldToLocal(lv.copy(e.point)))
     },
     onPointerMove: (e) => {
+      if (e.pointerType === 'touch') return
       hoverPt.current.copy(e.point)
     },
     onPointerOut: () => setHovered(false),
+    onPointerCancel: () => setHovered(false),
   }
   if (interactive) {
     events.onClick = (e) => {
@@ -315,6 +353,12 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
     // ketutup overlay/kabut). Gate ke jendela snap-nya biar cuma 1 batu yang aktif,
     // gak semua batu muter barengan pas di-drag
     const down = (e) => {
+      // JANGAN drag pakai jari. Di HP gesture ini persis sama dengan gesture
+      // scroll, dan efeknya dua-duanya jelek: batunya ikut miring tiap kali
+      // di-swipe, DAN pas browser ngambil alih gesture buat scroll dia ngirim
+      // pointercancel (bukan pointerup), jadi dragState.active nyangkut true
+      // selamanya, dan auto-snap ikut mati permanen abis swipe pertama.
+      if (e.pointerType === 'touch') return
       if (focusState.phase !== 'idle') return // lagi nyelam ke batu — jangan drag
       if (Math.abs(scrollState.damped - snapT) > 0.09) return
       if (e.target.closest?.('a, button, .panel, .rock-modal')) return
@@ -342,10 +386,14 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
     window.addEventListener('pointerdown', down)
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', up)
+    // pointercancel WAJIB ikut: kalau browser ngerebut gesture-nya, pointerup
+    // gak pernah dateng dan drag-nya nyangkut nyala
+    window.addEventListener('pointercancel', up)
     return () => {
       window.removeEventListener('pointerdown', down)
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', up)
     }
   }, [draggable, snapT])
 
@@ -356,28 +404,20 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
           <mesh geometry={geometry}>
             <MeshTransmissionMaterial
               transmissionSampler
-              samples={4}
-              resolution={256}
               transmission={1}
               thickness={1.8}
               roughness={0.1}
               ior={1.31}
-              chromaticAberration={0.05}
-              anisotropy={0.15}
-              distortion={0.08}
-              distortionScale={0.2}
-              temporalDistortion={0.03}
               color="#eaf2f7"
               attenuationColor="#d6e8f1"
               attenuationDistance={6}
-              clearcoat={1}
-              clearcoatRoughness={0.12}
               envMapIntensity={1.1}
+              {...ICE}
             />
           </mesh>
           {/* selubung wireframe lokal: cuma sekitar kursor yang kebuka garis
               geometrinya, disapu gelombang cincin keluar (shader di atas) */}
-          <mesh ref={veil} geometry={veilGeo} material={veilMat} scale={1.004} />
+          {veilGeo && <mesh ref={veil} geometry={veilGeo} material={veilMat} scale={1.004} />}
           <Artifact type={data.artifact} />
         </group>
         {interactive && (

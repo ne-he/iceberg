@@ -132,27 +132,14 @@ export const PANELS = {
     code: 'ICEBERG_SEC_03',
     kicker: "things i've built",
     title: 'PROJECTS',
+    // urutan ini permintaan Nehemiah langsung. Cuma delapan teratas yang dikasih
+    // link; sisanya cukup disebut di satu baris penutup tanpa link.
     rows: [
-      {
-        h: 'PHONE ADDICTION PREDICTOR V2',
-        tag: 'FLAGSHIP',
-        p: 'A CatBoost regressor that scores smartphone addiction from 1 to 10. One shared Preprocessor class is the single source of truth for training, the FastAPI service, and the Streamlit demo, so training and serving cannot drift apart. Ships with SHAP explanations, tests, CI and Docker. The model card flags the 0.95 R² as an artifact of synthetic data, not clinical validity.',
-        links: [
-          { label: 'LIVE', href: 'https://addictv2.vercel.app' },
-          { label: 'REPO', href: 'https://github.com/ne-he/Addictv2' },
-        ],
-      },
       {
         h: 'FINSIGHT / SEC 10-K RAG',
         tag: 'RETRIEVAL · FINANCE',
         p: 'Answers questions about public companies strictly from their SEC 10-K filings. Section-aware chunking that follows the 10-K Item skeleton, hybrid dense and BM25 retrieval fused with Reciprocal Rank Fusion, metadata filtering by company and fiscal year, and a confidence gate that says "not found in the filings" instead of inventing a number. Every claim carries its exact section citation.',
         links: [{ label: 'REPO', href: 'https://github.com/ne-he/RAG_businessAnalysis_assist' }],
-      },
-      {
-        h: 'FEATURE STORE MVP',
-        tag: 'DATA ENGINEERING · MLOPS',
-        p: 'An e-commerce feature store, end to end. Ingests transaction data, computes 20+ user-level features in batch, keeps PostgreSQL as the offline store and Redis as the online store, and serves them through a low-latency FastAPI. A Streamlit dashboard backed by Evidently watches feature freshness and drift.',
-        links: [{ label: 'REPO', href: 'https://github.com/ne-he/Feature_shopz' }],
       },
       {
         h: 'PHISHGUARD V2',
@@ -170,6 +157,21 @@ export const PANELS = {
         links: [{ label: 'LIVE', href: 'https://web-portofolio-rag.vercel.app' }],
       },
       {
+        h: 'FEATURE STORE MVP',
+        tag: 'DATA ENGINEERING · MLOPS',
+        p: 'An e-commerce feature store, end to end. Ingests transaction data, computes 20+ user-level features in batch, keeps PostgreSQL as the offline store and Redis as the online store, and serves them through a low-latency FastAPI. A Streamlit dashboard backed by Evidently watches feature freshness and drift.',
+        links: [{ label: 'REPO', href: 'https://github.com/ne-he/Feature_shopz' }],
+      },
+      {
+        h: 'PHONE ADDICTION PREDICTOR V2',
+        tag: 'FLAGSHIP',
+        p: 'A CatBoost regressor that scores smartphone addiction from 1 to 10. One shared Preprocessor class is the single source of truth for training, the FastAPI service, and the Streamlit demo, so training and serving cannot drift apart. Ships with SHAP explanations, tests, CI and Docker. The model card flags the 0.95 R² as an artifact of synthetic data, not clinical validity.',
+        links: [
+          { label: 'LIVE', href: 'https://addictv2.vercel.app' },
+          { label: 'REPO', href: 'https://github.com/ne-he/Addictv2' },
+        ],
+      },
+      {
         h: 'WASTE CLASSIFIER BENCHMARK',
         tag: 'DEEP LEARNING · VISION',
         p: 'TrashNet, six waste classes, 2,527 images. Benchmarked ResNet50, EfficientNet-B0 and MobileNetV2 with selective fine-tuning, then fused them into a soft-voting ensemble. Class imbalance handled with weighted sampling and label smoothing. MobileNetV2 transfer learning reached 90.3% validation accuracy against a 54.5% baseline CNN, and Grad-CAM shows what the model actually looked at.',
@@ -177,27 +179,6 @@ export const PANELS = {
           { label: 'LIVE', href: 'https://deep-learning-imageclassif.vercel.app' },
           { label: 'REPO', href: 'https://github.com/ne-he/Deep_Learning_imageclassif' },
         ],
-      },
-      {
-        h: 'ICEBERG',
-        tag: 'THIS SITE',
-        p: 'Live-rendered 3D scroll experience. Blender-modeled ice driven through an agentic Blender-to-web pipeline, React Three Fiber, real-time refraction. No scrubbed video, every object here is real and clickable. Geometry ships meshopt-compressed: the heaviest rock went from 10.7 MB down to 0.4 MB.',
-        links: [{ label: 'REPO', href: 'https://github.com/ne-he/iceberg' }],
-      },
-      {
-        h: 'ARMORY HALL',
-        tag: 'CREATIVE WEB',
-        p: 'A cinematic two-act portfolio: a dark hall powers on as you scroll and each project steps out as its own unit. GSAP choreography, canvas frame-scrubbing, AI-generated visuals.',
-        links: [
-          { label: 'LIVE', href: 'https://armory-rouge.vercel.app' },
-          { label: 'REPO', href: 'https://github.com/ne-he/armory' },
-        ],
-      },
-      {
-        h: 'HCI LAB',
-        tag: 'FULL-STACK',
-        p: 'A TypeScript monorepo where the API contract is the single source of truth: Express 5 and PostgreSQL through Drizzle, Zod validation throughout, and Orval generating the frontend hooks and schemas straight from the OpenAPI spec, so the two halves cannot silently diverge.',
-        links: [{ label: 'REPO', href: 'https://github.com/ne-he/hci_lab' }],
       },
       {
         h: 'FAMILY TASK BOARD',
@@ -209,13 +190,15 @@ export const PANELS = {
         ],
       },
       {
+        h: 'ICEBERG',
+        tag: 'THIS SITE',
+        p: 'Live-rendered 3D scroll experience. Blender-modeled ice driven through an agentic Blender-to-web pipeline, React Three Fiber, real-time refraction. No scrubbed video, every object here is real and clickable. Geometry ships meshopt-compressed: the heaviest rock went from 10.7 MB down to 0.4 MB.',
+        links: [{ label: 'REPO', href: 'https://github.com/ne-he/iceberg' }],
+      },
+      {
         h: 'ALSO SHIPPED',
         tag: 'SMALLER BUILDS',
-        p: 'SimpleNotes, a native SwiftUI notes app for iOS 16. A to-do and focus dashboard built in a Software Engineering mini project. And a Second Brain CLI: deterministic index-and-score retrieval over my course materials so the model opens only the top-ranked section, A/B tested at roughly 40% cheaper token usage.',
-        links: [
-          { label: 'SIMPLENOTES', href: 'https://github.com/ne-he/swift_UI_notes' },
-          { label: 'TO-DO DASHBOARD', href: 'https://github.com/ne-he/To-do-list-organizer' },
-        ],
+        p: 'Armory Hall, a cinematic two-act portfolio where a dark room powers on as you scroll, built on GSAP choreography and canvas frame-scrubbing. HCI Lab, a TypeScript monorepo where the OpenAPI contract generates the frontend hooks, so the two halves cannot silently diverge. SimpleNotes, a native SwiftUI notes app for iOS 16. A to-do and focus dashboard from a Software Engineering mini project. And a Second Brain CLI: deterministic index-and-score retrieval over my course materials so the model opens only the top-ranked section, A/B tested at roughly 40% cheaper token usage.',
       },
     ],
     foot: 'SELECTED WORK / ALL REPOS AT GITHUB.COM/NE-HE',

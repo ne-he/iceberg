@@ -6,6 +6,7 @@ import Experience from './Experience'
 import { UI, Loader } from './UI'
 import ChatDock from './chat/ChatDock'
 import TargetCursor from './components/TargetCursor/TargetCursor'
+import { LOW } from './perf'
 import { beginFocus, bgVideoState, chatState, dragState, endFocus, focusState, introState, scrollState } from './scrollState'
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
@@ -24,7 +25,7 @@ function SnowVeil() {
     let raf
     let W = 0
     let H = 0
-    const dpr = Math.min(2, window.devicePixelRatio || 1)
+    const dpr = Math.min(LOW ? 1.5 : 2, window.devicePixelRatio || 1)
     const resize = () => {
       W = window.innerWidth
       H = window.innerHeight
@@ -39,7 +40,7 @@ function SnowVeil() {
       return x - Math.floor(x)
     }
     // 3 lapis kedalaman: jauh (kecil,lambat,samar) → deket (gede,cepat,jelas)
-    const flakes = Array.from({ length: 150 }, (_, i) => {
+    const flakes = Array.from({ length: LOW ? 70 : 150 }, (_, i) => {
       const layer = i % 3
       return {
         x: rnd(i + 1),
@@ -52,13 +53,24 @@ function SnowVeil() {
       }
     })
     let last = performance.now()
+    let drew = false // ada sisa gambar di canvas? (biar clear-nya gak tiap frame)
     const tick = (now) => {
       const dt = Math.min(0.05, (now - last) / 1000)
       last = now
       const br = scrollState.bridge
       const env = clamp((br - 0.28) / 0.14, 0, 1) * (1 - clamp((br - 0.66) / 0.16, 0, 1))
-      ctx.clearRect(0, 0, W, H)
-      if (env > 0.02) {
+      // salju cuma nyala pas bridge, sisanya (mayoritas waktu) canvas kosong.
+      // dulu clearRect full-screen tetep jalan 60x/detik walau gak ada yang
+      // digambar, dan di HP itu ngabisin fill rate percuma. Sekarang cuma di-clear
+      // sekali pas mati.
+      if (env <= 0.02) {
+        if (drew) {
+          ctx.clearRect(0, 0, W, H)
+          drew = false
+        }
+      } else {
+        ctx.clearRect(0, 0, W, H)
+        drew = true
         for (const f of flakes) {
           f.y += f.spd * dt
           if (f.y > 1.06) f.y -= 1.12
@@ -88,8 +100,14 @@ const DESCEND = 100 / 120
 // anchor auto-center (dalam satuan descend 0..1) → dikonversi ke satuan loop
 const DESCEND_ANCHORS = [0, 0.2, 0.4, 0.6, 0.8, 0.915, 1]
 const LOOP_ANCHORS = DESCEND_ANCHORS.map((a) => a * DESCEND)
-// tinggi 1 periode loop dalam layar (≈ sama feel-nya kayak 480vh descend lama)
-const periodPx = () => window.innerHeight * 5.8
+// tinggi 1 periode loop dalam layar (≈ sama feel-nya kayak 480vh descend lama).
+// DIBULATIN: 844 * 5.8 = 4895.2, dan di layar dpr 3 window.scrollTo ke angka
+// pecahan mendarat meleset subpixel, cukup buat bikin loop 0 kebaca 0.9999
+const periodPx = () => Math.round(window.innerHeight * 5.8)
+// jumlah salinan periode di kolom scroll. Dinaikin 3 → 5: jarak antar "recenter"
+// jadi 2x lebih jauh. Tiap recenter itu lompatan window.scrollTo, dan di HP
+// lompatan itu MOTONG inersia scroll (kerasa patah), jadi makin jarang makin bagus
+const COPIES = 5
 
 // background = video langit hasil generate (public/scene/scene.mp4): kabut idle "breathing",
 // angin, kristal es lewat — dunia yang masuk akal buat batu-batu melayang.
@@ -140,19 +158,31 @@ export default function App() {
     const S = introState
     let raf
     let P = periodPx() // tinggi 1 periode loop (px)
+    // scrollY yang dianggap loop = 0. WAJIB diikat ke posisi pendaratan NYATA,
+    // bukan ke kelipatan P: di HP dpr 3 scrollTo mendarat meleset subpixel, dan
+    // frac() dari meleset-dikit-ke-bawah itu 0.9999 alias ujung bridge. Efeknya
+    // halaman kebuka langsung nyangkut di zona transisi loop, dan auto-snap
+    // GAK PERNAH nyala di situ (snap cuma jalan kalau loopRaw <= DESCEND).
+    let originY = 0
     let loopDamped = 0 // posisi loop ter-smoothing (0..1), damping SIRKULAR
     let lastNow = performance.now()
     let lastUser = performance.now()
     let snapTween = null // tween GSAP yg lagi jalan (null = gak ada)
     let prevLoopRaw = 0 // buat ngedeteksi arah scroll terakhir
+    let prevY = 0 // scrollY frame lalu, buat ngedeteksi halaman masih meluncur
     let dir = 0 // -1 naik, +1 turun, 0 belum gerak
     let gradOn = null // status display .grad-depth (biar gak nulis style tiap frame)
 
+    const frac = (v) => ((v % 1) + 1) % 1
+
     const sizeSpace = () => {
+      // pertahanin posisi loop yang lagi jalan pas layar di-resize
+      const phase = P ? frac((window.scrollY - originY) / P) : 0
       P = periodPx()
-      // 3 salinan periode + 1 layar: user selalu di salinan tengah, pas mepet
-      // tepi di-"recenter" ±P (gak keliatan karena konten periodik: 0 ≡ 120)
-      if (scrollSpaceRef.current) scrollSpaceRef.current.style.height = `${3 * P + window.innerHeight}px`
+      // COPIES salinan periode + 1 layar: user selalu di salinan tengah, pas
+      // mepet tepi di-"recenter" ±P (gak keliatan karena konten periodik: 0 ≡ 120)
+      if (scrollSpaceRef.current) scrollSpaceRef.current.style.height = `${COPIES * P + window.innerHeight}px`
+      originY = window.scrollY - phase * P
     }
     const bump = () => {
       lastUser = performance.now()
@@ -167,8 +197,6 @@ export default function App() {
     window.addEventListener('touchmove', bump, { passive: true })
     window.addEventListener('pointerdown', bump)
     window.addEventListener('keydown', bump)
-
-    const frac = (v) => ((v % 1) + 1) % 1
 
     const tick = (now) => {
       const dt = Math.min(0.05, (now - lastNow) / 1000)
@@ -200,21 +228,43 @@ export default function App() {
           scrollState.depthK = scrollState.loopDamped = 0
           loopDamped = 0
           sizeSpace()
-          window.scrollTo(0, P) // masuk salinan tengah, posisi loop = 0 (hero)
+          window.scrollTo(0, 2 * P) // masuk salinan tengah
+          // jangkar loop = tempat kita BENERAN mendarat, bukan 2*P yang diminta.
+          // Selisih subpixel-nya kecil, tapi kalau mendaratnya sedikit di bawah,
+          // frac()-nya jadi 0.9999 dan halaman kejebak di bridge (bug HP)
+          originY = window.scrollY
+          prevY = originY
           lastUser = now
         }
       } else {
         // ---- idle: infinite loop ----
         let y = window.scrollY
-        // recenter tak-kasat-mata biar gak pernah mentok tepi (dua arah)
-        if (y < 0.5 * P) {
+        // recenter tak-kasat-mata biar gak pernah mentok tepi (dua arah).
+        // Batasnya diukur dari originY, dan lebarnya 4P (dulu 2P), lompatannya
+        // jadi separuh lebih jarang
+        let recentered = false
+        if (y < originY - 1.5 * P) {
           y += P
           window.scrollTo(0, y)
-        } else if (y > 2.5 * P) {
+          recentered = true
+        } else if (y > originY + 2.5 * P) {
           y -= P
           window.scrollTo(0, y)
+          recentered = true
         }
-        const loopRaw = frac(y / P)
+        const loopRaw = frac((y - originY) / P)
+
+        // ---- gate inersia (biang "patah" di HP) ----
+        // Di HP jari udah lepas tapi halaman masih meluncur ~1 detik, dan selama
+        // luncuran itu GAK ada event touchmove lagi. Akibatnya timer 450ms di
+        // bawah kelewat, snap nyala di tengah luncuran, dan tween GSAP rebutan
+        // sama inersia browser. Jadi selama posisinya masih berubah, itung
+        // sebagai "user masih gerak": snap baru boleh nyala pas beneran diem.
+        if (recentered) prevY = y
+        else {
+          if (!snapTween && Math.abs(y - prevY) > 0.5) lastUser = now
+          prevY = y
+        }
 
         // arah scroll terakhir (jalur sirkular terdekat) — cuma dicatat dari
         // gerakan user, bukan dari tween snap yg lagi jalan
@@ -247,7 +297,7 @@ export default function App() {
           if (dir > 0) A = g > 0.22 ? hi : lo
           else if (dir < 0) A = g < 0.78 ? lo : hi
           else A = g < 0.5 ? lo : hi
-          const targetY = (Math.round(y / P - A) + A) * P
+          const targetY = originY + (Math.round((y - originY) / P - A) + A) * P
           if (Math.abs(targetY - y) > 2) {
             const proxy = { y }
             snapTween = gsap.to(proxy, {
@@ -265,7 +315,7 @@ export default function App() {
         if (snapTween) y = window.scrollY
 
         // damping SIRKULAR (jalur terdekat) — biar seam 0.99→0.00 gak nge-scrub mundur
-        let d = frac(y / P) - loopDamped
+        let d = frac((y - originY) / P) - loopDamped
         if (d > 0.5) d -= 1
         if (d < -0.5) d += 1
         loopDamped = frac(loopDamped + d * (1 - Math.exp(-dt / 0.16)))
@@ -406,7 +456,11 @@ export default function App() {
       {/* tint biru gletser di backdrop, makin dalam makin pekat */}
       <div ref={depthTintRef} className="depth-tint" aria-hidden="true" />
       {/* gradient shader air-dalam (eksperimen ShaderGradient): waterPlane biru
-          es yang mengalir pelan di balik scene, muncul cuma di zona dalam */}
+          es yang mengalir pelan di balik scene, muncul cuma di zona dalam.
+          Di HP dimatiin total: ini konteks WebGL KEDUA di halaman yang sama, dan
+          GPU HP harus gonta-ganti konteks tiap frame, mahal banget buat hiasan
+          latar. Yang ilang cuma gradasi halus, tint biru .depth-tint tetep ada */}
+      {!LOW && (
       <div ref={gradRef} className="grad-depth" aria-hidden="true">
         {/* pixelDensity diturunin 1 → 0.6: gradient-nya blur lembut, downscale
             gak kebaca mata tapi beban fragment shader-nya turun ~3x */}
@@ -437,14 +491,19 @@ export default function App() {
           />
         </ShaderGradientCanvas>
       </div>
+      )}
       {/* tirai biru penutup layar buat transisi loop 100/100 → 0/100 */}
       <div ref={washRef} className="loop-wash" aria-hidden="true" />
       {/* salju jatuh di atas biru pas transisi — biar gak kerasa biru kosong */}
       <SnowVeil />
       <div className="canvas-wrap">
         <Canvas
-          dpr={[1, 1.5]}
-          gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+          // di HP dpr 1.5 = 2.25x piksel dibanding dpr 1, dan tiap piksel di sini
+          // mahal (transmission nge-render ulang scene). Turun ke 1 = beban
+          // fragment shader langsung sepertiga-nya. MSAA juga dimatiin: di HP
+          // mahal, dan tepiannya udah ketutup kabut + grain CSS
+          dpr={LOW ? [1, 1] : [1, 1.5]}
+          gl={{ antialias: !LOW, alpha: true, powerPreference: 'high-performance' }}
           camera={{ fov: 32, position: [0, 1.8, 11], near: 0.1, far: 100 }}
           style={{ touchAction: 'pan-y' }}
           // pas panel batu kebuka, scene ketutup penuh sama modal + video glacier.

@@ -2,10 +2,13 @@ import * as THREE from 'three'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { faceState, scrollState } from './scrollState'
+import { LOW } from './perf'
 
 // jumlah partikel: bener-bener padat biar fotonya kebentuk jelas ala igloo —
-// 120k + slab tipis = antar partikel makin rapat, celah ketutup, muka solid
-const COUNT = 120000
+// 120k + slab tipis = antar partikel makin rapat, celah ketutup, muka solid.
+// Di HP dipotong ke 40k: layarnya kecil (390px), jadi kerapatan segitu masih
+// kebaca solid, tapi kerja CPU per frame-nya tinggal sepertiga
+const COUNT = LOW ? 40000 : 120000
 // radius & displacement maksimal efek buyar pas pointer nyentuh partikel —
 // push-nya SATURASI (bukan akumulasi) biar pointer diem gak ngebolongin badan
 const REPEL_R = 1.05
@@ -230,6 +233,18 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
     // Pas bridge mulai (mau balik ke atas), partikel FADE OUT ketutup kabut
     const bridgeFade = 1 - clamp((scrollState.bridge - 0.05) / 0.3, 0, 1)
     const o = clamp((scrollState.damped - 0.968) / 0.014, 0, 1) * bridgeFade
+
+    // ===== PINTU KELUAR: wajah cuma hidup di ujung banget perjalanan =====
+    // Sebelum ini, loop di bawah tetep jalan 120.000 iterasi (exp/sin/cos/sqrt)
+    // SETIAP FRAME di sepanjang halaman, termasuk pas di hero waktu grup-nya
+    // invisible dan gak kegambar sama sekali. Itu kerja CPU murni kebuang, dan
+    // di HP itu yang bikin frame-nya patah-patah di semua posisi scroll.
+    if (o <= 0.001) {
+      if (group.current.visible) group.current.visible = false
+      if (mat.current) mat.current.opacity = 0
+      return
+    }
+
     let a = clamp((scrollState.damped - 0.978) / 0.022, 0, 1)
     a = a * a * (3 - 2 * a)
 
