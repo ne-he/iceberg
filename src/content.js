@@ -132,9 +132,25 @@ export const PANELS = {
     code: 'ICEBERG_SEC_03',
     kicker: "things i've built",
     title: 'PROJECTS',
-    // urutan ini permintaan Nehemiah langsung. Cuma delapan teratas yang dikasih
-    // link; sisanya cukup disebut di satu baris penutup tanpa link.
+    // Urutan asli permintaan Nehemiah langsung, dengan VERDICT dan PULSE
+    // disisipkan di depan waktu keduanya masuk roster (9 Agu 2026). Sepuluh
+    // teratas dikasih link; sisanya cukup disebut di satu baris penutup.
     rows: [
+      {
+        h: 'VERDICT ANALYST',
+        tag: 'LIVE · AGENTIC AI',
+        p: 'A data-analyst agent built on the assumption that an agent is not right until something outside it checks. It writes and runs its own code in a locked Docker sandbox, then recomputes every descriptive number a second independent way, pandas against DuckDB SQL, so confidence is measured rather than claimed. Causal questions are never answered by the language model: they route to a deterministic statistics engine that must pass recover-the-ground-truth tests, and any figure in the narrative that is absent from the engine output gets the narrative swapped for a deterministic template.',
+        links: [
+          { label: 'LIVE', href: 'https://agentic-verdict-sand.vercel.app' },
+          { label: 'REPO', href: 'https://github.com/ne-he/agentic_verdict' },
+        ],
+      },
+      {
+        h: 'PULSE / LIVE AIR QUALITY',
+        tag: 'MLOPS · STREAMING',
+        p: 'Jakarta air quality, built around what happens after a model deploys. Sensor and weather data stream through Redis into an online model that updates on every single event rather than in nightly batches, forecasts PM2.5 with an uncertainty band, and flags spikes. When the data drifts it retrains itself, versions the result, and rewrites its own model card, while an LLM agent turns each spike into a plain-language incident card. Runs as a self-contained demo, one command, no cloud account needed.',
+        links: [{ label: 'REPO', href: 'https://github.com/ne-he/pulse' }],
+      },
       {
         h: 'FINSIGHT / SEC 10-K RAG',
         tag: 'RETRIEVAL · FINANCE',
@@ -146,8 +162,8 @@ export const PANELS = {
         tag: 'ML · SECURITY',
         p: 'Phishing URL detection API trained on roughly 81k labelled URLs: sentence-transformer embeddings feeding a small Keras dense network. v2 exists because v1 had real defects, so it is a deliberate rebuild: strict URL validation, a health endpoint that admits when the model failed to load, config from the environment, and 17 tests including a regression test that locks the label orientation.',
         links: [
-          { label: 'REPO', href: 'https://github.com/ne-he/phishguard' },
-          { label: 'V1 DEMO', href: 'https://url-detection-one.vercel.app' },
+          { label: 'LIVE', href: 'https://url-detection-one.vercel.app' },
+          { label: 'REPO', href: 'https://github.com/ne-he/URL_Detection' },
         ],
       },
       {
@@ -160,7 +176,10 @@ export const PANELS = {
         h: 'FEATURE STORE MVP',
         tag: 'DATA ENGINEERING · MLOPS',
         p: 'An e-commerce feature store, end to end. Ingests transaction data, computes 20+ user-level features in batch, keeps PostgreSQL as the offline store and Redis as the online store, and serves them through a low-latency FastAPI. A Streamlit dashboard backed by Evidently watches feature freshness and drift.',
-        links: [{ label: 'REPO', href: 'https://github.com/ne-he/Feature_shopz' }],
+        links: [
+          { label: 'LIVE', href: 'https://ne-he-feature-store-mvp.hf.space' },
+          { label: 'REPO', href: 'https://github.com/ne-he/Feature_shopz' },
+        ],
       },
       {
         h: 'PHONE ADDICTION PREDICTOR V2',
@@ -185,7 +204,7 @@ export const PANELS = {
         tag: 'PRODUCT',
         p: 'A shared task board built for my own household rather than for a grade. Next.js and TypeScript, deployed and in use.',
         links: [
-          { label: 'LIVE', href: 'https://family-list-iota.vercel.app' },
+          { label: 'LIVE', href: 'https://partai-wilhelmus.vercel.app' },
           { label: 'REPO', href: 'https://github.com/ne-he/Partai_Wilhelmus' },
         ],
       },
