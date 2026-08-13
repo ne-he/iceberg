@@ -123,7 +123,7 @@ export const PANELS = {
       {
         h: '2026 / SEMESTER 4',
         tag: 'NOW',
-        p: 'Retrieval systems and agentic workflows: a 10-K RAG engine with a hallucination gate, a resume chatbot that is live, and this 3D site. Building at the intersection of machine learning and the web.',
+        p: 'Retrieval systems and agentic workflows: an analyst agent that recomputes its own arithmetic a second way before it answers, a streaming air-quality platform that retrains itself when the data drifts, a 10-K RAG engine with a hallucination gate, a resume chatbot that is live, and this 3D site. Building at the intersection of machine learning and the web.',
       },
     ],
     foot: 'TIMELINE / UPDATED 08.2026',
@@ -200,6 +200,15 @@ export const PANELS = {
         ],
       },
       {
+        h: 'E-COMMERCE SALES ANALYSIS',
+        tag: 'LIVE · ANALYTICS',
+        p: '20,848 marketplace orders read for three decisions an owner actually has to make: which products deserve budget, which regions are failing, and where margin leaks. The highest-volume product turns out not to be the revenue driver, cancellation tracks geography rather than the COD payment method it usually gets blamed on, and shipping subsidy compounds the loss in the same provinces that cancel most. The harder half was the data: eleven order-status variants normalised so valid orders were not discarded, two missing months marked as gaps instead of zeroes, and multi-category orders split proportionally so revenue is never double counted.',
+        links: [
+          { label: 'LIVE', href: 'https://dashboard-nehemiah.vercel.app' },
+          { label: 'REPO', href: 'https://github.com/ne-he/nemi-dashboard' },
+        ],
+      },
+      {
         h: 'FAMILY TASK BOARD',
         tag: 'PRODUCT',
         p: 'A shared task board built for my own household rather than for a grade. Next.js and TypeScript, deployed and in use.',
@@ -217,7 +226,11 @@ export const PANELS = {
       {
         h: 'ALSO SHIPPED',
         tag: 'SMALLER BUILDS',
-        p: 'Armory Hall, a cinematic two-act portfolio where a dark room powers on as you scroll, built on GSAP choreography and canvas frame-scrubbing. HCI Lab, a TypeScript monorepo where the OpenAPI contract generates the frontend hooks, so the two halves cannot silently diverge. SimpleNotes, a native SwiftUI notes app for iOS 16. A to-do and focus dashboard from a Software Engineering mini project. And a Second Brain CLI: deterministic index-and-score retrieval over my course materials so the model opens only the top-ranked section, A/B tested at roughly 40% cheaper token usage.',
+        p: 'Armory Hall, a cinematic two-act portfolio where a dark room powers on as you scroll, built on GSAP choreography and canvas frame-scrubbing. HCI Lab, a TypeScript monorepo where the OpenAPI contract generates the frontend hooks, so the two halves cannot silently diverge. A churn pipeline that will not promote a model until it clears an accuracy gate, a credit scorer fronted by a form built for a loan officer rather than a data scientist, and a workout-load scorer that rates a training program before you run it. SimpleNotes, a native SwiftUI notes app for iOS 16. A to-do and focus dashboard from a Software Engineering mini project. And a Second Brain CLI: deterministic index-and-score retrieval over my course materials so the model opens only the top-ranked section, A/B tested at roughly 40% cheaper token usage.',
+        links: [
+          { label: 'ARMORY HALL', href: 'https://armory-rouge.vercel.app' },
+          { label: 'HCI LAB', href: 'https://web-hci-final-clash-of-bang.vercel.app' },
+        ],
       },
     ],
     foot: 'SELECTED WORK / ALL REPOS AT GITHUB.COM/NE-HE',
@@ -229,7 +242,7 @@ export const PANELS = {
     rows: [
       {
         h: 'DATA & ANALYSIS',
-        p: 'Python, pandas, NumPy, Polars, SQL, exploratory data analysis, Jupyter. Used across the Feature Store and every model below.',
+        p: 'Python, pandas, NumPy, Polars, DuckDB, SQL, exploratory data analysis, Jupyter. Used across the Feature Store, the e-commerce analysis, and every model below.',
       },
       {
         h: 'MACHINE LEARNING',
@@ -241,7 +254,7 @@ export const PANELS = {
       },
       {
         h: 'SERVING & INFRA',
-        p: 'FastAPI, PostgreSQL, Redis, Docker, GitHub Actions, Streamlit, pytest. Enough to take a model from notebook to a deployed endpoint that stays up.',
+        p: 'FastAPI, PostgreSQL, Redis, Docker, GitHub Actions, MLflow, Streamlit, pytest. Enough to take a model from notebook to a deployed endpoint that stays up.',
       },
       {
         h: 'AGENTIC WORKFLOWS',
