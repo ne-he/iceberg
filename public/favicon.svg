@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="a" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f2fbff"/><stop offset="1" stop-color="#a6d6f2"/>
+    </linearGradient>
+    <linearGradient id="b" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#bfe4fb"/><stop offset="1" stop-color="#5f97c1"/>
+    </linearGradient>
+    <linearGradient id="c" x1="0" y1="0" x2=".4" y2="1">
+      <stop offset="0" stop-color="#9fcdec"/><stop offset="1" stop-color="#4d82ac"/>
+    </linearGradient>
+    <linearGradient id="d" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6ba2c9"/><stop offset="1" stop-color="#39678c"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="7" fill="#0a141d"/>
+  <!-- 4 facet, cahaya dari kiri atas: sama motifnya sama ikon tombol chat -->
+  <path d="M16 4.5 7 12.5 16 12.5Z" fill="url(#a)"/>
+  <path d="M16 4.5 16 12.5 25 12.5Z" fill="url(#b)"/>
+  <path d="M7 12.5 16 27.5 16 12.5Z" fill="url(#c)"/>
+  <path d="M16 12.5 16 27.5 25 12.5Z" fill="url(#d)"/>
+  <path d="M16 4.5 7 12.5 16 27.5 25 12.5 16 4.5M7 12.5h18M16 4.5V27.5"
+        fill="none" stroke="rgba(226,244,255,.8)" stroke-width=".8" stroke-linejoin="round"/>
+</svg>
