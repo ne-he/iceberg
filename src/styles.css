@@ -517,6 +517,14 @@ body {
   text-shadow: 0 0 16px rgba(120, 190, 240, 0.4);
 }
 .echo-inline:hover { opacity: 1; color: #d8ecfb; }
+/* pintu ke situs porto satunya (ARMORY) — sengaja lebih redup dari .echo-inline
+   supaya ajakan ngobrol tetap jadi aksi utama di outro */
+.sister-site {
+  display: block; margin-top: 10px;
+  font-size: 9px; letter-spacing: 0.28em; text-decoration: none;
+  color: #8fb0c6; opacity: 0.55; transition: opacity 0.25s, color 0.25s;
+}
+.sister-site:hover { opacity: 1; color: #d8ecfb; }
 @media (prefers-reduced-motion: reduce) {
   .echo-btn::before, .echo-btn::after, .echo-empty-orb, .echo-live::before,
   .echo-gem, .echo-btn-dot { animation: none; }

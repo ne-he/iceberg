@@ -274,6 +274,11 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
         <button className="echo-inline" onClick={onOpenChat}>
           &gt; ngobrol langsung sama aku
         </button>
+        {/* jalan keluar ke ARMORY. Dua situs porto ini sebelumnya nol saling
+            tunjuk, jadi yang mendarat di salah satunya gak pernah tau yang lain */}
+        <a className="sister-site" href={CONTACT.armory} target="_blank" rel="noopener">
+          ATAU LIHAT GARASINYA ↗
+        </a>
         {/* petunjuk loop: scroll terus di 100/100 = balik ke permukaan */}
         <div className="loop-hint">KEEP SCROLLING TO RESURFACE ↻</div>
         </div>

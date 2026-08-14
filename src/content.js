@@ -274,4 +274,5 @@ export const CONTACT = {
   github: 'https://github.com/ne-he',
   linkedin: 'https://www.linkedin.com/in/nehemiah-wilhelmus-b90391327/',
   whatsapp: 'https://wa.me/6281911497766',
+  armory: 'https://armory-rouge.vercel.app',
 }
