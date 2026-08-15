@@ -370,48 +370,54 @@ body {
   display: flex; align-items: center; gap: 6px;
   font-family: var(--font-display); font-size: 11px; font-weight: 400; color: #9dbdd3;
 }
+/* dulu dot ijo "online". Ijo itu bahasa dashboard, bukan bahasa es — diganti
+   belah ketupat biru es, motif yang sama dipakai buat bullet list di jawaban bot */
 .echo-btn-dot {
-  width: 6px; height: 6px; flex: none; border-radius: 50%; background: #6fe6b8;
-  box-shadow: 0 0 8px #6fe6b8; animation: echo-blink-soft 2.4s ease-in-out infinite;
+  width: 6px; height: 6px; flex: none; background: rgba(150, 205, 245, 0.92);
+  transform: rotate(45deg);
+  box-shadow: 0 0 8px rgba(140, 200, 245, 0.75); animation: echo-blink-soft 2.4s ease-in-out infinite;
 }
 
-/* drawer chat dari kanan, scene 3D masih keliatan separo */
+/* Drawer chat dari kanan, scene 3D masih keliatan separo di desktop.
+   Badannya PUTIH DINGIN (bukan putih kertas): rasanya kayak ngeliat es dari dalam
+   rongga yang kena cahaya dari atas. Kepalanya sengaja tetep navy gelap — kristal
+   es itu didesain nyala di atas gelap, dan di HP yang drawernya selebar layar,
+   atap gelap bikin transisi dari scene ke ruangan terang gak nabrak.
+   PERF: nol backdrop-filter di sini, lihat catatan di atas. Semua gradient solid. */
 .echo-drawer {
   position: fixed; top: 0; right: 0; bottom: 0; z-index: 45;
   width: min(420px, 100vw); display: flex; flex-direction: column;
   background:
-    radial-gradient(ellipse at 82% 6%, rgba(104, 152, 194, 0.32) 0%, rgba(104, 152, 194, 0) 54%),
-    linear-gradient(162deg, #0c1824 0%, #0a141d 52%, #08111a 100%);
-  border-left: 1px solid rgba(150, 200, 240, 0.22);
-  box-shadow: -18px 0 50px rgba(4, 10, 16, 0.5), inset 1px 0 0 rgba(160, 210, 250, 0.14);
+    radial-gradient(ellipse at 88% 22%, rgba(146, 190, 226, 0.28) 0%, rgba(146, 190, 226, 0) 58%),
+    linear-gradient(168deg, #f4f7fa 0%, #eef3f8 48%, #e8eef4 100%);
+  border-left: 1px solid rgba(70, 120, 160, 0.2);
+  box-shadow: -18px 0 50px rgba(4, 10, 16, 0.34);
   transform: translateX(100%); transition: transform 0.5s cubic-bezier(0.22, 0.9, 0.24, 1);
-  color: #c7d2da;
+  color: #34454f;
 }
 .echo-drawer.is-open { transform: none; }
 .echo-head {
+  position: relative; z-index: 1;
   display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
-  padding: 22px 22px 16px; border-bottom: 1px solid rgba(180, 205, 224, 0.14);
+  padding: 22px 22px 18px;
+  background:
+    radial-gradient(ellipse at 84% 2%, rgba(104, 152, 194, 0.34) 0%, rgba(104, 152, 194, 0) 56%),
+    linear-gradient(162deg, #0c1824 0%, #0a141d 60%, #09131c 100%);
+  border-bottom: 1px solid rgba(20, 62, 96, 0.2);
+  box-shadow: 0 12px 28px rgba(12, 30, 48, 0.16);
 }
-.echo-head-id { display: flex; align-items: center; gap: 12px; }
+.echo-head-id { display: flex; align-items: center; gap: 13px; }
+/* rumah buat canvas serpihan es. display:block (bukan grid) karena R3F naruh div
+   width/height 100% di dalem sini, butuh kotak dengan tinggi pasti */
 .echo-head-orb {
-  position: relative; width: 40px; height: 40px; flex: none;
-  display: grid; place-items: center; border-radius: 12px;
-  background: radial-gradient(circle at 50% 34%, rgba(150, 210, 255, 0.45), rgba(60, 120, 180, 0.1));
-  box-shadow: inset 0 0 14px rgba(150, 210, 255, 0.45), 0 0 18px rgba(120, 195, 255, 0.3);
+  position: relative; width: 52px; height: 52px; flex: none;
+  display: block; overflow: hidden; border-radius: 14px;
+  background: radial-gradient(circle at 50% 34%, rgba(150, 210, 255, 0.4), rgba(60, 120, 180, 0.08));
+  box-shadow: inset 0 0 14px rgba(150, 210, 255, 0.4), 0 0 20px rgba(120, 195, 255, 0.26);
 }
-.echo-head-orb svg { width: 21px; height: 21px; }
 .echo-title {
   font-family: var(--font-display);
   font-size: 15.5px; font-weight: 600; letter-spacing: -0.005em; color: #eef5fb;
-  display: flex; align-items: center; gap: 9px;
-}
-.echo-live {
-  font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: #8fe0c0;
-  display: inline-flex; align-items: center; gap: 5px; font-weight: 500;
-}
-.echo-live::before {
-  content: ''; width: 6px; height: 6px; border-radius: 50%; background: #6fe6b8;
-  box-shadow: 0 0 8px #6fe6b8; animation: echo-blink-soft 2.4s ease-in-out infinite;
 }
 @keyframes echo-blink-soft { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
 .echo-sub { margin-top: 6px; font-size: 11.5px; line-height: 1.55; color: #94a7b5; max-width: 244px; }
@@ -430,85 +436,94 @@ body {
   display: flex; flex-direction: column; align-items: center; text-align: center;
   gap: 12px; margin: auto 0; padding: 16px 6px;
 }
+/* PERF: napasnya dulu animasi box-shadow (repaint tiap frame, di atas canvas
+   WebGL). Sekarang glow-nya pindah ke ::before yang cuma dianimasi OPACITY —
+   compositor-only, gratis. Aturan yang sama kayak tombol chat. */
 .echo-empty-orb {
-  width: 64px; height: 64px; flex: none; display: grid; place-items: center; border-radius: 20px;
-  background: radial-gradient(circle at 50% 32%, rgba(150, 210, 255, 0.4), rgba(60, 120, 180, 0.08));
-  animation: echo-breathe-soft 3.6s ease-in-out infinite;
+  position: relative; width: 64px; height: 64px; flex: none;
+  display: grid; place-items: center; border-radius: 20px;
+  background: radial-gradient(circle at 50% 32%, rgba(126, 182, 226, 0.34), rgba(126, 182, 226, 0.07));
+  box-shadow: inset 0 0 20px rgba(120, 180, 224, 0.28);
 }
-.echo-empty-orb svg { width: 30px; height: 30px; }
-@keyframes echo-breathe-soft {
-  0%, 100% { box-shadow: inset 0 0 22px rgba(150, 210, 255, 0.4), 0 0 22px rgba(120, 195, 255, 0.22); }
-  50% { box-shadow: inset 0 0 26px rgba(150, 210, 255, 0.5), 0 0 40px rgba(120, 195, 255, 0.42); }
+.echo-empty-orb::before {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  box-shadow: 0 0 34px rgba(96, 160, 212, 0.45), inset 0 0 26px rgba(120, 180, 224, 0.4);
+  opacity: 0.3; animation: echo-breathe-soft 3.6s ease-in-out infinite;
 }
-.echo-empty-lead { font-family: var(--font-display); font-size: 17px; color: #eaf2f8; font-weight: 500; letter-spacing: -0.005em; }
-.echo-empty-lead b { color: #bfe0f6; font-weight: 700; }
-.echo-empty-p { font-size: 12.5px; line-height: 1.7; color: #98a9b6; max-width: 272px; }
+.echo-empty-orb svg { position: relative; width: 30px; height: 30px; }
+@keyframes echo-breathe-soft { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.85; } }
+.echo-empty-lead { font-family: var(--font-display); font-size: 17px; color: #12222d; font-weight: 500; letter-spacing: -0.005em; }
+.echo-empty-lead b { color: #1d6693; font-weight: 700; }
+.echo-empty-p { font-size: 12.5px; line-height: 1.7; color: #5d707e; max-width: 272px; }
 .echo-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 6px; }
 .echo-chip {
-  background: rgba(150, 200, 240, 0.07); border: 1px solid rgba(150, 200, 240, 0.22);
-  border-radius: 11px; padding: 9px 13px; color: #cfe0ee; font: inherit; font-size: 12px; line-height: 1.3;
+  background: rgba(255, 255, 255, 0.72); border: 1px solid rgba(52, 112, 158, 0.24);
+  border-radius: 11px; padding: 9px 13px; color: #274a60; font: inherit; font-size: 12px; line-height: 1.3;
   cursor: pointer; transition: background 0.2s, border-color 0.2s, transform 0.15s;
 }
-.echo-chip:hover:not(:disabled) { background: rgba(150, 200, 240, 0.15); border-color: rgba(180, 220, 255, 0.5); transform: translateY(-1px); }
-.echo-chip:disabled { opacity: 0.4; cursor: default; }
+.echo-chip:hover:not(:disabled) { background: #fff; border-color: rgba(38, 108, 158, 0.55); transform: translateY(-1px); }
+.echo-chip:disabled { opacity: 0.45; cursor: default; }
 .echo-msg { max-width: 88%; font-size: 13.5px; line-height: 1.72; word-wrap: break-word; }
+/* di putih, bubble transparan jadi pudar gak kebaca — dibikin tint solid */
 .echo-msg--user {
   align-self: flex-end; white-space: pre-wrap;
-  background: linear-gradient(150deg, rgba(150, 200, 240, 0.2), rgba(150, 200, 240, 0.1));
-  border: 1px solid rgba(160, 210, 250, 0.24); border-radius: 15px 15px 5px 15px;
-  padding: 10px 14px; color: #eef5fb;
+  background: linear-gradient(150deg, #dcebf7, #cfe3f3);
+  border: 1px solid rgba(52, 112, 158, 0.26); border-radius: 15px 15px 5px 15px;
+  padding: 10px 14px; color: #12222d;
 }
-.echo-msg--assistant { align-self: flex-start; max-width: 93%; color: #c6d4df; }
+.echo-msg--assistant { align-self: flex-start; max-width: 93%; color: #33444f; }
 /* jawaban bot: markdown yang udah dirender jadi elemen beneran (bukan bintang2) */
 .echo-md { display: flex; flex-direction: column; gap: 9px; }
 .echo-md p { margin: 0; line-height: 1.74; }
-.echo-md-h { font-weight: 650; color: #eaf4fc; letter-spacing: 0.01em; }
-.echo-md strong { color: #eaf4fc; font-weight: 650; }
-.echo-md em { color: #d3e2ee; font-style: italic; }
-.echo-md a { color: #9fd4ff; text-decoration: underline; text-underline-offset: 2px; }
+.echo-md-h { font-weight: 650; color: #0e1a23; letter-spacing: 0.01em; }
+.echo-md strong { color: #0e1a23; font-weight: 650; }
+.echo-md em { color: #405663; font-style: italic; }
+.echo-md a { color: #16628f; text-decoration: underline; text-underline-offset: 2px; }
+/* di gelap 12% opacity udah cukup, di putih bakal ilang total — dinaikin + tint */
 .echo-md code {
   font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px;
-  background: rgba(150, 200, 240, 0.12); border: 1px solid rgba(150, 200, 240, 0.16);
-  border-radius: 5px; padding: 1px 5px; color: #dcebf7;
+  background: rgba(28, 96, 146, 0.1); border: 1px solid rgba(28, 96, 146, 0.2);
+  border-radius: 5px; padding: 1px 5px; color: #14455f;
 }
 .echo-md ul, .echo-md ol { margin: 1px 0; padding: 0; display: flex; flex-direction: column; gap: 6px; list-style: none; }
 .echo-md ol { counter-reset: echo-li; }
 .echo-md li { position: relative; padding-left: 18px; line-height: 1.62; }
 .echo-md ul li::before {
   content: ''; position: absolute; left: 3px; top: 0.6em; width: 6px; height: 6px;
-  background: rgba(150, 205, 245, 0.9); box-shadow: 0 0 7px rgba(140, 200, 245, 0.7); transform: rotate(45deg);
+  background: #3f8ec0; transform: rotate(45deg);
 }
 .echo-md ol li { counter-increment: echo-li; }
 .echo-md ol li::before {
   content: counter(echo-li); position: absolute; left: 0; top: 0.05em;
-  font-size: 10.5px; font-weight: 600; color: #9fd4ff;
+  font-size: 10.5px; font-weight: 600; color: #2b7fb4;
 }
-.echo-caret { display: inline-block; width: 0.5em; margin-left: 1px; color: #9fdcff; animation: echo-blink 1s steps(2) infinite; }
+.echo-caret { display: inline-block; width: 0.5em; margin-left: 1px; color: #2b7fb4; animation: echo-blink 1s steps(2) infinite; }
 @keyframes echo-blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
 .echo-error {
-  align-self: stretch; font-size: 12.5px; line-height: 1.6; color: #ffd7c2;
-  background: rgba(120, 60, 40, 0.18); border: 1px solid rgba(200, 120, 90, 0.3);
+  align-self: stretch; font-size: 12.5px; line-height: 1.6; color: #8a3a1c;
+  background: rgba(196, 88, 48, 0.1); border: 1px solid rgba(196, 88, 48, 0.32);
   border-radius: 10px; padding: 10px 13px;
 }
 .echo-input {
   display: flex; align-items: flex-end; gap: 10px; padding: 14px 16px 18px;
-  border-top: 1px solid rgba(180, 205, 224, 0.14);
+  border-top: 1px solid rgba(52, 112, 158, 0.16);
 }
+/* dulu kotak gelap. Di badan putih itu kebaca kayak lubang hitam nyasar */
 .echo-input textarea {
-  flex: 1; resize: none; background: rgba(8, 15, 22, 0.6);
-  border: 1px solid rgba(150, 200, 240, 0.24); border-radius: 12px;
-  padding: 11px 13px; color: #e6eef4; font: inherit; font-size: 13.5px; line-height: 1.5;
-  max-height: 120px; outline: none; transition: border-color 0.2s;
+  flex: 1; resize: none; background: #fff;
+  border: 1px solid rgba(52, 112, 158, 0.26); border-radius: 12px;
+  padding: 11px 13px; color: #12222d; font: inherit; font-size: 13.5px; line-height: 1.5;
+  max-height: 120px; outline: none; transition: border-color 0.2s, box-shadow 0.2s;
 }
-.echo-input textarea:focus { border-color: rgba(180, 220, 255, 0.55); }
-.echo-input textarea::placeholder { color: #6f8494; }
+.echo-input textarea:focus { border-color: rgba(38, 108, 158, 0.6); box-shadow: 0 0 0 3px rgba(96, 160, 212, 0.15); }
+.echo-input textarea::placeholder { color: #8b9caa; }
 .echo-send {
   flex: none; width: 42px; height: 42px; border-radius: 12px;
-  background: rgba(150, 200, 240, 0.16); border: 1px solid rgba(150, 200, 240, 0.32);
-  color: #dbeeff; font-size: 18px; cursor: pointer; transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  background: linear-gradient(150deg, #d7e9f7, #c6dcee); border: 1px solid rgba(52, 112, 158, 0.3);
+  color: #185c88; font-size: 18px; cursor: pointer; transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
 }
-.echo-send:hover:not(:disabled) { background: rgba(150, 200, 240, 0.28); transform: translateY(-1px); box-shadow: 0 0 18px rgba(120, 195, 255, 0.3); }
-.echo-send:disabled { opacity: 0.4; cursor: default; }
+.echo-send:hover:not(:disabled) { background: linear-gradient(150deg, #e6f2fb, #d2e6f5); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(52, 112, 158, 0.22); }
+.echo-send:disabled { opacity: 0.45; cursor: default; }
 /* anotasi pintu masuk chat di klimaks outro */
 .echo-inline {
   margin-top: 18px; background: none; border: none;
@@ -526,7 +541,7 @@ body {
 }
 .sister-site:hover { opacity: 1; color: #d8ecfb; }
 @media (prefers-reduced-motion: reduce) {
-  .echo-btn::before, .echo-btn::after, .echo-empty-orb, .echo-live::before,
+  .echo-btn::before, .echo-btn::after, .echo-empty-orb::before,
   .echo-gem, .echo-btn-dot { animation: none; }
 }
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useChat } from './useChat'
 import { renderMarkdown } from './markdown'
+import ShardCanvas from './Shard'
 
 // pertanyaan starter — samain sama repo RAG biar konsisten
 const SUGGESTIONS = [
@@ -10,20 +11,25 @@ const SUGGESTIONS = [
   'Nemi suka makanan apa?',
 ]
 
-// ikon kristal es — motif iceberg, dipakai di tombol, header, sama empty state
-function Crystal() {
+// ikon kristal es — motif iceberg. Badan drawer sekarang putih, jadi versi
+// garis-terang gak kebaca lagi di situ: dipanggil pakai `dark` biar jadi kristal
+// gelap yang kena cahaya, bukan noda pucat.
+function Crystal({ dark }) {
+  const line = dark ? 'rgba(24,70,102,.85)' : 'rgba(224,242,255,.92)'
+  const fine = dark ? 'rgba(38,98,140,.45)' : 'rgba(190,225,255,.55)'
+  const fill = dark ? 'rgba(118,178,224,.24)' : 'rgba(150,205,245,.16)'
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M12 2.4 4.6 9.2 12 21.6 19.4 9.2 12 2.4Z"
-        stroke="rgba(224,242,255,.92)"
+        stroke={line}
         strokeWidth="1.1"
         strokeLinejoin="round"
-        fill="rgba(150,205,245,.16)"
+        fill={fill}
       />
       <path
         d="M4.6 9.2h14.8M12 2.4V21.6M8.3 9.2 12 21.6M15.7 9.2 12 21.6"
-        stroke="rgba(190,225,255,.55)"
+        stroke={fine}
         strokeWidth=".7"
       />
     </svg>
@@ -144,13 +150,12 @@ export default function ChatDock({ open, onOpen, onClose, hidden }) {
       <div className={`echo-drawer ${open ? 'is-open' : ''}`} aria-hidden={!open}>
         <div className="echo-head">
           <div className="echo-head-id">
-            <span className="echo-head-orb">
-              <Crystal />
-            </span>
+            {/* serpihan es WebGL: cuma di-mount pas drawer kebuka biar pas ketutup
+                gak ada konteks WebGL nganggur. Ini juga indikator "lagi mikir"-nya,
+                makanya dot ijo online udah gak dipakai lagi */}
+            <span className="echo-head-orb">{open && <ShardCanvas />}</span>
             <div className="echo-head-txt">
-              <div className="echo-title">
-                AI Nehemiah <span className="echo-live">online</span>
-              </div>
+              <div className="echo-title">AI Nehemiah</div>
               <div className="echo-sub">Tanya apa aja, aku tau hampir semua soal Nehemiah.</div>
             </div>
           </div>
@@ -163,7 +168,7 @@ export default function ChatDock({ open, onOpen, onClose, hidden }) {
           {messages.length === 0 && (
             <div className="echo-empty">
               <span className="echo-empty-orb">
-                <Crystal />
+                <Crystal dark />
               </span>
               <p className="echo-empty-lead">
                 Halo, aku <b>AI-nya Nehemiah</b>

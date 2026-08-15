@@ -509,7 +509,13 @@ export default function App() {
           // pas panel batu kebuka, scene ketutup penuh sama modal + video glacier.
           // stop render WebGL biar GPU fokus decode video (video gak patah lagi) &
           // hemat baterai. Balik jalan lagi begitu panel ditutup.
-          frameloop={panel ? 'never' : 'always'}
+          //
+          // Hal yang sama berlaku buat drawer chat, TAPI cuma di HP: di situ
+          // lebarnya 100vw jadi scene ketutup 100% (diukur, gak ada 1 piksel pun
+          // yang keliatan) sementara GPU tetep ngerender 18 draw call / 50rb
+          // segitiga tiap frame. Di desktop drawernya cuma 420px dan scene masih
+          // keliatan di kiri, jadi di sana JANGAN dibekuin.
+          frameloop={panel || (LOW && chatOpen) ? 'never' : 'always'}
         >
           <Suspense fallback={null}>
             <Experience onOpen={openRock} hasVideo={hasVideo} />
