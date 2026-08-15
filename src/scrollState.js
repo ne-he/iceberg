@@ -1,8 +1,8 @@
-// Shared mutable scroll state — ditulis master scroll di App.jsx, dibaca
+// Shared mutable scroll state, ditulis master scroll di App.jsx, dibaca
 // R3F frame loop (Experience) & HUD (UI).
 //   progress/damped  : posisi DESCEND 0..1 (hero → partikel). =1 selama bridge.
 //   bridge           : 0 selama descend, 0..1 selama "jembatan" balik ke start.
-//   depthK           : kedalaman efektif buat fog/tint/video — SAMA kayak damped
+//   depthK           : kedalaman efektif buat fog/tint/video, SAMA kayak damped
 //                      pas descend, tapi RETRACE balik ke 0 pas bridge, biar
 //                      ujung bridge == awal descend (loop mulus, gak nge-pop).
 //   loopDamped       : posisi loop penuh 0..1 (descend + bridge) buat counter /120.
@@ -12,12 +12,12 @@ export const scrollState = { progress: 0, damped: 0, bridge: 0, depthK: 0, loopD
 // ditulis oleh tombol sosial di UI.jsx, dibaca ParticleFace.jsx tiap frame
 export const faceState = { target: 'face' }
 
-// true selama hero lagi di-drag — CameraRig matiin parallax pointer biar puterannya solid
+// true selama hero lagi di-drag, CameraRig matiin parallax pointer biar puterannya solid
 export const dragState = { active: false }
 
 // ===== ECHO chat (RAG chatbot) =====
 // open    : panel chat lagi kebuka (dibaca App buat sembunyiin tombol, kunci scroll)
-// streaming: bot lagi ngetik jawaban — dibaca Experience buat bikin aura muka
+// streaming: bot lagi ngetik jawaban, dibaca Experience buat bikin aura muka
 //            partikel "denyut" pas lagi ngomong (di section outro). Ditulis useChat.
 export const chatState = { open: false, streaming: false }
 
@@ -32,7 +32,7 @@ export const chatState = { open: false, streaming: false }
 // buat deteksi "panel lagi kebuka" di master loop
 export const focusState = { id: null, pos: [0, 0, 0], phase: 'idle', t0: 0, panelOpen: false }
 
-// dipanggil pas batu diklik — mulai animasi menyelam
+// dipanggil pas batu diklik, mulai animasi menyelam
 export function beginFocus(id, pos) {
   focusState.id = id
   focusState.pos = pos
@@ -47,13 +47,13 @@ export function endFocus() {
 
 // ===== intro emerge + infinite loop scroll (permintaan Nehemiah) =====
 // phase: 'wait' (loader masih nutup) → 'fall' (intro EMERGE: biru+salju nyingkap,
-// batu hero mendarat + nama muncul — digerakin waktu di App, bukan layar putih) →
+// batu hero mendarat + nama muncul, digerakin waktu di App, bukan layar putih) →
 // 'idle' (normal, infinite loop dua arah). Loop-nya nyambung: dari partikel outro,
 // scroll terus = balik ke hero lewat emerge yang sama.
 export const introState = {
   phase: 'wait',
   t0: 0, // timestamp mulai phase (performance.now)
-  reveal: 0, // 0..1 kemunculan background/video/UI — 0 pas wait, 1 pas emerge/idle
+  reveal: 0, // 0..1 kemunculan background/video/UI, 0 pas wait, 1 pas emerge/idle
 }
 
 // video langit bg (scene.mp4): loader nunggu frame pertamanya kelar decode biar
@@ -61,7 +61,7 @@ export const introState = {
 // Di-set true juga kalau videonya gak ada / gagal load, biar loader gak ngegantung.
 export const bgVideoState = { ready: false }
 
-// dipanggil Loader pas selesai — mulai animasi emerge pertama kali
+// dipanggil Loader pas selesai, mulai animasi emerge pertama kali
 export function beginIntro() {
   if (introState.phase !== 'wait') return
   introState.phase = 'fall'

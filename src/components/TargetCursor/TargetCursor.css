@@ -6,7 +6,7 @@
   height: 0;
   pointer-events: none;
   z-index: 9999;
-  /* aslinya mix-blend-mode: difference — DIBUANG: blend di atas canvas WebGL
+  /* aslinya mix-blend-mode: difference, DIBUANG: blend di atas canvas WebGL
      maksa compositing mahal, fps anjlok. Ganti warna es + shadow tipis biar
      tetep kebaca di kabut putih maupun zona gelap */
   transform: translate(-50%, -50%);

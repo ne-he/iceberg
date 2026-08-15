@@ -14,7 +14,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
 const FALL_MS = 2100 // durasi animasi emerge intro pertama
 const smooth = (x) => x * x * (3 - 2 * x)
 
-// salju yg jatuh nutupin biru transisi loop — canvas ringan, cuma gambar pas
+// salju yg jatuh nutupin biru transisi loop, canvas ringan, cuma gambar pas
 // bridge aktif. Ngasih gerak & isi biar 109→120 gak kerasa "biru kosong doang"
 // (permintaan Nehemiah). Alpha ngikut envelope bridge yg sama kayak wash.
 function SnowVeil() {
@@ -110,7 +110,7 @@ const periodPx = () => Math.round(window.innerHeight * 5.8)
 const COPIES = 5
 
 // background = video langit hasil generate (public/scene/scene.mp4): kabut idle "breathing",
-// angin, kristal es lewat — dunia yang masuk akal buat batu-batu melayang.
+// angin, kristal es lewat, dunia yang masuk akal buat batu-batu melayang.
 // Pas scroll nyampe batu pertama, videonya fade out ketutup kabut putih polos.
 // Kalau file-nya belum ada, fallback ke background procedural (kabut + drifting ice).
 export default function App() {
@@ -133,7 +133,7 @@ export default function App() {
 
   // klik batu: mulai animasi menyelam, panel konten muncul pas kamera udah nembus
   const openRock = (id, pos) => {
-    if (focusState.phase !== 'idle') return // lagi nyelam/kebuka — abaikan klik dobel
+    if (focusState.phase !== 'idle') return // lagi nyelam/kebuka, abaikan klik dobel
     beginFocus(id, pos ?? [0, 0, 0])
     clearTimeout(diveTimer.current)
     diveTimer.current = setTimeout(() => {
@@ -203,16 +203,16 @@ export default function App() {
       lastNow = now
 
       if (S.phase === 'wait') {
-        // loader masih nutup — diem
+        // loader masih nutup, diem
       } else if (S.phase === 'fall') {
-        // intro PERTAMA (permintaan Nehemiah): BUKAN layar putih — reuse animasi
+        // intro PERTAMA (permintaan Nehemiah): BUKAN layar putih, reuse animasi
         // emerge biru+salju yang sama kayak ujung loop (112→120). Bridge digerakin
         // WAKTU dari 0.6→1.0: biru+salju nyingkap, batu hero mendarat, nama muncul
         const k = clamp((now - S.t0) / FALL_MS, 0, 1)
         const br = 0.6 + 0.4 * smooth(k) // bridge 0.6 → 1.0 (fase emerge)
         const ld = DESCEND + br * (1 - DESCEND)
         loopDamped = ld
-        S.reveal = 1 // dunia udah ada di balik biru — biru yg nyingkap, bukan fog putih
+        S.reveal = 1 // dunia udah ada di balik biru, biru yg nyingkap, bukan fog putih
         scrollState.progress = 1
         scrollState.damped = 1
         scrollState.bridge = br
@@ -266,7 +266,7 @@ export default function App() {
           prevY = y
         }
 
-        // arah scroll terakhir (jalur sirkular terdekat) — cuma dicatat dari
+        // arah scroll terakhir (jalur sirkular terdekat), cuma dicatat dari
         // gerakan user, bukan dari tween snap yg lagi jalan
         if (!snapTween) {
           let dm = loopRaw - prevLoopRaw
@@ -279,7 +279,7 @@ export default function App() {
         // snap antar section (teknik dari video snap-on-scroll Nicolai Palmkvist:
         // fullPage scrollingSpeed 1000ms + transisi GSAP power2.out). Diadaptasi
         // ke infinite loop kita: idle 450ms → SELALU dikunci ke anchor (gak ada
-        // posisi nyangkut di tengah section), dan DIRECTIONAL — lewat 22% gap
+        // posisi nyangkut di tengah section), dan DIRECTIONAL, lewat 22% gap
         // searah gerakan terakhir udah dianggap "niat pindah section"
         if (!snapTween && now - lastUser > 450 && !dragState.active && focusState.phase === 'idle' && loopRaw <= DESCEND + 1e-3) {
           // dua anchor pengapit posisi sekarang
@@ -314,7 +314,7 @@ export default function App() {
         }
         if (snapTween) y = window.scrollY
 
-        // damping SIRKULAR (jalur terdekat) — biar seam 0.99→0.00 gak nge-scrub mundur
+        // damping SIRKULAR (jalur terdekat), biar seam 0.99→0.00 gak nge-scrub mundur
         let d = frac((y - originY) / P) - loopDamped
         if (d > 0.5) d -= 1
         if (d < -0.5) d += 1
@@ -353,7 +353,7 @@ export default function App() {
       // gantiin rasa tint biru datar jadi air yang gerak. Di hero opacity 0
       if (gradRef.current) {
         gradRef.current.style.opacity = clamp((dk - 0.24) / 0.4, 0, 1) * 0.5 * rv
-        // canvas-nya render full-screen TIAP frame walau opacity 0 — di hero itu
+        // canvas-nya render full-screen TIAP frame walau opacity 0, di hero itu
         // buang GPU sia-sia. display:none bikin R3F nge-resize canvas ke 0x0
         // (nyaris gratis); baru dinyalain pas mulai turun, jauh sebelum
         // opacity-nya keliatan (0.24) jadi gak ada pop
@@ -372,7 +372,7 @@ export default function App() {
       if (el) {
         const fade = clamp(1 - (dk - 0.12) / 0.24, 0, 1)
         el.style.opacity = (0.3 + 0.7 * fade) * rv
-        // pas panel batu kebuka, layar ketutup penuh modal + video glacier —
+        // pas panel batu kebuka, layar ketutup penuh modal + video glacier,
         // video langit di-pause biar gak ada DUA video rebutan decoder
         // (biang video panel kadang patah). Balik play pas panel ditutup
         if (focusState.panelOpen) {
@@ -393,7 +393,7 @@ export default function App() {
     }
   }, [])
 
-  // kunci scroll halaman selama panel batu ATAU chat ECHO kebuka — biar pas ditutup
+  // kunci scroll halaman selama panel batu ATAU chat ECHO kebuka, biar pas ditutup
   // scene balik ke posisi yg sama (bukan loncat ke posisi scroll yg berubah di belakang)
   useEffect(() => {
     if (!panel && !chatOpen) return
@@ -405,7 +405,7 @@ export default function App() {
   }, [panel, chatOpen])
 
   useEffect(() => {
-    // handle debug buat verifikasi otomatis (Playwright) — gak dipakai runtime
+    // handle debug buat verifikasi otomatis (Playwright), gak dipakai runtime
     window.__ice = {
       introState,
       scrollState,
@@ -416,7 +416,7 @@ export default function App() {
       openChat,
       closeChat,
     }
-    // cek beneran video — dev server Vite ngebales 200 text/html buat file yang gak ada
+    // cek beneran video, dev server Vite ngebales 200 text/html buat file yang gak ada
     fetch('/scene/scene.mp4', { method: 'HEAD' })
       .then((r) => {
         const type = r.headers.get('content-type') || ''
@@ -494,7 +494,7 @@ export default function App() {
       )}
       {/* tirai biru penutup layar buat transisi loop 100/100 → 0/100 */}
       <div ref={washRef} className="loop-wash" aria-hidden="true" />
-      {/* salju jatuh di atas biru pas transisi — biar gak kerasa biru kosong */}
+      {/* salju jatuh di atas biru pas transisi, biar gak kerasa biru kosong */}
       <SnowVeil />
       <div className="canvas-wrap">
         <Canvas

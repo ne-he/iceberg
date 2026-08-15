@@ -6,7 +6,7 @@ import { scrollState } from './scrollState'
 
 // plane dekorasi (arus/caustic/shaft) + dinding gletser keliatan kayak "dinding
 // jalan" samar yang ganggu di zona atas (komplain Nehemiah, masih kebaca sampai
-// sekitar 100M). 0 sampai dk 0.28 (~106M), penuh di dk 0.40 (~152M) — crevasse
+// sekitar 100M). 0 sampai dk 0.28 (~106M), penuh di dk 0.40 (~152M), crevasse
 // emang baru mulai di kedalaman segitu. depthK retrace ke 0 pas bridge, jadi
 // pas balik ke atas mereka ikut ilang lagi.
 export function heroFade() {
@@ -21,7 +21,7 @@ export function heroFade() {
 
 const WALL = '/models/glacier_wall.glb'
 
-// tekstur caustic: jaring cahaya lembut ala pantulan air di bawah es —
+// tekstur caustic: jaring cahaya lembut ala pantulan air di bawah es,
 // dibikin di canvas (blob terang tumpang tindih + blur), di-scroll pelan
 function makeCausticTexture() {
   const c = document.createElement('canvas')
@@ -51,14 +51,14 @@ function makeCausticTexture() {
   return t
 }
 
-// satu dinding es — geometri di-load, material biru gletser tembus cahaya.
+// satu dinding es, geometri di-load, material biru gletser tembus cahaya.
 // fog nyala (default) biar bagian jauh membaur ke warna kabut/biru dalam
 function GlacierWall({ side }) {
   const { nodes } = useGLTF(WALL)
   const geo = useMemo(() => Object.values(nodes).find((n) => n.isMesh)?.geometry, [nodes])
   // kiri: normal +Z diputar ke +X (ngadep ke tengah). kanan: kebalikannya
   const rotY = side < 0 ? Math.PI / 2 : -Math.PI / 2
-  // puncak dinding nyampe zona atas dan siluet faceted-nya kebaca samar di kabut —
+  // puncak dinding nyampe zona atas dan siluet faceted-nya kebaca samar di kabut,
   // ikut heroFade kayak dekorasi lain biar zona atas beneran bersih
   const m1 = useRef()
   const m2 = useRef()
@@ -90,7 +90,7 @@ function GlacierWall({ side }) {
   )
 }
 
-// tekstur ARUS: garis-garis horizontal lembut memanjang (flow lines) — dipasang
+// tekstur ARUS: garis-garis horizontal lembut memanjang (flow lines), dipasang
 // di plane lebar yang di-drift ke samping = kesan medium yg mengalir, "di dalam sesuatu"
 function makeCurrentTexture() {
   const c = document.createElement('canvas')
@@ -105,7 +105,7 @@ function makeCurrentTexture() {
   }
   g.globalCompositeOperation = 'lighter'
   g.lineCap = 'round'
-  // garis arus melengkung, panjang, tipis-tipis — sebagian terang sebagian samar
+  // garis arus melengkung, panjang, tipis-tipis, sebagian terang sebagian samar
   for (let i = 0; i < 40; i++) {
     const y = rand(i, 1) * 256
     const amp = 6 + rand(i, 2) * 16
@@ -160,7 +160,7 @@ function Currents() {
   ))
 }
 
-// caustic drifting di antara dinding — beberapa plane additive naik pelan,
+// caustic drifting di antara dinding, beberapa plane additive naik pelan,
 // offset tekstur di-scroll biar cahayanya "menari" bukan diam
 function Caustics() {
   const tex = useMemo(makeCausticTexture, [])

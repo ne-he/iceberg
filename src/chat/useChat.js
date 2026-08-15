@@ -65,7 +65,7 @@ export function useChat() {
         })
 
         if (!res.ok || !res.body) {
-          // error JSON dari server (rate limit / guard) — pesannya udah Bahasa
+          // error JSON dari server (rate limit / guard), pesannya udah Bahasa
           // Indonesia santai, tampilin apa adanya
           let msg = 'Ada error di server, coba lagi bentar ya.'
           try {

@@ -1,4 +1,4 @@
-// markdown.jsx — renderer mini buat jawaban chatbot. Backend RAG balikin teks
+// markdown.jsx, renderer mini buat jawaban chatbot. Backend RAG balikin teks
 // markdown (bold **, italic *, list, link). Sebelumnya ke-render mentah jadi
 // keliatan bintang2 (**...**). Ini ngubah subset markdown itu jadi elemen React
 // beneran. Aman: gak ada dangerouslySetInnerHTML, semua jadi node React.

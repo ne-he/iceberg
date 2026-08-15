@@ -13,10 +13,10 @@ import { LOW } from './perf'
 import { chatState, dragState, focusState, introState, scrollState } from './scrollState'
 
 export const FOG_COLOR = '#b9c0c7'
-// warna kabut di kedalaman: biru gletser — makin dalam makin kerasa di dalam es
+// warna kabut di kedalaman: biru gletser, makin dalam makin kerasa di dalam es
 const FOG_TOP = new THREE.Color('#b9c0c7')
 // kabut dalam dibikin sedikit lebih terang/biru-es (dulu #5c83a4 agak murky) biar
-// dasar (kamar partikel) kerasa bercahaya, bukan gelap — vibe beda (permintaan Nehemiah)
+// dasar (kamar partikel) kerasa bercahaya, bukan gelap, vibe beda (permintaan Nehemiah)
 const FOG_DEEP = new THREE.Color('#6b93b5')
 const _fogCol = new THREE.Color()
 
@@ -24,9 +24,9 @@ export default function Experience({ onOpen, hasVideo }) {
   return (
     <>
       {/* kalau ada video langit (bg.mp4), canvas dibiarin transparan biar videonya
-          keliatan di belakang — pas video fade out, body #b9c0c7 yang jadi kabut */}
+          keliatan di belakang, pas video fade out, body #b9c0c7 yang jadi kabut */}
       {!hasVideo && <color attach="background" args={[FOG_COLOR]} />}
-      {/* nilai awal aja — FogRig yang ngatur tebal-tipisnya ngikutin kedalaman scroll */}
+      {/* nilai awal aja, FogRig yang ngatur tebal-tipisnya ngikutin kedalaman scroll */}
       <fog attach="fog" args={[FOG_COLOR, 16, 50]} />
       <FogRig />
       <Probe />
@@ -46,20 +46,20 @@ export default function Experience({ onOpen, hasVideo }) {
       </HeroDrop>
       {CRYSTALS.map((c, i) => (
         // snapT = titik scroll pas kamera nge-frame batu ini (sinkron sama
-        // anchor di CameraRig) — jadi tiap batu bisa diputer pas dia yang keliatan
+        // anchor di CameraRig), jadi tiap batu bisa diputer pas dia yang keliatan
         <Crystal key={c.id} data={c} onOpen={onOpen} snapT={(i + 1) / (CRYSTALS.length + 1)} />
       ))}
 
-      {/* dinding es crevasse kiri-kanan + caustic — kesan di dalam glacier */}
+      {/* dinding es crevasse kiri-kanan + caustic, kesan di dalam glacier */}
       <Glacier />
 
       {/* dunia latar: bongkahan-bongkahan jauh yang jadi siluet di kabut (trik igloo) */}
       <BackgroundField />
 
-      {/* kristal es kecil melayang naik pelan, looping — pengganti video daratan */}
+      {/* kristal es kecil melayang naik pelan, looping, pengganti video daratan */}
       <DriftingIce />
 
-      {/* portal es ala igloo — kamera nembus lubangnya sebelum nyampe outro */}
+      {/* portal es ala igloo, kamera nembus lubangnya sebelum nyampe outro */}
       <Suspense fallback={null}>
         <Portal />
       </Suspense>
@@ -89,11 +89,11 @@ export default function Experience({ onOpen, hasVideo }) {
       {/* kolom-kolom cahaya samar menembus kabut */}
       <LightShafts />
 
-      {/* eksperimen post-processing: bloom halus — threshold tinggi biar cuma
+      {/* eksperimen post-processing: bloom halus, threshold tinggi biar cuma
           highlight kristal/portal yang "nyala", kabut putih gak ikut meledak.
           multisampling 0 = hemat GPU (AA-nya udah ketutup fog + grain CSS) */}
       {/* DOF sempet dicoba di sini dan DIBUANG: subjek utama ikut ke-blur, ada
-          halo di siluet batu, fps drop ke 28 — kabut udah ngasih depth blur alami */}
+          halo di siluet batu, fps drop ke 28, kabut udah ngasih depth blur alami */}
       {/* Di HP seluruh composer DIMATIIN. mipmapBlur itu rantai downsample +
           upsample full-screen tiap frame, dan dia maksa scene dirender ke FBO
           dulu, padahal di frame yang sama transmission material juga lagi
@@ -118,7 +118,7 @@ function Probe() {
   return null
 }
 
-// kabut bertingkat: di hero (atas) JELAS BANGET, makin turun makin berkabut —
+// kabut bertingkat: di hero (atas) JELAS BANGET, makin turun makin berkabut,
 // menandakan makin dalam makin tenggelam di kabut es
 function FogRig() {
   const scene = useThree((s) => s.scene)
@@ -132,11 +132,11 @@ function FogRig() {
       const near = 16 - k * 8 // 16 → 8
       const far = 50 - k * 16 // 50 → 34
       // pas intro batu jatuh: kabut RAPET dulu (dunia masih kosong), kebuka
-      // bareng reveal — "baru muncul backgroundnya" persis permintaan Nehemiah
+      // bareng reveal, "baru muncul backgroundnya" persis permintaan Nehemiah
       const r = introState.phase === 'idle' ? 1 : introState.reveal
       scene.fog.near = THREE.MathUtils.lerp(9, near, r)
       scene.fog.far = THREE.MathUtils.lerp(17, far, r)
-      // warna kabut geser ke biru gletser makin dalam — objek (batu/dinding es)
+      // warna kabut geser ke biru gletser makin dalam, objek (batu/dinding es)
       // membaur ke biru dalam, bukan abu pucat
       _fogCol.copy(FOG_TOP).lerp(FOG_DEEP, THREE.MathUtils.smoothstep(k, 0.15, 0.85))
       scene.fog.color.copy(_fogCol)
@@ -145,7 +145,7 @@ function FogRig() {
   return null
 }
 
-// batu hero jatuh dari atas — digerakin BRIDGE (satu jalur buat intro & loop):
+// batu hero jatuh dari atas, digerakin BRIDGE (satu jalur buat intro & loop):
 //  - intro pertama (phase 'fall'): App nge-drive bridge 0.6→1.0 (animasi emerge)
 //  - tiap loop (idle, bridge): pas biru nutup batu keangkat, lalu jatuh mendarat
 //    pas biru nyingkap → mendarat = awal descend (loop mulus)
@@ -176,13 +176,13 @@ function HeroDrop({ children }) {
 }
 
 // batu ASAL yang muncul dari BAWAH podium pas loop (permintaan Nehemiah): pas
-// scroll turun dari panggung, di bawah tempat kita berdiri, batu pertama naik —
+// scroll turun dari panggung, di bawah tempat kita berdiri, batu pertama naik,
 // kamera nyelam ke situ, lalu (ketutup wash) muncul balik di hero atas. Pakai
 // geometri hero yang sama, material lebih murah (tanpa transmission pass ekstra)
-// skala dasar echo — ice_gen.glb dimensi ~1 unit, dinaikin biar sebesar batu hero
+// skala dasar echo, ice_gen.glb dimensi ~1 unit, dinaikin biar sebesar batu hero
 const ECHO_S = 3.5
 function HeroEcho() {
-  // pakai ice_gen.glb (model es detail hasil generate Nehemiah) — di-clone &
+  // pakai ice_gen.glb (model es detail hasil generate Nehemiah), di-clone &
   // center biar poros-nya pas di tengah grup. Cuma dirender pas bridge (hemat)
   const { scene } = useGLTF('/models/ice_gen.glb')
   const geo = useMemo(() => {
@@ -209,13 +209,13 @@ function HeroEcho() {
     const vis = b > 0.001 && b < 0.68
     grp.current.visible = vis
     if (!vis) return
-    // naik dari bawah frame (-50) ke dasar podium selama dive — di z lebih deket
+    // naik dari bawah frame (-50) ke dasar podium selama dive, di z lebih deket
     // kamera (5.5) biar gak keblok dais podium yg solid, jadi batu keliatan
     // "muncul dari bawah tempat berdiri" pas kamera nyelam ke arahnya
     const rise = smoothstep(0, 0.5, b)
     grp.current.position.y = -48 + rise * 7
     grp.current.rotation.y = state.clock.elapsedTime * 0.18
-    // membesar "menelan" layar — jadi ISI utama biru (bukan biru kosong): batu
+    // membesar "menelan" layar, jadi ISI utama biru (bukan biru kosong): batu
     // gede berputar nembus wash tembus, baru pudar pas seam teleport lewat
     const grow = 1 + smoothstep(0.26, 0.58, b) * 2.2
     grp.current.scale.setScalar(ECHO_S * grow)
@@ -226,7 +226,7 @@ function HeroEcho() {
   return (
     <group ref={grp} position={[0, -48, 5.5]} scale={ECHO_S} visible={false}>
       <mesh geometry={geo}>
-        {/* biru gletser PEKAT — sengaja gelap biar kontras nongol di depan
+        {/* biru gletser PEKAT, sengaja gelap biar kontras nongol di depan
             podium/kabut yg terang pas dive (bukan pucat yg nyaru) */}
         <meshStandardMaterial
           ref={mat}
@@ -244,7 +244,7 @@ function HeroEcho() {
   )
 }
 
-// pecahan es kecil yang melayang naik pelan sepanjang jalur turun, looping terus —
+// pecahan es kecil yang melayang naik pelan sepanjang jalur turun, looping terus,
 // ngasih rasa "dunia hidup" tanpa perlu video background
 function DriftingIce() {
   const { nodes } = useGLTF('/models/iceberg.glb')
@@ -288,7 +288,7 @@ function DriftingIce() {
 }
 
 // podium = CLUSTER KRISTAL NATURAL (dimodel di Blender: mound es lumpy +
-// belasan kristal prisma variatif — ukuran, ketebalan, tilt, arah beda-beda,
+// belasan kristal prisma variatif, ukuran, ketebalan, tilt, arah beda-beda,
 // sengaja GAK simetris/sejajar & gak jarum tajem, permintaan Nehemiah). Wajah
 // partikel Nehemiah melayang di atas cluster ini.
 function OutroStage() {
@@ -313,7 +313,7 @@ function OutroStage() {
       <mesh geometry={geo} scale={1.014}>
         <meshBasicMaterial color="#f0f9ff" transparent opacity={0.12} depthWrite={false} toneMapped={false} />
       </mesh>
-      {/* dua ring cahaya melingkar di lantai dais — lebih terang & double biar
+      {/* dua ring cahaya melingkar di lantai dais, lebih terang & double biar
           panggungnya kerasa "shining" ala referensi */}
       <mesh position={[0, 0.4, 0]} rotation-x={-Math.PI / 2}>
         <ringGeometry args={[2.9, 3.14, 96]} />
@@ -327,7 +327,7 @@ function OutroStage() {
   )
 }
 
-// aura bercahaya di belakang wajah partikel — bikin bagian outro kerasa "kamar
+// aura bercahaya di belakang wajah partikel, bikin bagian outro kerasa "kamar
 // es bercahaya" yang beda vibes dari kabut gelap perjalanan turun (permintaan
 // Nehemiah, referensi igloo ss#4: partikel nyala di tengah lingkaran cahaya).
 // Fade in cuma pas udah mendarat (damped ~1) & padam pas mulai bridge/loop.
@@ -353,7 +353,7 @@ function FaceAura() {
     const a = smoothstep(0.92, 0.99, scrollState.damped) * (1 - smoothstep(0, 0.12, scrollState.bridge))
     const t = state.clock.elapsedTime
     // pas ECHO (chatbot) lagi ngetik & kita di section wajah: aura "denyut" lebih
-    // terang — kesannya muka partikel lagi ngomong (avatar chatbot hidup)
+    // terang, kesannya muka partikel lagi ngomong (avatar chatbot hidup)
     const talk = chatState.streaming ? 1 + 0.28 * (0.5 + 0.5 * Math.sin(t * 7)) : 1
     if (glow.current) glow.current.material.opacity = 0.85 * a * talk
     // dua cincin tipis pelan berputar = kesan spiral cahaya di ss#4
@@ -369,7 +369,7 @@ function FaceAura() {
   })
   return (
     <group position={[0, -40.4, -3.5]}>
-      {/* halo utama — plane additive gede di belakang wajah */}
+      {/* halo utama, plane additive gede di belakang wajah */}
       <mesh ref={glow}>
         <planeGeometry args={[26, 26]} />
         <meshBasicMaterial map={tex} transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} fog={false} toneMapped={false} />
@@ -390,7 +390,7 @@ function FaceAura() {
 }
 
 function BackgroundField() {
-  // 3 varian bongkahan es ORGANIK dari Blender — di-remesh + decimate dari model
+  // 3 varian bongkahan es ORGANIK dari Blender, di-remesh + decimate dari model
   // ice_gen (es tengah) jadi low-poly tapi bentuknya realistik senada es tengah,
   // ganti facet tajem yg dulu keliatan aneh (permintaan Nehemiah)
   const { nodes } = useGLTF('/models/ice_rock.glb')
@@ -443,7 +443,7 @@ function BackgroundField() {
   return (
     <>
       {/* gate kemunculan: di puncak (hero) background disembunyiin, baru MUNCUL
-          pas mulai turun — biar frame awal bersih cuma batu hero (permintaan
+          pas mulai turun, biar frame awal bersih cuma batu hero (permintaan
           Nehemiah: "ada yg muncul duluan"). depthK = kedalaman efektif */}
       <BgFade material={material} shellMaterial={shellMaterial} />
       {chunks.map((c, i) => (
@@ -479,7 +479,7 @@ function BgChunk({ geometry, material, shellMaterial, speed, ...props }) {
   )
 }
 
-// kolom cahaya vertikal samar (fake god-rays) — ngisi kekosongan kabut
+// kolom cahaya vertikal samar (fake god-rays), ngisi kekosongan kabut
 function LightShafts() {
   const tex = useMemo(() => {
     const c = document.createElement('canvas')
@@ -509,7 +509,7 @@ function LightShafts() {
     { pos: [-4.5, -26, -8], rot: 0.1, w: 2.2 },
     { pos: [2.5, -33.5, -6], rot: -0.08, w: 3.2 },
   ]
-  // shaft tingginya 36 jadi nyampe area hero — sembunyiin di atas biar nama bersih
+  // shaft tingginya 36 jadi nyampe area hero, sembunyiin di atas biar nama bersih
   const mats = useRef([])
   useFrame(() => {
     const vis = heroFade()
@@ -524,7 +524,7 @@ function LightShafts() {
 }
 
 // selama rentang ini di sekitar tiap KRISTAL, kamera berhenti sebentar aja.
-// hold-nya per-anchor: anchor sequence portal pakai hold 0 — dulu hold rata
+// hold-nya per-anchor: anchor sequence portal pakai hold 0, dulu hold rata
 // 0.03 bikin segmen sempit (0.8 - 0.86) kehabisan jendela gerak, kamera
 // "jebret" lompat sekali frame di 82-83/100
 const HOLD = 0.03
@@ -543,7 +543,7 @@ function CameraRig() {
       new THREE.Vector3(),
       [
         { t: 0, pos: v(0, 1.8, 11), look: v(0, 0.5, 0), hold: 0 },
-        // anchor ngikut daftar CRYSTALS — nambah batu tinggal nambah di content.js
+        // anchor ngikut daftar CRYSTALS, nambah batu tinggal nambah di content.js
         ...CRYSTALS.map((c, i) => ({
           t: (i + 1) / (CRYSTALS.length + 1),
           pos: front(c.position, 7.5),
@@ -551,10 +551,10 @@ function CameraRig() {
           hold: HOLD,
         })),
         // koreografi portal (permintaan Nehemiah): abis batu terakhir kamera
-        // recenter & natap lurus dari ATAS nembus lubang ring — kristal keliatan
+        // recenter & natap lurus dari ATAS nembus lubang ring, kristal keliatan
         // KECIL JAUH di bawah (portal tinggi, jaraknya jauh). Lalu kamera NYELAM
         // LURUS turun nembus TENGAH ring (z tetep ~1.5, jadi bener2 masuk lubang,
-        // bukan lewat samping) — pas nembus portal meledak nyala = "dunia lain" —
+        // bukan lewat samping), pas nembus portal meledak nyala = "dunia lain",
         // baru turun ke landing zone & swing ke depan natap wajah di 100/120
         { t: 0.86, pos: v(0, -26.5, 5.5), look: v(0, -33, 1.5), hold: 0 },
         { t: 0.905, pos: v(0, -26.8, 1.6), look: v(0, -42.5, 1.5), hold: 0.02 },
@@ -566,7 +566,7 @@ function CameraRig() {
   }, [])
 
   useFrame((state, delta) => {
-    // damped di-smoothing di App (master loop) — di sini tinggal baca
+    // damped di-smoothing di App (master loop), di sini tinggal baca
     const k = THREE.MathUtils.clamp(scrollState.damped, 0, 1)
 
     // cari segmen anchor aktif, lalu interpolasi dengan plateau per-anchor

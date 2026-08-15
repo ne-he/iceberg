@@ -4,15 +4,15 @@ import { useFrame } from '@react-three/fiber'
 import { Sparkles, useGLTF } from '@react-three/drei'
 import { scrollState } from './scrollState'
 
-// portal es ala igloo.inc — dimodel di Blender (ring luar bergelombang +
+// portal es ala igloo.inc, dimodel di Blender (ring luar bergelombang +
 // 8 segmen dalam), di-load dari GLB. Dipasang HORIZONTAL ngambang TINGGI di atas
 // cluster kristal (jaraknya jauh): kamera nyorot lurus dari atas nembus lubangnya
-// (kristal keliatan kecil jauh di bawah), lalu NYELAM NEMBUS ring — pas nembus,
-// portal MELEDAK nyala = sensasi masuk dunia lain — baru turun ke kristal & wajah
+// (kristal keliatan kecil jauh di bawah), lalu NYELAM NEMBUS ring, pas nembus,
+// portal MELEDAK nyala = sensasi masuk dunia lain, baru turun ke kristal & wajah
 // (permintaan Nehemiah: "masuk lewatin portal yg nyala, kerasa different world")
 export const PORTAL_POS = [0, -32.8, 1.5]
 
-// tekstur glow dibikin di canvas: ring cahaya + blob inti — pengganti bloom
+// tekstur glow dibikin di canvas: ring cahaya + blob inti, pengganti bloom
 // post-processing yang berat. Additive + fog:false biar nembus kabut.
 function makeGlowTexture(draw) {
   const c = document.createElement('canvas')
@@ -58,7 +58,7 @@ export function Portal() {
     () =>
       makeGlowTexture((g) => {
         // inti di-tint cyan es (bukan putih polos): additive putih murni di atas
-        // kabut pucat cuma "nyuci" jadi kelabu — cyan bikin kebaca sebagai ENERGI
+        // kabut pucat cuma "nyuci" jadi kelabu, cyan bikin kebaca sebagai ENERGI
         const grad = g.createRadialGradient(128, 128, 0, 128, 128, 128)
         grad.addColorStop(0, 'rgba(206,240,255,0.95)')
         grad.addColorStop(0.35, 'rgba(176,222,255,0.42)')
@@ -75,7 +75,7 @@ export function Portal() {
     const clamp01 = (v) => Math.max(0, Math.min(1, v))
 
     // animasi KEBANGUN (sinkron kamera mendekat dari atas): portal naik dari
-    // bawah sambil ngembang, segmen dalamnya muter kenceng terus settle —
+    // bawah sambil ngembang, segmen dalamnya muter kenceng terus settle,
     // kesannya gerbang lagi dirakit pas visitor dateng. Kelar sebelum top-down.
     let up = clamp01((d - 0.78) / 0.08)
     up = up * up * (3 - 2 * up)
@@ -84,16 +84,16 @@ export function Portal() {
       build.current.scale.setScalar(0.5 + 0.5 * up)
     }
 
-    // segmen dalam muter — kenceng selama kebangun, kalem pas udah jadi
+    // segmen dalam muter, kenceng selama kebangun, kalem pas udah jadi
     if (segs.current) segs.current.rotation.z -= delta * (0.14 + (1 - up) * 2.2)
     if (group.current) group.current.rotation.z = Math.sin(t * 0.18) * 0.05
     const pulse = 0.85 + Math.sin(t * 1.4) * 0.15
     // GERBANG NYALA + KILATAN NEMBUS:
-    //  - win  : jendela hidup glow — nyala pas top-down, padam pas udah lewat
+    //  - win  : jendela hidup glow, nyala pas top-down, padam pas udah lewat
     //  - cross: puncak tajam pas kamera nembus BIDANG ring (d~0.935). Di sinilah
     //    portal MELEDAK terang = "masuk dunia lain" (permintaan Nehemiah)
     // Pas top-down inti sengaja lembut (kristal jauh di bawah tetep kebaca),
-    // baru full-blast pas nembus — layar kesorot putih-cyan sekejap, terus padam.
+    // baru full-blast pas nembus, layar kesorot putih-cyan sekejap, terus padam.
     const win = up * (1 - clamp01((d - 0.965) / 0.035))
     const cross = Math.exp(-Math.pow((d - 0.935) / 0.02, 2))
     // RING RIM nyala TERANG sepanjang top-down (kayak referensi igloo ss#2), plus
@@ -158,7 +158,7 @@ export function Portal() {
         {/* debu es kecil berkilau di sekitar mulut portal (pipih ngikut bidang ring) */}
         <Sparkles count={70} scale={[6.5, 1.6, 6.5]} size={2.4} speed={0.25} opacity={0.6} color="#ffffff" />
       </group>
-      {/* cahaya beneran nyorot ke bawah — intensity digerakin di useFrame:
+      {/* cahaya beneran nyorot ke bawah, intensity digerakin di useFrame:
           lembut pas top-down, MELEDAK pas kamera nembus ring (nyorot kristal &
           wajah di bawah), distance digedein biar nyampe landing zone yg jauh */}
       <pointLight ref={light} color="#eaf6ff" intensity={12} distance={22} decay={2} />

@@ -4,7 +4,7 @@ import { beginIntro, bgVideoState, faceState, introState, scrollState } from './
 import { CONTACT, PANELS, SECTION_WORDS } from './content'
 import DecryptedText from './components/DecryptedText'
 
-// glyph acak buat efek decode judul — huruf kapital + angka + simbol instrumen,
+// glyph acak buat efek decode judul, huruf kapital + angka + simbol instrumen,
 // senada sama kode section '//////' dan readout HUD
 const DECRYPT_GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#/<>-'
 
@@ -12,7 +12,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
 
 // carousel sosial ala igloo.inc: item tengah kekurung bracket, tetangganya
 // redup di kiri-kanan. Geser pakai ARROW KEY keyboard (kiri/kanan) atau klik
-// langsung label tetangganya — tanpa tombol panah visual (permintaan Nehemiah).
+// langsung label tetangganya, tanpa tombol panah visual (permintaan Nehemiah).
 // Item yang dipilih = bentuk partikel di panggung (face | github | linkedin | whatsapp)
 const SOCIAL_ITEMS = [
   { id: 'face', label: 'NEHEMIAH', url: null },
@@ -31,7 +31,7 @@ function SocialCarousel() {
       return j
     })
 
-  // arrow key kiri/kanan buat geser — aktif cuma pas udah mendarat di outro,
+  // arrow key kiri/kanan buat geser, aktif cuma pas udah mendarat di outro,
   // biar gak ganggu navigasi keyboard pas masih di atas
   useEffect(() => {
     const onKey = (e) => {
@@ -122,7 +122,7 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
   const [soundOn, setSoundOn] = useState(true)
 
   useEffect(() => {
-    // HUD render only — scrollState di-drive master di App.jsx (infinite loop).
+    // HUD render only, scrollState di-drive master di App.jsx (infinite loop).
     // Nilai "descend-linked" (kabut/depth/ruler) pakai depthK biar retrace mulus
     // balik ke 0 pas bridge (ujung loop == awal, gak nge-pop)
     let raf
@@ -132,7 +132,7 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
       const br = scrollState.bridge
       const lp = scrollState.loopDamped
       const rv = introState.phase === 'idle' ? 1 : introState.reveal
-      // hero text nongol pas dangkal (dk kecil) — otomatis balik muncul di ujung bridge
+      // hero text nongol pas dangkal (dk kecil), otomatis balik muncul di ujung bridge
       if (hero.current) {
         const ho = clamp(1 - dk / 0.07, 0, 1) * rv
         hero.current.style.opacity = ho
@@ -202,9 +202,9 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
   return (
     <>
       <div className="grain" aria-hidden="true" />
-      {/* vignette via CSS — dulunya post-processing GPU, dipindah ke sini biar enteng */}
+      {/* vignette via CSS, dulunya post-processing GPU, dipindah ke sini biar enteng */}
       <div className="vignette" aria-hidden="true" />
-      {/* penggaris kedalaman kiri — ikut gerak scroll, ala instrumen igloo */}
+      {/* penggaris kedalaman kiri, ikut gerak scroll, ala instrumen igloo */}
       <div className="ruler" aria-hidden="true">
         <div className="ruler-in" ref={ruler}>
           {Array.from({ length: 39 }, (_, i) => (
@@ -270,7 +270,7 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
         {/* carousel ala igloo: pilih platform → partikel morph jadi logonya */}
         <SocialCarousel />
         {/* pintu masuk chatbot dari klimaks: udah ketemu muka partikel, langsung
-            bisa ngajak ngomong — muka partikel = avatar ECHO */}
+            bisa ngajak ngomong, muka partikel = avatar ECHO */}
         <button className="echo-inline" onClick={onOpenChat}>
           &gt; ngobrol langsung sama aku
         </button>
@@ -347,11 +347,11 @@ export function Loader() {
   const { active, progress } = useProgress()
   const [done, setDone] = useState(false)
   useEffect(() => {
-    // selesai kalau progress 100 ATAU gak ada loader yang aktif lagi —
+    // selesai kalau progress 100 ATAU gak ada loader yang aktif lagi,
     // useProgress kadang mentok di bawah 100 padahal asset udah kelar semua.
     // Delay minimal 600ms: kalau ternyata masih ada asset nyusul (active balik
     // true), interval ke-cancel duluan, jadi gak kecolongan mulai intro kepagian.
-    // useProgress cuma ngitung asset three.js — video langit (scene.mp4) di luar
+    // useProgress cuma ngitung asset three.js, video langit (scene.mp4) di luar
     // itu, jadi ditunggu juga (bgVideoState) biar pas tirai kebuka videonya udah
     // nongol, bukan putih dulu sedetik. Batas nunggu video 3 detik.
     if (progress >= 100 || !active) {

@@ -46,7 +46,7 @@ const ICE = LOW
 // kegambar, termasuk diagonal hasil triangulasi yang bukan bentuk asli objek.
 // Sekarang tiap edge dikasih flag (aEdge): cuma crease & siluet yang digambar
 // (lihat buildVeilGeometry), plus garisnya dikasih fresnel, simpul di sudut,
-// dan cincin scan bertepi tajam — jadi kebaca kayak struktur/HUD, bukan mesh mentah.
+// dan cincin scan bertepi tajam, jadi kebaca kayak struktur/HUD, bukan mesh mentah.
 const veilVert = /* glsl */ `
   attribute vec3 aBary;
   attribute vec3 aEdge;
@@ -67,7 +67,7 @@ const veilVert = /* glsl */ `
     float d = distance(position, uPoint) / uRadius;
     float mask = 1.0 - smoothstep(0.0, 1.0, d);
     // "napas" lapisan: permukaan veil ngangkat tipis ngikutin gelombang yang
-    // nyapu keluar dari titik hover — kerasa ada selubung yang gerak, bukan tempelan
+    // nyapu keluar dari titik hover, kerasa ada selubung yang gerak, bukan tempelan
     float wave = 0.5 + 0.5 * sin(d * 13.0 - uTime * 3.2);
     vec3 p = position + normal * (0.004 + 0.022 * mask * wave) * uReach;
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
@@ -105,7 +105,7 @@ const veilFrag = /* glsl */ `
     float c = max(vBary.x, max(vBary.y, vBary.z));
     float node = smoothstep(0.978, 0.999, c) * max(vEdge.x, max(vEdge.y, vEdge.z));
 
-    // fresnel: garis yang miring ngadep tepi siluet lebih nyala — kesan selubung
+    // fresnel: garis yang miring ngadep tepi siluet lebih nyala, kesan selubung
     // beneran MEMBUNGKUS permukaan, bukan tekstur garis yang ditempel datar
     float fres = pow(1.0 - abs(dot(normalize(vN), normalize(vView))), 2.0);
 
@@ -114,7 +114,7 @@ const veilFrag = /* glsl */ `
     float scan = pow(1.0 - ph, 9.0);
 
     // garis kontur konsentris yang ngikutin lekuk permukaan (kayak garis
-    // topografi) — ini yang bikin kebaca "lagi dipindai berlapis", bukan
+    // topografi), ini yang bikin kebaca "lagi dipindai berlapis", bukan
     // kerangka mesh. Tebalnya dihitung dari turunan biar tetep tipis rata
     float cd = d * 7.5 - uTime * 0.42;
     float cw = fwidth(cd) * 1.3;
@@ -124,7 +124,7 @@ const veilFrag = /* glsl */ `
     float rim = smoothstep(0.82, 0.96, d) * (1.0 - smoothstep(0.96, 1.04, d));
 
     float energy = 0.5 + 0.65 * fres + 1.5 * scan;
-    // warna dinaikin di puncak cincin sampai lewat ambang bloom (0.88) —
+    // warna dinaikin di puncak cincin sampai lewat ambang bloom (0.88),
     // jadi garisnya dapet pendar GPU beneran, bukan cuma putih datar
     vec3 col = mix(uColor, uHot, clamp(scan * 1.15 + fres * 0.3, 0.0, 1.0)) * (1.0 + 1.5 * scan);
     float a = line * energy + halo * 0.1 * (0.35 + fres) + node * 0.9 + rim * 0.3 + fres * 0.06
@@ -285,13 +285,13 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
     []
   )
   useEffect(() => {
-    // radius area yang kebuka ~ separuh badan batu — cukup buat kerasa "lokal"
+    // radius area yang kebuka ~ separuh badan batu, cukup buat kerasa "lokal"
     if (veilGeo) veilMat.uniforms.uRadius.value = (veilGeo.boundingSphere?.radius ?? 1) * 0.55
   }, [veilGeo, veilMat])
 
   useFrame((state, delta) => {
     if (!group.current || !spinner.current) return
-    // hanya mesh-nya yang muter — label anotasi tetap diam ala igloo.
+    // hanya mesh-nya yang muter, label anotasi tetap diam ala igloo.
     // pas lagi di-drag, auto-spin berhenti biar gak rebutan kendali.
     if (!dragging.current) spinner.current.rotation.y += delta * (data.spin ?? 0.06)
     const s = (data.scale ?? 1) * (interactive && hovered ? 1.07 : 1)
@@ -338,7 +338,7 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
   if (interactive) {
     events.onClick = (e) => {
       e.stopPropagation()
-      // baru abis muter batunya? jangan buka panel — itu drag, bukan klik
+      // baru abis muter batunya? jangan buka panel, itu drag, bukan klik
       if (dragMoved.current) {
         dragMoved.current = false
         return
@@ -349,7 +349,7 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
   useEffect(() => {
     if (!draggable) return
     // ala igloo: pas batu ini yang lagi di-frame kamera (scroll deket snap-nya),
-    // drag DI MANA AJA muterin batunya — gak tergantung raycast kena mesh (sering
+    // drag DI MANA AJA muterin batunya, gak tergantung raycast kena mesh (sering
     // ketutup overlay/kabut). Gate ke jendela snap-nya biar cuma 1 batu yang aktif,
     // gak semua batu muter barengan pas di-drag
     const down = (e) => {
@@ -359,7 +359,7 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
       // pointercancel (bukan pointerup), jadi dragState.active nyangkut true
       // selamanya, dan auto-snap ikut mati permanen abis swipe pertama.
       if (e.pointerType === 'touch') return
-      if (focusState.phase !== 'idle') return // lagi nyelam ke batu — jangan drag
+      if (focusState.phase !== 'idle') return // lagi nyelam ke batu, jangan drag
       if (Math.abs(scrollState.damped - snapT) > 0.09) return
       if (e.target.closest?.('a, button, .panel, .rock-modal')) return
       dragging.current = { x: e.clientX, y: e.clientY }
@@ -440,7 +440,7 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
   )
 }
 
-// artefak gelap di dalam es — ala penguin dalam bongkahan igloo
+// artefak gelap di dalam es, ala penguin dalam bongkahan igloo
 function Artifact({ type }) {
   if (!type) return null
   return (
