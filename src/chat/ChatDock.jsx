@@ -3,7 +3,7 @@ import { useChat } from './useChat'
 import { renderMarkdown } from './markdown'
 import ShardCanvas from './Shard'
 
-// pertanyaan starter — samain sama repo RAG biar konsisten
+// pertanyaan starter, samain sama repo RAG biar konsisten
 const SUGGESTIONS = [
   'Apa pengalaman kerja Nehemiah?',
   'Project AI/ML apa yang udah Nemi bikin?',
@@ -11,7 +11,7 @@ const SUGGESTIONS = [
   'Nemi suka makanan apa?',
 ]
 
-// ikon kristal es — motif iceberg. Badan drawer sekarang putih, jadi versi
+// ikon kristal es, motif iceberg. Badan drawer sekarang putih, jadi versi
 // garis-terang gak kebaca lagi di situ: dipanggil pakai `dark` biar jadi kristal
 // gelap yang kena cahaya, bukan noda pucat.
 function Crystal({ dark }) {
@@ -36,7 +36,7 @@ function Crystal({ dark }) {
   )
 }
 
-// kristal faceted padet buat ikon tombol — tiap facet punya gradient sendiri
+// kristal faceted padet buat ikon tombol, tiap facet punya gradient sendiri
 // (cahaya dari kiri-atas) biar kebaca "batu es" pas diputer 3D lewat CSS.
 // id gradient dibedain per instance biar dua bidang nyilang gak rebutan id.
 function GemIcon({ tag }) {
@@ -120,14 +120,14 @@ export default function ChatDock({ open, onOpen, onClose, hidden }) {
 
   return (
     <>
-      {/* tombol chatbot floating — "nyala" pelan biar jelas bisa diajak ngobrol */}
+      {/* tombol chatbot floating, "nyala" pelan biar jelas bisa diajak ngobrol */}
       <button
         className={`echo-btn ${hidden || open ? 'is-hidden' : ''}`}
         onClick={onOpen}
         aria-label="Buka chatbot AI Nehemiah, tanya apa aja soal dia"
       >
         <span className="echo-btn-orb" aria-hidden="true">
-          {/* kristal 3D: dua bidang SVG nyilang, diputer pakai CSS (bukan WebGL) —
+          {/* kristal 3D: dua bidang SVG nyilang, diputer pakai CSS (bukan WebGL),
               enteng, gak nambah render loop kayak canvas kedua */}
           <span className="echo-gem">
             <span className="echo-gem-face">
@@ -146,7 +146,7 @@ export default function ChatDock({ open, onOpen, onClose, hidden }) {
         </span>
       </button>
 
-      {/* drawer chat dari kanan — scene 3D masih keliatan separo */}
+      {/* drawer chat dari kanan, scene 3D masih keliatan separo */}
       <div className={`echo-drawer ${open ? 'is-open' : ''}`} aria-hidden={!open}>
         <div className="echo-head">
           <div className="echo-head-id">
@@ -204,24 +204,29 @@ export default function ChatDock({ open, onOpen, onClose, hidden }) {
           {error && <div className="echo-error">{error}</div>}
         </div>
 
-        <form className="echo-input" onSubmit={submit}>
-          <textarea
-            ref={inputRef}
-            rows={1}
-            placeholder="Tanya soal Nehemiah..."
-            maxLength={2000}
-            onInput={(e) => {
-              e.target.style.height = 'auto'
-              e.target.style.height = Math.min(120, e.target.scrollHeight) + 'px'
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) submit(e)
-            }}
-          />
-          <button type="submit" className="echo-send" disabled={streaming} aria-label="Kirim">
-            →
-          </button>
-        </form>
+        <div className="echo-composer">
+          <form className="echo-input" onSubmit={submit}>
+            <textarea
+              ref={inputRef}
+              rows={1}
+              placeholder="Tanya soal Nehemiah..."
+              maxLength={2000}
+              onInput={(e) => {
+                e.target.style.height = 'auto'
+                e.target.style.height = Math.min(120, e.target.scrollHeight) + 'px'
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) submit(e)
+              }}
+            />
+            <button type="submit" className="echo-send" disabled={streaming} aria-label="Kirim">
+              →
+            </button>
+          </form>
+          {/* baris HUD kecil: bahasanya nyambung sama readout DPT/TEMP/SIG di scene,
+              sekalian ngisi dasar drawer yang tadinya kosong melompong */}
+          <div className="echo-foot">Enter kirim, Shift + Enter baris baru</div>
+        </div>
       </div>
     </>
   )

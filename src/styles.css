@@ -1,6 +1,6 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-/* font display buat elemen UI chat — biar beda dari mono HUD & gak berasa template */
+/* font display buat elemen UI chat, biar beda dari mono HUD & gak berasa template */
 :root { --font-display: 'Space Grotesk', 'Segoe UI', system-ui, sans-serif; }
 
 html, body { background: #b9c0c7; }
@@ -13,13 +13,13 @@ body {
   overflow-x: hidden;
 }
 
-/* video langit di paling belakang — fade out via JS pas scroll turun */
+/* video langit di paling belakang, fade out via JS pas scroll turun */
 .bg-video {
   position: fixed; inset: 0; z-index: 0;
   width: 100%; height: 100%; object-fit: cover;
   pointer-events: none;
 }
-/* tirai kabut yang NAIK DARI BAWAH nutupin video pas scroll — transisi
+/* tirai kabut yang NAIK DARI BAWAH nutupin video pas scroll, transisi
    video → kabut jadi mengalir, bukan langsung "plek" ganti. Digerakin via JS */
 .fog-veil {
   position: fixed; left: 0; right: 0; top: 0; height: 200vh; z-index: 0;
@@ -37,7 +37,7 @@ body {
    sebentar, scroll di-reset di baliknya, kebuka lagi pas batu jatuh ulang */
 .loop-wash {
   position: fixed; inset: 0; z-index: 40;
-  /* biru gletser dalam (bukan putih polos) — transisi loop kerasa nyelam ke
+  /* biru gletser dalam (bukan putih polos), transisi loop kerasa nyelam ke
      dalam es. Berlapis: core cahaya dari atas + vignette gelap di tepi biar
      gak flat/kosong, nyambung sama batu es echo yg nembus (permintaan Nehemiah) */
   background:
@@ -47,20 +47,20 @@ body {
   opacity: 0; visibility: hidden;
   pointer-events: none;
 }
-/* salju transisi loop — di atas wash biru, di bawah HUD */
+/* salju transisi loop, di atas wash biru, di bawah HUD */
 .snow-veil {
   position: fixed; inset: 0; z-index: 41;
   width: 100%; height: 100%;
   pointer-events: none;
 }
-/* tint biru gletser buat backdrop kosong (di atas video/veil, di bawah canvas) —
+/* tint biru gletser buat backdrop kosong (di atas video/veil, di bawah canvas),
    opacity digerakin JS ngikut kedalaman: makin dalam makin biru, kesan dalam es */
 .depth-tint {
   position: fixed; inset: 0; z-index: 0; opacity: 0;
   background: radial-gradient(ellipse at 50% 30%, rgba(70, 116, 150, 0.55) 0%, rgba(40, 74, 104, 0.9) 75%);
   pointer-events: none;
 }
-/* huruf yang masih "keenkripsi" pas efek decode judul — sedikit redup
+/* huruf yang masih "keenkripsi" pas efek decode judul, sedikit redup
    biar kebedain dari huruf yang udah kebuka */
 .dt-enc { opacity: 0.5; }
 
@@ -71,7 +71,7 @@ body {
   html, body, * { cursor: none !important; }
 }
 
-/* gradient shader air-dalam (ShaderGradient) — di atas tint, di bawah scene 3D.
+/* gradient shader air-dalam (ShaderGradient), di atas tint, di bawah scene 3D.
    opacity digerakin JS ngikut depthK, 0 pas di hero */
 .grad-depth {
   position: fixed; inset: 0; z-index: 0; opacity: 0;
@@ -79,7 +79,7 @@ body {
 }
 .canvas-wrap { position: fixed; inset: 0; z-index: 1; }
 .canvas-wrap canvas { display: block; }
-/* 480vh untuk 5 segmen = ±1 layar scroll per batu — dulunya 600vh/4 segmen,
+/* 480vh untuk 5 segmen = ±1 layar scroll per batu, dulunya 600vh/4 segmen,
    kerasa "patah/ngelag" karena harus 2x scroll baru pindah batu */
 .scroll-space { height: 480vh; pointer-events: none; position: relative; z-index: 1; }
 
@@ -117,7 +117,7 @@ body {
   position: fixed; top: 44%; right: 5vw; transform: translateY(-50%);
   font-size: clamp(44px, 8.5vw, 118px); font-weight: 600; letter-spacing: 0.04em;
   color: rgba(255, 255, 255, 0.55);
-  /* halo gelap di belakang huruf — background-nya "digelapin" biar putihnya
+  /* halo gelap di belakang huruf, background-nya "digelapin" biar putihnya
      gak nyamar ketelen kabut terang */
   text-shadow: 0 0 26px rgba(38, 47, 56, 0.5), 0 0 80px rgba(38, 47, 56, 0.65);
   z-index: 2; pointer-events: none; text-transform: uppercase;
@@ -136,16 +136,16 @@ body {
 }
 .hero p { margin-top: 14px; font-size: 11px; letter-spacing: 0.3em; opacity: 0.85; }
 
-/* outro nempel bawah — biar partikel wajah kelihatan penuh di tengah */
+/* outro nempel bawah, biar partikel wajah kelihatan penuh di tengah */
 .outro {
   position: fixed; inset: 0; z-index: 6;
   display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
   padding-bottom: 5vh;
   text-align: center; opacity: 0; pointer-events: none; text-transform: uppercase;
 }
-/* teks outro GELAP — podiumnya terang, jadi kontrasnya kebalik dari HUD */
+/* teks outro GELAP, podiumnya terang, jadi kontrasnya kebalik dari HUD */
 .outro { color: #171a1d; }
-/* konten outro dibungkus — cuma bagian ini yang nangkep mouse, sisanya tembus ke canvas.
+/* konten outro dibungkus, cuma bagian ini yang nangkep mouse, sisanya tembus ke canvas.
    Panel frost blur di belakang teks: partikel gelap di baliknya keblur + kecerahin,
    jadi GET IN TOUCH / GITHUB / LINKEDIN gak nyamar lagi */
 .outro-in {
@@ -171,7 +171,7 @@ body {
   border-bottom: 1px solid rgba(23, 26, 29, 0.55); padding-bottom: 2px;
   text-shadow: 0 0 12px rgba(255, 255, 255, 0.6);
 }
-/* petunjuk loop di bawah carousel — kecil, napas pelan biar kebaca tapi gak ganggu */
+/* petunjuk loop di bawah carousel, kecil, napas pelan biar kebaca tapi gak ganggu */
 .loop-hint {
   margin-top: 16px; font-size: 9px; letter-spacing: 0.28em; opacity: 0.5;
   animation: loop-breathe 2.6s ease-in-out infinite;
@@ -318,7 +318,7 @@ body {
 /* ---------- ECHO chat (RAG chatbot) ---------- */
 /* tombol chatbot kanan-bawah, "nyala" pelan biar jelas bisa diajak ngobrol */
 /* PENTING PERF: tombol ini nangkring permanen di atas canvas WebGL yang berubah
-   tiap frame — jangan pernah kasih backdrop-filter atau animasi box-shadow di sini
+   tiap frame, jangan pernah kasih backdrop-filter atau animasi box-shadow di sini
    (dua-duanya maksa repaint/re-blur tiap frame = scroll ngelag). Glow kedap-kedip
    dipindah ke ::before yang cuma animasi OPACITY (compositor-only, gratis). */
 .echo-btn {
@@ -370,7 +370,7 @@ body {
   display: flex; align-items: center; gap: 6px;
   font-family: var(--font-display); font-size: 11px; font-weight: 400; color: #9dbdd3;
 }
-/* dulu dot ijo "online". Ijo itu bahasa dashboard, bukan bahasa es — diganti
+/* dulu dot ijo "online". Ijo itu bahasa dashboard, bukan bahasa es, diganti
    belah ketupat biru es, motif yang sama dipakai buat bullet list di jawaban bot */
 .echo-btn-dot {
   width: 6px; height: 6px; flex: none; background: rgba(150, 205, 245, 0.92);
@@ -380,7 +380,7 @@ body {
 
 /* Drawer chat dari kanan, scene 3D masih keliatan separo di desktop.
    Badannya PUTIH DINGIN (bukan putih kertas): rasanya kayak ngeliat es dari dalam
-   rongga yang kena cahaya dari atas. Kepalanya sengaja tetep navy gelap — kristal
+   rongga yang kena cahaya dari atas. Kepalanya sengaja tetep navy gelap, kristal
    es itu didesain nyala di atas gelap, dan di HP yang drawernya selebar layar,
    atap gelap bikin transisi dari scene ke ruangan terang gak nabrak.
    PERF: nol backdrop-filter di sini, lihat catatan di atas. Semua gradient solid. */
@@ -396,6 +396,40 @@ body {
   color: #34454f;
 }
 .echo-drawer.is-open { transform: none; }
+/* Lapisan material biar putihnya gak kayak kertas printer: pias cahaya miring
+   (sinar nembus celah es), dua bidang facet redup biar putihnya punya "sisi",
+   genangan biru dingin di dasar, plus tick kedalaman tipis di tepi kiri,
+   motif yang sama kayak penanda 000M/010M di scene utama.
+   PERF: semua gradient statis, nol animasi, nol backdrop-filter. Layer ini
+   dirasterisasi sekali terus di-cache compositor. */
+.echo-drawer::before {
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    /* kolam cahaya di atas: sumbernya sama dengan sorot di kepala drawer */
+    radial-gradient(ellipse 118% 46% at 56% 2%, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0) 62%),
+    /* tiga pias sinar miring nembus celah es */
+    linear-gradient(99deg, transparent 15%, rgba(255, 255, 255, 0.95) 25%, rgba(255, 255, 255, 0) 38%),
+    linear-gradient(99deg, transparent 44%, rgba(255, 255, 255, 0.66) 53%, rgba(255, 255, 255, 0) 62%),
+    linear-gradient(99deg, transparent 70%, rgba(255, 255, 255, 0.58) 77%, rgba(255, 255, 255, 0) 85%),
+    /* dua bidang facet redup biar putihnya punya sisi, bukan bidang datar */
+    linear-gradient(168deg, transparent 54%, rgba(112, 156, 196, 0.13) 70%, transparent 86%),
+    linear-gradient(14deg, transparent 70%, rgba(100, 146, 188, 0.14) 88%, transparent 100%),
+    /* tepi kiri-kanan didinginin: rongga es, bukan lembar kertas */
+    linear-gradient(90deg, rgba(92, 138, 178, 0.16), rgba(92, 138, 178, 0) 20%, rgba(92, 138, 178, 0) 80%, rgba(92, 138, 178, 0.13)),
+    /* genangan biru di dasar */
+    radial-gradient(ellipse 130% 38% at 26% 104%, rgba(112, 162, 206, 0.42), rgba(112, 162, 206, 0) 72%),
+    /* tick kedalaman di tepi kiri */
+    repeating-linear-gradient(180deg, rgba(40, 92, 132, 0.24) 0 1px, transparent 1px 96px);
+  background-size: auto, auto, auto, auto, auto, auto, auto, auto, 9px 100%;
+  background-repeat: repeat, repeat, repeat, repeat, repeat, repeat, repeat, repeat, no-repeat;
+}
+/* butiran halus. Tanpa ini gradient sebersih itu kebaca "plastik" di layar bagus */
+.echo-drawer::after {
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  opacity: 0.055;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 140px 140px;
+}
 .echo-head {
   position: relative; z-index: 1;
   display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
@@ -404,7 +438,9 @@ body {
     radial-gradient(ellipse at 84% 2%, rgba(104, 152, 194, 0.34) 0%, rgba(104, 152, 194, 0) 56%),
     linear-gradient(162deg, #0c1824 0%, #0a141d 60%, #09131c 100%);
   border-bottom: 1px solid rgba(20, 62, 96, 0.2);
-  box-shadow: 0 12px 28px rgba(12, 30, 48, 0.16);
+  /* bibir es tipis di batas navy-ke-putih: satu garis terang biar dua ruangan itu
+     nyambung lewat cahaya, bukan cuma dipotong */
+  box-shadow: 0 12px 28px rgba(12, 30, 48, 0.16), inset 0 -1px 0 rgba(150, 205, 245, 0.24);
 }
 .echo-head-id { display: flex; align-items: center; gap: 13px; }
 /* rumah buat canvas serpihan es. display:block (bukan grid) karena R3F naruh div
@@ -427,7 +463,9 @@ body {
   display: flex; align-items: center; gap: 8px; opacity: 0.82; transition: opacity 0.25s; flex: none;
 }
 .echo-close:hover { opacity: 1; }
+/* z-index 1: naik di atas lapisan facet/grain drawer */
 .echo-body {
+  position: relative; z-index: 1;
   flex: 1; overflow-y: auto; padding: 20px 22px;
   display: flex; flex-direction: column; gap: 14px; scrollbar-width: none;
 }
@@ -437,7 +475,7 @@ body {
   gap: 12px; margin: auto 0; padding: 16px 6px;
 }
 /* PERF: napasnya dulu animasi box-shadow (repaint tiap frame, di atas canvas
-   WebGL). Sekarang glow-nya pindah ke ::before yang cuma dianimasi OPACITY —
+   WebGL). Sekarang glow-nya pindah ke ::before yang cuma dianimasi OPACITY,
    compositor-only, gratis. Aturan yang sama kayak tombol chat. */
 .echo-empty-orb {
   position: relative; width: 64px; height: 64px; flex: none;
@@ -456,22 +494,38 @@ body {
 .echo-empty-lead b { color: #1d6693; font-weight: 700; }
 .echo-empty-p { font-size: 12.5px; line-height: 1.7; color: #5d707e; max-width: 272px; }
 .echo-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 6px; }
+/* kepingan es kecil, bukan tombol datar: terang di atas, dingin di bawah, plus
+   satu garis putih di bibir atas biar keliatan ada tebalnya */
 .echo-chip {
-  background: rgba(255, 255, 255, 0.72); border: 1px solid rgba(52, 112, 158, 0.24);
+  background: linear-gradient(168deg, rgba(255, 255, 255, 0.92), rgba(228, 240, 249, 0.72));
+  border: 1px solid rgba(52, 112, 158, 0.24);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 1px 3px rgba(30, 74, 108, 0.07);
   border-radius: 11px; padding: 9px 13px; color: #274a60; font: inherit; font-size: 12px; line-height: 1.3;
   cursor: pointer; transition: background 0.2s, border-color 0.2s, transform 0.15s;
 }
 .echo-chip:hover:not(:disabled) { background: #fff; border-color: rgba(38, 108, 158, 0.55); transform: translateY(-1px); }
 .echo-chip:disabled { opacity: 0.45; cursor: default; }
 .echo-msg { max-width: 88%; font-size: 13.5px; line-height: 1.72; word-wrap: break-word; }
-/* di putih, bubble transparan jadi pudar gak kebaca — dibikin tint solid */
+/* di putih, bubble transparan jadi pudar gak kebaca, dibikin tint solid */
 .echo-msg--user {
   align-self: flex-end; white-space: pre-wrap;
   background: linear-gradient(150deg, #dcebf7, #cfe3f3);
   border: 1px solid rgba(52, 112, 158, 0.26); border-radius: 15px 15px 5px 15px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
   padding: 10px 14px; color: #12222d;
 }
-.echo-msg--assistant { align-self: flex-start; max-width: 93%; color: #33444f; }
+/* jawaban bot sengaja gak dikasih bubble (biar teks panjang enak dibaca), tapi
+   tanpa penanda apa pun transkripnya jadi teks ngambang. Dikasih rusuk es tipis
+   di kiri yang meredup ke bawah: struktur dapet, bubble kedua gak perlu */
+.echo-msg--assistant {
+  position: relative; align-self: flex-start; max-width: 93%; color: #33444f;
+  padding-left: 14px;
+}
+.echo-msg--assistant::before {
+  content: ''; position: absolute; left: 0; top: 4px; bottom: 4px; width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, rgba(63, 142, 192, 0.55), rgba(63, 142, 192, 0.07));
+}
 /* jawaban bot: markdown yang udah dirender jadi elemen beneran (bukan bintang2) */
 .echo-md { display: flex; flex-direction: column; gap: 9px; }
 .echo-md p { margin: 0; line-height: 1.74; }
@@ -479,7 +533,7 @@ body {
 .echo-md strong { color: #0e1a23; font-weight: 650; }
 .echo-md em { color: #405663; font-style: italic; }
 .echo-md a { color: #16628f; text-decoration: underline; text-underline-offset: 2px; }
-/* di gelap 12% opacity udah cukup, di putih bakal ilang total — dinaikin + tint */
+/* di gelap 12% opacity udah cukup, di putih bakal ilang total, dinaikin + tint */
 .echo-md code {
   font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px;
   background: rgba(28, 96, 146, 0.1); border: 1px solid rgba(28, 96, 146, 0.2);
@@ -504,9 +558,25 @@ body {
   background: rgba(196, 88, 48, 0.1); border: 1px solid rgba(196, 88, 48, 0.32);
   border-radius: 10px; padding: 10px 13px;
 }
-.echo-input {
-  display: flex; align-items: flex-end; gap: 10px; padding: 14px 16px 18px;
+/* komposer duduk di atas "plinth" beku yang agak lebih terang dari badan drawer,
+   jadi kolom ketik kepisah dari transkrip tanpa perlu garis tebal */
+.echo-composer {
+  position: relative; z-index: 1;
   border-top: 1px solid rgba(52, 112, 158, 0.16);
+  background: linear-gradient(180deg, rgba(247, 251, 254, 0.5), rgba(253, 254, 255, 0.94));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.echo-input {
+  display: flex; align-items: flex-end; gap: 10px; padding: 14px 16px 9px;
+}
+.echo-foot {
+  display: flex; align-items: center; gap: 7px; padding: 0 18px 13px;
+  font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: rgba(45, 88, 118, 0.5);
+}
+.echo-foot::before {
+  content: ''; flex: none; width: 5px; height: 5px;
+  background: rgba(63, 142, 192, 0.6); transform: rotate(45deg);
 }
 /* dulu kotak gelap. Di badan putih itu kebaca kayak lubang hitam nyasar */
 .echo-input textarea {
@@ -532,7 +602,7 @@ body {
   text-shadow: 0 0 16px rgba(120, 190, 240, 0.4);
 }
 .echo-inline:hover { opacity: 1; color: #d8ecfb; }
-/* pintu ke situs porto satunya (ARMORY) — sengaja lebih redup dari .echo-inline
+/* pintu ke situs porto satunya (ARMORY), sengaja lebih redup dari .echo-inline
    supaya ajakan ngobrol tetap jadi aksi utama di outro */
 .sister-site {
   display: block; margin-top: 10px;
@@ -558,7 +628,7 @@ body {
 .tick::before { content: ''; width: 20px; height: 1px; background: rgba(255, 255, 255, 0.55); }
 .tick span { opacity: 0.75; }
 
-/* ---------- vignette CSS — pengganti post-processing GPU yang berat ---------- */
+/* ---------- vignette CSS, pengganti post-processing GPU yang berat ---------- */
 .vignette {
   position: fixed; inset: 0; z-index: 8; pointer-events: none;
   background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 55%, rgba(18, 22, 26, 0.34) 100%);
