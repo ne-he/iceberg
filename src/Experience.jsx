@@ -35,7 +35,10 @@ export default function Experience({ onOpen, hasVideo }) {
       <directionalLight position={[6, 10, 4]} intensity={1.6} />
       <directionalLight position={[-6, -4, -6]} intensity={0.5} color="#dfe8ff" />
       <Suspense fallback={null}>
-        <Environment preset="city" />
+        {/* dulu preset="city" narik file ini dari CDN pihak ketiga (raw.githack)
+            tiap kunjungan. Sama persis, cuma sekarang dilayanin dari domain
+            sendiri: nggak nunggu server orang lain buat pantulan es muncul */}
+        <Environment files="/hdri/potsdamer_platz_1k.hdr" />
       </Suspense>
 
       <CameraRig />
