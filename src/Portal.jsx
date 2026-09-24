@@ -95,14 +95,18 @@ export function Portal() {
     // Pas top-down inti sengaja lembut (kristal jauh di bawah tetep kebaca),
     // baru full-blast pas nembus, layar kesorot putih-cyan sekejap, terus padam.
     const win = up * (1 - clamp01((d - 0.965) / 0.035))
-    const cross = Math.exp(-Math.pow((d - 0.935) / 0.02, 2))
+    // lebar kilatan dulu 0.02, padahal titik snap top-down ada di 0.915: pas
+    // pengunjung BERHENTI di situ kilatannya udah 37% nyala, jadi frame diamnya
+    // selalu gumpalan putih overexposed. 0.011 = di 0.915 tinggal 4%, puncak
+    // pas nembus (0.935) tetep sama terangnya
+    const cross = Math.exp(-Math.pow((d - 0.935) / 0.011, 2))
     // RING RIM nyala TERANG sepanjang top-down (kayak referensi igloo ss#2), plus
     // flare ekstra pas nembus. Core (lubang tengah) setengah kebuka: tetep glow
     // tapi kristal jauh di bawah masih keintip, full-blaze cuma pas crossing.
     if (glowRing.current) glowRing.current.material.opacity = win * (0.92 * pulse + 0.5 * cross)
     if (glowCore.current) glowCore.current.material.opacity = win * (0.28 * pulse + 0.7 * cross)
     // cahaya beneran: nyorot lumayan pas top-down, meledak pas nembus
-    if (light.current) light.current.intensity = win * (16 + 26 * cross)
+    if (light.current) light.current.intensity = win * (9 + 33 * cross)
   })
 
   return (
@@ -161,7 +165,10 @@ export function Portal() {
       {/* cahaya beneran nyorot ke bawah, intensity digerakin di useFrame:
           lembut pas top-down, MELEDAK pas kamera nembus ring (nyorot kristal &
           wajah di bawah), distance digedein biar nyampe landing zone yg jauh */}
-      <pointLight ref={light} color="#eaf6ff" intensity={12} distance={22} decay={2} />
+      {/* diturunin 2.2 di bawah bidang ring: dulu lampunya pas di tengah ring,
+          nempel ke 8 segmen dalam (jarak 1 sampai 2 unit) sampai segmennya putih
+          polos tanpa bentuk. Dari sini dia tetep nyorot kristal di bawah */}
+      <pointLight ref={light} color="#eaf6ff" intensity={12} distance={22} decay={2} position={[0, -2.2, 0]} />
     </group>
     </group>
     </group>
