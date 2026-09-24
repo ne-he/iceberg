@@ -273,12 +273,12 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
         {/* pintu masuk chatbot dari klimaks: udah ketemu muka partikel, langsung
             bisa ngajak ngomong, muka partikel = avatar ECHO */}
         <button className="echo-inline" onClick={onOpenChat}>
-          &gt; ngobrol langsung sama aku
+          &gt; Chat with my AI
         </button>
         {/* jalan keluar ke ARMORY. Dua situs porto ini sebelumnya nol saling
             tunjuk, jadi yang mendarat di salah satunya gak pernah tau yang lain */}
         <a className="sister-site" href={CONTACT.armory} target="_blank" rel="noopener">
-          ATAU LIHAT GARASINYA ↗
+          OR VISIT NEMI'S GARAGE ↗
         </a>
         {/* petunjuk loop: scroll terus di 100/100 = balik ke permukaan */}
         <div className="loop-hint">KEEP SCROLLING TO RESURFACE ↻</div>
@@ -305,10 +305,10 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
           <button
             className="rock-sound"
             onClick={() => setSoundOn((s) => !s)}
-            aria-label={soundOn ? 'Matiin suara' : 'Nyalain suara'}
+            aria-label={soundOn ? 'Mute the background video' : 'Turn the background sound on'}
           >
             <SpeakerIcon on={soundOn} />
-            {soundOn ? 'SUARA' : 'BISU'}
+            {soundOn ? 'SOUND ON' : 'SOUND OFF'}
           </button>
         )}
         {data && (

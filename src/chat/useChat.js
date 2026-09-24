@@ -7,6 +7,17 @@ const MAX_MESSAGE_CHARS = 2000
 const MAX_MESSAGES = 30
 const MAX_TOTAL_CHARS = 15000
 
+// pesan error yang keliatan pengunjung, Inggris biar satu bahasa sama situsnya
+const SERVER_ERROR = 'Something went wrong on the server. Try again in a moment.'
+const STREAM_ERROR = 'The answer stopped halfway. Please ask again.'
+const NETWORK_ERROR = 'Could not reach the chat. Check your connection and try again.'
+const HTTP_ERRORS = {
+  400: 'That message could not be read. Reload the page to start a new chat.',
+  413: 'This chat got too long. Reload the page to start a new one.',
+  429: 'Lots of messages in a short time. Take a short break, then try again.',
+}
+class ChatError extends Error {}
+
 // buang pesan paling lama kalau history kepanjangan, sisain minimal 2 turn
 function trimHistory(messages) {
   let msgs = messages.slice(-MAX_MESSAGES)
@@ -32,7 +43,7 @@ export function useChat() {
       const text = (raw || '').trim()
       if (!text || streaming) return
       if (text.length > MAX_MESSAGE_CHARS) {
-        setError('Pesannya kepanjangan, ringkas dikit ya.')
+        setError('That message is too long. Please shorten it a little.')
         return
       }
       setError(null)
@@ -65,14 +76,10 @@ export function useChat() {
         })
 
         if (!res.ok || !res.body) {
-          // error JSON dari server (rate limit / guard), pesannya udah Bahasa
-          // Indonesia santai, tampilin apa adanya
-          let msg = 'Ada error di server, coba lagi bentar ya.'
-          try {
-            const j = await res.json()
-            if (j?.error) msg = j.error
-          } catch {}
-          throw new Error(msg)
+          // pesan error dari backend RAG ditulis Bahasa Indonesia, sementara situs
+          // ini full Inggris. Jadi teks server gak ditampilin mentah, dipetakan
+          // dari status HTTP-nya aja (kodenya ada di route.ts repo RAG)
+          throw new ChatError(HTTP_ERRORS[res.status] || SERVER_ERROR)
         }
 
         const reader = res.body.getReader()
@@ -106,10 +113,13 @@ export function useChat() {
             }
           }
         }
-        if (streamErr) throw new Error(streamErr)
+        // streamErr isinya juga teks Indonesia dari server, diganti versi Inggris
+        if (streamErr) throw new ChatError(STREAM_ERROR)
       } catch (err) {
         if (err?.name === 'AbortError') return
-        setError(err instanceof Error ? err.message : String(err))
+        // selain error yang kita bikin sendiri, sisanya error jaringan mentah
+        // ("Failed to fetch" dkk), gak berguna buat pengunjung
+        setError(err instanceof ChatError ? err.message : NETWORK_ERROR)
         // buang slot assistant kalau belum keisi apa-apa
         setMessages((m) => {
           const last = m[m.length - 1]

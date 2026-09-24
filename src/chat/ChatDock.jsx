@@ -3,12 +3,14 @@ import { useChat } from './useChat'
 import { renderMarkdown } from './markdown'
 import ShardCanvas from './Shard'
 
-// pertanyaan starter, samain sama repo RAG biar konsisten
+// pertanyaan starter. Maknanya sama kayak di repo RAG, tapi situs ini satu
+// bahasa (Inggris, penontonnya recruiter), jadi versi Inggris. Bot-nya ngikut
+// bahasa si penanya, jadi chip Inggris = jawaban Inggris juga
 const SUGGESTIONS = [
-  'Apa pengalaman kerja Nehemiah?',
-  'Project AI/ML apa yang udah Nemi bikin?',
-  'Nemi orangnya gimana sih?',
-  'Nemi suka makanan apa?',
+  'What work experience does Nehemiah have?',
+  'What AI/ML projects has Nemi built?',
+  'What is Nemi like as a person?',
+  'What food does Nemi like?',
 ]
 
 // ikon kristal es, motif iceberg. Badan drawer sekarang putih, jadi versi
@@ -80,7 +82,7 @@ function GemIcon({ tag }) {
   )
 }
 
-// Chatbot RAG. Tombol "Tanya soal Nehemiah" kanan-bawah (selalu keliatan pas idle)
+// Chatbot RAG. Tombol "Ask about Nehemiah" kanan-bawah (selalu keliatan pas idle)
 // + drawer chat dari kanan. Backend-nya /api/chat (di-proxy ke project RAG).
 export default function ChatDock({ open, onOpen, onClose, hidden }) {
   const { messages, streaming, error, send } = useChat()
@@ -124,7 +126,7 @@ export default function ChatDock({ open, onOpen, onClose, hidden }) {
       <button
         className={`echo-btn ${hidden || open ? 'is-hidden' : ''}`}
         onClick={onOpen}
-        aria-label="Buka chatbot AI Nehemiah, tanya apa aja soal dia"
+        aria-label="Open the chat and ask Nehemiah's AI anything about him"
       >
         <span className="echo-btn-orb" aria-hidden="true">
           {/* kristal 3D: dua bidang SVG nyilang, diputer pakai CSS (bukan WebGL),
@@ -139,9 +141,9 @@ export default function ChatDock({ open, onOpen, onClose, hidden }) {
           </span>
         </span>
         <span className="echo-btn-txt">
-          <span className="echo-btn-title">Tanya soal Nehemiah</span>
+          <span className="echo-btn-title">Ask about Nehemiah</span>
           <span className="echo-btn-kicker">
-            <span className="echo-btn-dot" /> AI-nya Nehemiah
+            <span className="echo-btn-dot" /> Nehemiah's AI
           </span>
         </span>
       </button>
@@ -155,11 +157,11 @@ export default function ChatDock({ open, onOpen, onClose, hidden }) {
                 makanya dot ijo online udah gak dipakai lagi */}
             <span className="echo-head-orb">{open && <ShardCanvas />}</span>
             <div className="echo-head-txt">
-              <div className="echo-title">AI Nehemiah</div>
-              <div className="echo-sub">Tanya apa aja, aku tau hampir semua soal Nehemiah.</div>
+              <div className="echo-title">Nehemiah's AI</div>
+              <div className="echo-sub">Ask anything. I know nearly everything about Nehemiah.</div>
             </div>
           </div>
-          <button className="echo-close" onClick={onClose}>
+          <button className="echo-close" onClick={onClose} aria-label="Close the chat">
             <span className="rock-close-br">⌐</span> CLOSE <span className="rock-close-br">¬</span>
           </button>
         </div>
@@ -171,11 +173,11 @@ export default function ChatDock({ open, onOpen, onClose, hidden }) {
                 <Crystal dark />
               </span>
               <p className="echo-empty-lead">
-                Halo, aku <b>AI-nya Nehemiah</b>
+                Hi, I'm <b>Nehemiah's AI</b>
               </p>
               <p className="echo-empty-p">
-                Aku tau hampir segalanya soal dia: journey, project, skill, sampai hal random. Mau
-                mulai dari mana?
+                I know nearly everything about him: his journey, projects, skills, even the random
+                stuff. Where do you want to start?
               </p>
               <div className="echo-chips">
                 {SUGGESTIONS.map((q) => (
@@ -209,7 +211,7 @@ export default function ChatDock({ open, onOpen, onClose, hidden }) {
             <textarea
               ref={inputRef}
               rows={1}
-              placeholder="Tanya soal Nehemiah..."
+              placeholder="Ask about Nehemiah..."
               maxLength={2000}
               onInput={(e) => {
                 e.target.style.height = 'auto'
@@ -219,13 +221,13 @@ export default function ChatDock({ open, onOpen, onClose, hidden }) {
                 if (e.key === 'Enter' && !e.shiftKey) submit(e)
               }}
             />
-            <button type="submit" className="echo-send" disabled={streaming} aria-label="Kirim">
+            <button type="submit" className="echo-send" disabled={streaming} aria-label="Send">
               →
             </button>
           </form>
           {/* baris HUD kecil: bahasanya nyambung sama readout DPT/TEMP/SIG di scene,
               sekalian ngisi dasar drawer yang tadinya kosong melompong */}
-          <div className="echo-foot">Enter kirim, Shift + Enter baris baru</div>
+          <div className="echo-foot">Enter to send, Shift + Enter for a new line</div>
         </div>
       </div>
     </>
