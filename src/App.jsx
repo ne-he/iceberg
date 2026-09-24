@@ -7,7 +7,7 @@ import { UI, Loader } from './UI'
 import ChatDock from './chat/ChatDock'
 import TargetCursor from './components/TargetCursor/TargetCursor'
 import { LOW } from './perf'
-import { beginFocus, bgVideoState, chatState, dragState, endFocus, focusState, introState, scrollState } from './scrollState'
+import { beginFocus, bgVideoState, chatState, dragState, endFocus, faceState, focusState, introState, scrollState } from './scrollState'
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
 
@@ -411,6 +411,7 @@ export default function App() {
       scrollState,
       focusState,
       chatState,
+      faceState,
       open: openRock,
       close: closeRock,
       openChat,
@@ -523,7 +524,7 @@ export default function App() {
         </Canvas>
       </div>
       <div ref={scrollSpaceRef} className="scroll-space" aria-hidden="true" />
-      <UI panel={panel} onClose={closeRock} hasGlacier={hasGlacier} onOpenChat={openChat} />
+      <UI panel={panel} onClose={closeRock} hasGlacier={hasGlacier} onOpenChat={openChat} onOpenRock={openRock} />
       <ChatDock open={chatOpen} onOpen={openChat} onClose={closeChat} hidden={!ready || !!panel} />
       {/* kursor bracket 4 sudut (React Bits TargetCursor): ngunci ke elemen
           interaktif DOM, membesar pas hover batu 3D. Desktop doang, di mobile
