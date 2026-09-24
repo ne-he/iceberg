@@ -1,8 +1,10 @@
 import * as THREE from 'three'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useFrame, useThree } from '@react-three/fiber'
 import { faceState, scrollState } from './scrollState'
 import { LOW } from './perf'
+import { warmHooks } from './warmup'
+import { createFaceSim } from './particles/faceSim'
 
 // jumlah partikel: bener-bener padat biar fotonya kebentuk jelas ala igloo,
 // 120k + slab tipis = antar partikel makin rapat, celah ketutup, muka solid.
@@ -135,6 +137,38 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
     }
   }
 
+  // ===== simulasi pindah ke GPU kalau device-nya sanggup =====
+  // Loop CPU di useFrame bawah (120k partikel per frame + upload buffer 2.9 MB)
+  // makan ~890 ms JS per detik di outro. Kalau WebGL2 + render target float +
+  // tekstur di vertex shader ada, rumus yang sama jalan di shader (lihat
+  // particles/faceSim.js). Gak sanggup = sim null = loop CPU lama, gak diubah.
+  // Diputusin SEKALI pas mount, soalnya bentuk geometri points-nya beda
+  const gl = useThree((s) => s.gl)
+  const [sim] = useState(() =>
+    createFaceSim(gl, {
+      count: COUNT,
+      pos: positions.current,
+      col: colors.current,
+      scatter: scatter.current,
+      speeds: speeds.current,
+      repelR: REPEL_R,
+      repelMax: REPEL_MAX,
+    }),
+  )
+  // layout effect biar hook warm-up udah kedaftar sebelum effect Warmup jalan
+  useLayoutEffect(() => {
+    if (!sim) return
+    const warm = () => sim.warm()
+    warmHooks.add(warm)
+    return () => {
+      warmHooks.delete(warm)
+      sim.dispose()
+    }
+  }, [sim])
+  useEffect(() => {
+    if (sim && targets) sim.setTargets(targets)
+  }, [sim, targets])
+
   useEffect(() => {
     const onMove = (e) => {
       ndc.current.x = (e.clientX / window.innerWidth) * 2 - 1
@@ -218,13 +252,6 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
   useFrame((state, delta) => {
     if (!targets || !points.current || !group.current) return
     const target = targets[faceState.target] || targets.face
-    const posAttr = points.current.geometry.attributes.position
-    const colAttr = points.current.geometry.attributes.color
-    const arr = posAttr.array
-    const arrC = colAttr.array
-    const offs = offsets.current
-    const tp = target.pos
-    const tc = target.col
     const time = state.clock.elapsedTime
 
     // urutan kemunculan (permintaan Nehemiah): panggung keliatan dulu → partikel
@@ -271,46 +298,60 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
     const wobTarget = faceState.target === 'face' ? 0 : 1
     wobAmp.current += (wobTarget - wobAmp.current) * (1 - Math.exp(-3 * delta))
     const wob = wobAmp.current
-    const scat = scatter.current
 
-    for (let i = 0; i < COUNT; i++) {
-      const k = 1 - Math.exp(-speeds.current[i] * delta)
-      const i3 = i * 3
-      let ox = offs[i3] * dec
-      let oy = offs[i3 + 1] * dec
-      let oz = offs[i3 + 2] * dec
-      const ddx = arr[i3] - px
-      const ddy = arr[i3 + 1] - py
-      const d2 = ddx * ddx + ddy * ddy
-      if (d2 < R2 && d2 > 1e-6) {
-        const d = Math.sqrt(d2)
-        // displacement target berbatas, makin deket pointer makin kedorong,
-        // tapi gak pernah lebih dari REPEL_MAX walau pointer nangkring lama
-        const push = (1 - d / REPEL_R) * REPEL_MAX
-        const blend = 1 - Math.exp(-7 * delta)
-        ox += ((ddx / d) * push - ox) * blend
-        oy += ((ddy / d) * push - oy) * blend
-        oz += (push * 0.5 - oz) * blend
+    if (sim) {
+      // jalur GPU: angka yang masuk sama persis kayak yang dipakai loop CPU,
+      // blend repel = 1 - exp(-7 * delta), sama kayak di dalam loop
+      sim.step({ delta, target, a, px, py, dec, blend: 1 - Math.exp(-7 * delta), wob, time })
+    } else {
+      const posAttr = points.current.geometry.attributes.position
+      const colAttr = points.current.geometry.attributes.color
+      const arr = posAttr.array
+      const arrC = colAttr.array
+      const offs = offsets.current
+      const tp = target.pos
+      const tc = target.col
+      const scat = scatter.current
+
+      for (let i = 0; i < COUNT; i++) {
+        const k = 1 - Math.exp(-speeds.current[i] * delta)
+        const i3 = i * 3
+        let ox = offs[i3] * dec
+        let oy = offs[i3 + 1] * dec
+        let oz = offs[i3 + 2] * dec
+        const ddx = arr[i3] - px
+        const ddy = arr[i3 + 1] - py
+        const d2 = ddx * ddx + ddy * ddy
+        if (d2 < R2 && d2 > 1e-6) {
+          const d = Math.sqrt(d2)
+          // displacement target berbatas, makin deket pointer makin kedorong,
+          // tapi gak pernah lebih dari REPEL_MAX walau pointer nangkring lama
+          const push = (1 - d / REPEL_R) * REPEL_MAX
+          const blend = 1 - Math.exp(-7 * delta)
+          ox += ((ddx / d) * push - ox) * blend
+          oy += ((ddy / d) * push - oy) * blend
+          oz += (push * 0.5 - oz) * blend
+        }
+        offs[i3] = ox
+        offs[i3 + 1] = oy
+        offs[i3 + 2] = oz
+        const wx = Math.sin(time * 1.3 + i * 0.37) * 0.011 * wob
+        const wy = Math.cos(time * 1.1 + i * 0.71) * 0.011 * wob
+        // target per partikel = interpolasi posisi sebar → posisi wajah/logo,
+        // dikontrol progres perakitan a (scatter pas baru mendarat, ngumpul pas a→1)
+        const txp = scat[i3] + (tp[i3] - scat[i3]) * a
+        const typ = scat[i3 + 1] + (tp[i3 + 1] - scat[i3 + 1]) * a
+        const tzp = scat[i3 + 2] + (tp[i3 + 2] - scat[i3 + 2]) * a
+        arr[i3] += (txp + wx + ox - arr[i3]) * k
+        arr[i3 + 1] += (typ + wy + oy - arr[i3 + 1]) * k
+        arr[i3 + 2] += (tzp + oz - arr[i3 + 2]) * k
+        arrC[i3] += (tc[i3] - arrC[i3]) * k
+        arrC[i3 + 1] += (tc[i3 + 1] - arrC[i3 + 1]) * k
+        arrC[i3 + 2] += (tc[i3 + 2] - arrC[i3 + 2]) * k
       }
-      offs[i3] = ox
-      offs[i3 + 1] = oy
-      offs[i3 + 2] = oz
-      const wx = Math.sin(time * 1.3 + i * 0.37) * 0.011 * wob
-      const wy = Math.cos(time * 1.1 + i * 0.71) * 0.011 * wob
-      // target per partikel = interpolasi posisi sebar → posisi wajah/logo,
-      // dikontrol progres perakitan a (scatter pas baru mendarat, ngumpul pas a→1)
-      const txp = scat[i3] + (tp[i3] - scat[i3]) * a
-      const typ = scat[i3 + 1] + (tp[i3 + 1] - scat[i3 + 1]) * a
-      const tzp = scat[i3 + 2] + (tp[i3 + 2] - scat[i3 + 2]) * a
-      arr[i3] += (txp + wx + ox - arr[i3]) * k
-      arr[i3 + 1] += (typ + wy + oy - arr[i3 + 1]) * k
-      arr[i3 + 2] += (tzp + oz - arr[i3 + 2]) * k
-      arrC[i3] += (tc[i3] - arrC[i3]) * k
-      arrC[i3 + 1] += (tc[i3 + 1] - arrC[i3 + 1]) * k
-      arrC[i3 + 2] += (tc[i3 + 2] - arrC[i3 + 2]) * k
+      posAttr.needsUpdate = true
+      colAttr.needsUpdate = true
     }
-    posAttr.needsUpdate = true
-    colAttr.needsUpdate = true
 
     if (mat.current) mat.current.opacity = o
     group.current.visible = o > 0.01
@@ -322,11 +363,20 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
     <group ref={group} position={position} visible={false}>
       {/* renderOrder tinggi + fog & depthTest mati: partikel SELALU gambar di atas
           background, gak pernah ketelen kabut, muka harus keliatan jelas maksimal */}
-      <points ref={points} renderOrder={10}>
-        <bufferGeometry>
-          <bufferAttribute attach="attributes-position" count={COUNT} array={positions.current} itemSize={3} />
-          <bufferAttribute attach="attributes-color" count={COUNT} array={colors.current} itemSize={3} />
-        </bufferGeometry>
+      {/* jalur GPU: atribut position isinya koordinat texel partikel (posisi
+          aslinya dibaca vertex shader dari tekstur simulasi), jadi frustum
+          culling dari bounding box atribut itu gak ada artinya, dimatiin */}
+      <points ref={points} renderOrder={10} frustumCulled={!sim}>
+        {sim ? (
+          <bufferGeometry boundingSphere={sim.bounds}>
+            <bufferAttribute attach="attributes-position" count={COUNT} array={sim.uvs} itemSize={3} />
+          </bufferGeometry>
+        ) : (
+          <bufferGeometry>
+            <bufferAttribute attach="attributes-position" count={COUNT} array={positions.current} itemSize={3} />
+            <bufferAttribute attach="attributes-color" count={COUNT} array={colors.current} itemSize={3} />
+          </bufferGeometry>
+        )}
         <pointsMaterial
           ref={mat}
           map={sprite}
@@ -338,6 +388,7 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
           depthWrite={false}
           depthTest={false}
           fog={false}
+          {...(sim ? sim.materialProps : null)}
         />
       </points>
     </group>
