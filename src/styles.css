@@ -289,6 +289,12 @@ body {
   position: fixed; inset: 0; z-index: 30;
   opacity: 0; pointer-events: none; overflow: hidden;
   transition: opacity 0.7s ease;
+  /* latar cadangan = gradient es fallback. Kepake kalau panel kebuka sebelum
+     video dalam-glacier dapet frame pertama (video-nya sekarang dimuat
+     belakangan), biar yang keliatan es gelap, bukan scene beku di belakang */
+  background:
+    radial-gradient(ellipse at 50% 26%, rgba(150, 190, 224, 0.4) 0%, rgba(150, 190, 224, 0) 58%),
+    linear-gradient(158deg, #0c1620 0%, #17242f 44%, #0a1219 100%);
 }
 .rock-modal.is-open { opacity: 1; pointer-events: auto; }
 /* background: video loop dalam-glacier (generate Nehemiah) atau gradient es fallback */

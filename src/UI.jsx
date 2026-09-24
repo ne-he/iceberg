@@ -205,13 +205,30 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
   // video dalam-glacier: suara nyala default (permintaan Nehemiah), bisa di-toggle
   const vidRef = useRef(null)
   const [soundOn, setSoundOn] = useState(true)
+  // video panel (905 KB) dulu preload="auto" dari awal, rebutan bandwidth sama
+  // model + HDR + video langit pas loading pertama, padahal baru kepake pas batu
+  // dibuka. Sekarang src-nya baru dipasang 2.5 detik setelah intro kelar, atau
+  // langsung begitu orang mulai nyelam ke batu (masih ada 1.15 detik sebelum
+  // panel nongol). Sekali dipasang gak dilepas lagi
+  const [vidArmed, setVidArmed] = useState(false)
+  const vidArmedRef = useRef(false)
+  const vidSrc = vidArmed || panel ? '/glacier_inside.mp4' : undefined
 
   useEffect(() => {
     // HUD render only, scrollState di-drive master di App.jsx (infinite loop).
     // Nilai "descend-linked" (kabut/depth/ruler) pakai depthK biar retrace mulus
     // balik ke 0 pas bridge (ujung loop == awal, gak nge-pop)
     let raf
+    let idleAt = 0 // kapan intro pertama kali kelar (buat jadwal video panel)
     const tick = () => {
+      if (!vidArmedRef.current) {
+        const now = performance.now()
+        if (introState.phase === 'idle' && !idleAt) idleAt = now
+        if (focusState.phase !== 'idle' || (idleAt && now - idleAt > 2500)) {
+          vidArmedRef.current = true
+          setVidArmed(true)
+        }
+      }
       const t = scrollState.damped // posisi descend (=1 selama bridge)
       const dk = scrollState.depthK // retrace pas bridge
       const br = scrollState.bridge
@@ -332,7 +349,9 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
     } else {
       v.pause()
     }
-  }, [panel, soundOn])
+    // vidSrc ikut jadi dependency: kalau panel kebuka sebelum video sempat
+    // dipasang, play() pertama jalan tanpa src, jadi diulang begitu src-nya ada
+  }, [panel, soundOn, vidSrc])
 
   return (
     <>
@@ -444,9 +463,10 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
           layar. Muncul pas kamera udah nembus masuk batunya (permintaan Nehemiah) */}
       <div className={`rock-modal ${panel ? 'is-open' : ''}`} aria-hidden={!panel}>
         {hasGlacier ? (
-          // videonya udah dikompres ke <1MB, jadi aman di-preload penuh:
-          // ke-buffer semua sebelum user klik kristal = main tanpa patah
-          <video ref={vidRef} className="rock-bg" src="/glacier_inside.mp4" loop playsInline preload="auto" />
+          // videonya udah dikompres ke <1MB, jadi begitu src dipasang (lihat
+          // vidArmed) di-preload penuh: ke-buffer semua sebelum user klik
+          // kristal = main tanpa patah
+          <video ref={vidRef} className="rock-bg" src={vidSrc} loop playsInline preload="auto" />
         ) : (
           <div className="rock-bg rock-bg--fallback" />
         )}
