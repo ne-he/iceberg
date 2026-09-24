@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useProgress } from '@react-three/drei'
 import { beginIntro, bgVideoState, chatState, faceState, focusState, introState, scrollState } from './scrollState'
 import { warmState } from './warmup'
-import { CONTACT, CRYSTALS, PANELS, SECTION_WORDS } from './content'
+import { AVAILABILITY, CONTACT, CRYSTALS, PANELS, SECTION_WORDS } from './content'
 import DecryptedText from './components/DecryptedText'
 
 // glyph acak buat efek decode judul, huruf kapital + angka + simbol instrumen,
@@ -187,6 +187,7 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
   const framed = useRef(0) // index batu terakhir yang di-frame kamera
   const openShown = useRef(null) // visibility terakhir yang ditulis (biar gak nulis tiap frame)
   const openLive = useRef(null) // pointer-events terakhir yang ditulis
+  const atOutro = useRef(false) // lagi mendarat di outro (kelas html.at-outro)
 
   // simpan konten panel terakhir biar teks gak hilang pas animasi nutup
   const lastRef = useRef(null)
@@ -231,6 +232,14 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
         const o = clamp((t - 0.974) / 0.022, 0, 1) * (1 - smooth(clamp(br / 0.3, 0, 1)))
         outro.current.style.opacity = o
         if (outroIn.current) outroIn.current.style.pointerEvents = o > 0.5 ? 'auto' : 'none'
+        // kelas di <html> buat CSS: di HP tombol chat melayang disembunyiin pas
+        // di outro (nutupin kartu kontak, dan kartunya udah punya tombol chat
+        // sendiri). Ditulis cuma pas berubah, bukan tiap frame
+        const at = o > 0.5
+        if (at !== atOutro.current) {
+          atOutro.current = at
+          document.documentElement.classList.toggle('at-outro', at)
+        }
       }
       SECTION_WORDS.forEach((w, i) => {
         const el = words.current[i]
@@ -294,7 +303,10 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
       raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
+    return () => {
+      cancelAnimationFrame(raf)
+      document.documentElement.classList.remove('at-outro')
+    }
   }, [])
 
   useEffect(() => {
@@ -406,13 +418,16 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
       <div className="outro" ref={outro}>
         <div className="outro-in" ref={outroIn}>
         <h2>LET'S CONNECT</h2>
-        <a href={`mailto:${CONTACT.email}`}>{CONTACT.email.toUpperCase()}</a>
+        <p className="outro-avail">{AVAILABILITY}</p>
+        <a className="outro-mail" href={`mailto:${CONTACT.email}`}>
+          {CONTACT.email.toUpperCase()}
+        </a>
         {/* carousel ala igloo: pilih platform → partikel morph jadi logonya */}
         <SocialCarousel />
         {/* pintu masuk chatbot dari klimaks: udah ketemu muka partikel, langsung
             bisa ngajak ngomong, muka partikel = avatar ECHO */}
         <button className="echo-inline" onClick={onOpenChat}>
-          &gt; Chat with my AI
+          <span aria-hidden="true">&gt;</span> Chat with my AI
         </button>
         {/* jalan keluar ke ARMORY. Dua situs porto ini sebelumnya nol saling
             tunjuk, jadi yang mendarat di salah satunya gak pernah tau yang lain */}

@@ -167,57 +167,75 @@ body {
 }
 .hero p { margin-top: 14px; font-size: 11px; letter-spacing: 0.3em; opacity: 0.85; }
 
-/* outro nempel bawah, biar partikel wajah kelihatan penuh di tengah */
+/* outro = kartu kontak di depan potret partikel. Default (HP, layar sempit):
+   nempel bawah tengah dan dibikin ringkas, jadi muka + bahu tetep keliatan.
+   Layar lebar: kartunya pindah ke kanan potret (lihat media query di bawah),
+   badannya gak ketutup sama sekali */
 .outro {
   position: fixed; inset: 0; z-index: 6;
   display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
-  padding-bottom: 5vh;
+  padding: 0 16px 40px;
   text-align: center; opacity: 0; pointer-events: none; text-transform: uppercase;
+  /* teks outro GELAP, kartunya terang, kontrasnya kebalik dari HUD */
+  color: #111b22;
 }
-/* teks outro GELAP, podiumnya terang, jadi kontrasnya kebalik dari HUD */
-.outro { color: #171a1d; }
 /* konten outro dibungkus, cuma bagian ini yang nangkep mouse, sisanya tembus ke canvas.
-   Panel frost blur di belakang teks: partikel gelap di baliknya keblur + kecerahin,
-   jadi GET IN TOUCH / GITHUB / LINKEDIN gak nyamar lagi */
+   PERF: dulu frost backdrop-filter blur(28px), padahal .outro fixed di atas canvas
+   WebGL dan opacity-nya dianimasi = blur ulang tiap frame. Sekarang pelat es solid
+   (gradient statis), kontrasnya malah lebih pasti di atas partikel gelap */
 .outro-in {
+  width: min(420px, 100%);
   display: flex; flex-direction: column; align-items: center;
   pointer-events: none;
-  padding: 26px 44px 22px;
-  background: rgba(216, 223, 230, 0.62);
-  backdrop-filter: blur(28px) saturate(1.1); -webkit-backdrop-filter: blur(28px) saturate(1.1);
-  border: 1px solid rgba(255, 255, 255, 0.45);
+  padding: 24px 28px 18px;
+  background: linear-gradient(170deg, rgba(247, 250, 253, 0.96) 0%, rgba(229, 238, 245, 0.95) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.85);
   border-radius: 4px;
-  box-shadow: 0 20px 60px rgba(60, 72, 84, 0.28);
+  box-shadow: 0 18px 50px rgba(40, 60, 80, 0.22);
   /* font formal (permintaan Nehemiah): blok kontak keluar dari mono HUD,
      pakai sans profesional biar kerasa kartu nama, bukan terminal */
-  font-family: 'Helvetica Neue', 'Segoe UI', Arial, sans-serif;
+  font-family: var(--font-body);
+}
+/* potret partikel selalu di tengah, lebarnya ~0.37 x tinggi layar (ikut FOV
+   vertikal kamera). Kartu mulai 23vh di kanan titik tengah = selalu lewat bahu,
+   dan 360px-nya berhenti sebelum readout DPT/TEMP. Rasio di bawah 8:5 gak
+   cukup ruang, balik ke kartu bawah tengah */
+@media (min-width: 1200px) and (min-aspect-ratio: 8/5) {
+  .outro { align-items: flex-start; padding: 0 0 14vh calc(50% + 23vh); text-align: left; }
+  .outro-in { width: 360px; align-items: flex-start; padding: 28px 30px 20px; }
 }
 .outro h2 {
-  font-size: clamp(20px, 2.8vw, 34px); font-weight: 700; letter-spacing: 0.24em;
-  text-shadow: 0 0 16px rgba(255, 255, 255, 0.6);
+  font-family: var(--font-display);
+  font-size: clamp(20px, 2.2vw, 28px); font-weight: 600; letter-spacing: 0.2em;
+}
+.outro-avail {
+  margin-top: 8px; font-size: 14px; line-height: 1.45; color: #2a3a45;
+  text-transform: none; letter-spacing: 0;
 }
 .outro a {
-  display: inline-block; margin-top: 14px; color: #171a1d;
-  font-size: 14px; font-weight: 500; letter-spacing: 0.14em; text-decoration: none;
-  border-bottom: 1px solid rgba(23, 26, 29, 0.55); padding-bottom: 2px;
-  text-shadow: 0 0 12px rgba(255, 255, 255, 0.6);
+  display: inline-block; color: #111b22;
+  font-size: 14px; font-weight: 500; letter-spacing: 0.12em; text-decoration: none;
+  border-bottom: 1px solid rgba(17, 27, 34, 0.5); padding-bottom: 2px;
 }
-/* petunjuk loop di bawah carousel, kecil, napas pelan biar kebaca tapi gak ganggu */
+.outro-mail { margin-top: 14px; }
+/* petunjuk loop di bawah carousel, kecil, napas pelan biar kebaca tapi gak ganggu.
+   Batas bawah napasnya dinaikin (dulu 0.32, nyaris ilang di kartu terang) */
 .loop-hint {
-  margin-top: 16px; font-size: 9px; letter-spacing: 0.28em; opacity: 0.5;
+  margin-top: 14px; font-size: 9.5px; letter-spacing: 0.26em; color: #4a5a65;
   animation: loop-breathe 2.6s ease-in-out infinite;
 }
 @keyframes loop-breathe {
-  0%, 100% { opacity: 0.32; }
-  50% { opacity: 0.6; }
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
-/* carousel sosial ala igloo: [ ITEM AKTIF ] di tengah, tetangga redup di sisi */
-.soc-carousel { margin-top: 18px; display: flex; align-items: center; gap: 14px; letter-spacing: 0.18em; }
+/* carousel sosial ala igloo: [ ITEM AKTIF ] di tengah, tetangga redup di sisi.
+   "Redup"-nya sekarang lewat warna abu (kontras ~5:1), bukan opacity 0.32 */
+.soc-carousel { margin-top: 14px; display: flex; align-items: center; gap: 12px; letter-spacing: 0.18em; }
 .soc-carousel button { background: none; border: none; color: inherit; font-family: inherit; text-transform: uppercase; cursor: pointer; padding: 0; }
-.soc-side { font-size: 11px; letter-spacing: 0.18em; opacity: 0.32; min-width: 78px; transition: opacity 0.25s; }
-.soc-side:hover { opacity: 0.65; }
+.soc-carousel .soc-side { font-size: 11px; letter-spacing: 0.18em; color: #56656f; min-width: 78px; min-height: 32px; transition: color 0.25s; }
+.soc-carousel .soc-side:hover { color: #111b22; }
 .soc-current {
-  position: relative; margin-top: 0 !important; padding: 8px 20px;
+  position: relative; padding: 8px 20px;
   font-size: 13px; font-weight: 600; letter-spacing: 0.2em;
   color: inherit; text-decoration: none; border-bottom: none !important;
   min-width: 128px; text-align: center;
@@ -379,7 +397,8 @@ body {
 .rock-facts { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
 .rock-facts li {
   font-size: 11.5px; line-height: 1.35; letter-spacing: 0.02em; color: #d3e5f2;
-  background: rgba(150, 200, 240, 0.08); border: 1px solid rgba(150, 200, 240, 0.2);
+  /* tanpa border, biar kebedain dari tombol LIVE/REPO yang berbingkai */
+  background: rgba(150, 200, 240, 0.11);
   padding: 5px 9px;
 }
 .rock-act { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 16px; }
@@ -702,22 +721,31 @@ body {
 }
 .echo-send:hover:not(:disabled) { background: linear-gradient(150deg, #e6f2fb, #d2e6f5); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(52, 112, 158, 0.22); }
 .echo-send:disabled { opacity: 0.45; cursor: default; }
-/* anotasi pintu masuk chat di klimaks outro */
+/* pintu masuk chat di kartu outro. Dulu teks biru muda di atas kartu terang,
+   nyaris gak keliatan di HP. Sekarang tombol navy padet (bahasanya sama kayak
+   tombol chat melayang), aksi utama di kartu ini */
 .echo-inline {
-  margin-top: 18px; background: none; border: none;
-  color: #a9c6dc; font: inherit; font-size: 12px; letter-spacing: 0.12em; cursor: pointer;
-  opacity: 0.82; transition: opacity 0.25s, color 0.25s;
-  text-shadow: 0 0 16px rgba(120, 190, 240, 0.4);
+  margin-top: 16px; min-height: 40px; padding: 0 16px;
+  display: inline-flex; align-items: center; gap: 8px;
+  background: linear-gradient(150deg, #13212d, #0b151e); border: 1px solid rgba(20, 50, 74, 0.6);
+  border-radius: 2px; color: #eef6fc; cursor: pointer;
+  font-family: var(--font-body); font-size: 14px; font-weight: 500; letter-spacing: 0.01em;
+  transition: background 0.25s;
 }
-.echo-inline:hover { opacity: 1; color: #d8ecfb; }
-/* pintu ke situs porto satunya (ARMORY), sengaja lebih redup dari .echo-inline
-   supaya ajakan ngobrol tetap jadi aksi utama di outro */
-.sister-site {
-  display: block; margin-top: 10px;
-  font-size: 9px; letter-spacing: 0.28em; text-decoration: none;
-  color: #8fb0c6; opacity: 0.55; transition: opacity 0.25s, color 0.25s;
+.echo-inline span { color: #8fc3e6; font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+.echo-inline:hover { background: linear-gradient(150deg, #1b3042, #0f1d29); }
+/* pintu ke situs porto satunya (ARMORY, judulnya NEMI'S GARAGE), sengaja lebih
+   kalem dari tombol chat supaya ngobrol tetap jadi aksi utama di outro */
+.outro .sister-site {
+  display: inline-block; margin-top: 12px;
+  font-size: 11px; font-weight: 500; letter-spacing: 0.2em;
+  color: #34444f; border-bottom-color: rgba(52, 68, 79, 0.45);
+  transition: color 0.25s;
 }
-.sister-site:hover { opacity: 1; color: #d8ecfb; }
+.outro .sister-site:hover { color: #111b22; }
+.echo-inline:focus-visible, .outro a:focus-visible, .soc-side:focus-visible {
+  outline: 2px solid #1d6693; outline-offset: 3px;
+}
 @media (prefers-reduced-motion: reduce) {
   .echo-btn::before, .echo-btn::after, .echo-empty-orb::before,
   .echo-gem, .echo-btn-dot { animation: none; }
@@ -785,7 +813,12 @@ body {
      chat). Keduanya gak pernah nongol bareng: aba-aba udah pudar di dk 0.06,
      batu pertama baru di-frame dari 0.14 */
   .rock-open { bottom: 80px; }
-  .outro { padding-bottom: 100px; }
+  /* tombol chat melayang disembunyiin pas di outro (kelas dari UI.jsx), jadi
+     kartunya boleh turun mepet bawah: muka + bahu partikel lega di atasnya */
+  .outro { padding-bottom: calc(18px + env(safe-area-inset-bottom)); }
+  .outro-in { padding: 18px 18px 12px; }
+  html.at-outro .echo-btn { opacity: 0; pointer-events: none; transform: translateY(14px); }
+  html.at-outro .echo-btn::before { animation: none; }
   /* judul section di atas tombol OPEN, sejajar kiri sama logo. 13.5vw biar
      kata terpanjang (PROJECTS) tetep muat di 360px tanpa kepotong */
   .bigword { left: 20px; bottom: 142px; font-size: 13.5vw; }
