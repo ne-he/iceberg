@@ -1,16 +1,17 @@
 import * as THREE from 'three'
 import { Suspense, useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Environment, Sparkles, useGLTF } from '@react-three/drei'
+import { Environment, Sparkles, useGLTF, useProgress } from '@react-three/drei'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import { easing } from 'maath'
-import { Crystal } from './Crystal'
+import { Crystal, IceBuffer } from './Crystal'
 import { ParticleFace } from './ParticleFace'
 import { Portal } from './Portal'
 import { Glacier, heroFade } from './Glacier'
 import { CRYSTALS, HERO_CRYSTAL } from './content'
 import { LOW } from './perf'
 import { chatState, dragState, focusState, introState, scrollState } from './scrollState'
+import { warmHooks, warmState } from './warmup'
 
 export const FOG_COLOR = '#b9c0c7'
 // warna kabut di kedalaman: biru gletser, makin dalam makin kerasa di dalam es
@@ -36,12 +37,18 @@ export default function Experience({ onOpen, hasVideo }) {
       <directionalLight position={[-6, -4, -6]} intensity={0.5} color="#dfe8ff" />
       <Suspense fallback={null}>
         {/* dulu preset="city" narik file ini dari CDN pihak ketiga (raw.githack)
-            tiap kunjungan. Sama persis, cuma sekarang dilayanin dari domain
-            sendiri: nggak nunggu server orang lain buat pantulan es muncul */}
-        <Environment files="/hdri/potsdamer_platz_1k.hdr" />
+            tiap kunjungan, sekarang dilayanin dari domain sendiri. Versi 512 px
+            (400 KB, dulu 1k = 1,5 MB, file terbesar di jalur loading): PMREM
+            dari sumber 512 cuma ngilangin detail di mip paling tajam, padahal
+            batu es di sini roughness 0.1 plus kabut, jadi mip itu gak pernah
+            kebaca. Dicek A/B pakai screenshot sebelum diganti */}
+        <Environment files="/hdri/potsdamer_platz_512.hdr" />
       </Suspense>
 
       <CameraRig />
+
+      {/* gradient air dalam di balik semua objek (pengganti ShaderGradient) */}
+      {!LOW && <DeepWater />}
 
       {/* batu hero dibungkus HeroDrop: pas intro/loop dia JATUH dari atas ke posisinya */}
       <HeroDrop>
@@ -107,7 +114,158 @@ export default function Experience({ onOpen, hasVideo }) {
           <Bloom intensity={0.38} luminanceThreshold={0.88} luminanceSmoothing={0.22} mipmapBlur />
         </EffectComposer>
       )}
+
+      <Warmup />
+      {/* WAJIB paling bawah: useFrame-nya harus jalan setelah kamera & batu
+          selesai digerakin di frame yang sama (lihat IceBuffer di Crystal.jsx) */}
+      <IceBuffer />
     </>
+  )
+}
+
+// ===== pemanasan GPU di balik loader (lihat src/warmup.js) =====
+// Begitu semua asset kelar (useProgress gak aktif lagi) dan scene udah
+// ke-mount, SEMUA material di scene dikompilasi lewat compileAsync, termasuk
+// yang lagi disembunyiin atau jauh di luar kamera (portal, podium, wajah).
+// compileAsync pakai KHR_parallel_shader_compile: driver ngompilasi di thread
+// sendiri, main thread gak ketahan. Versi pertama warmup ini render paksa
+// semua objek sekali jalan, dan itu satu frame macet 6,4 detik (diukur).
+// Loader (UI.jsx) nungguin warmState.done sebelum buka tirai.
+//
+// Program shader three dibedain per target render: di desktop scene masuk ke
+// render target EffectComposer (tanpa tone mapping, linear), di HP langsung ke
+// layar. Buffer es (IceBuffer) selalu ke render target. Jadi dikompilasi buat
+// target yang beneran dipakai, bukan sekadar "yang penting kompilasi".
+function Warmup() {
+  const since = useRef(0)
+  const started = useRef(false)
+  const rt = useMemo(() => new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType }), [])
+  useEffect(() => () => rt.dispose(), [rt])
+  useFrame(({ gl, scene, camera }) => {
+    if (started.current || warmState.done) return
+    // tunggu loader three.js diem 250 ms: kasih waktu Suspense dalam (portal,
+    // HDR, batu echo) ke-mount dulu setelah file terakhirnya kelar
+    if (useProgress.getState().active) {
+      since.current = 0
+      return
+    }
+    const now = performance.now()
+    if (!since.current) since.current = now
+    if (now - since.current < 250) return
+    started.current = true
+
+    const prev = gl.getRenderTarget()
+    const jobs = []
+    gl.setRenderTarget(rt)
+    jobs.push(gl.compileAsync(scene, camera))
+    if (LOW) {
+      gl.setRenderTarget(null)
+      jobs.push(gl.compileAsync(scene, camera))
+    }
+    gl.setRenderTarget(prev)
+    // tekstur canvas (glow, sprite partikel) di-upload sekarang juga, bukan pas
+    // objeknya pertama kelihatan
+    scene.traverse((o) => {
+      const ms = Array.isArray(o.material) ? o.material : o.material ? [o.material] : []
+      for (const m of ms) if (m.map) gl.initTexture(m.map)
+    })
+    warmHooks.forEach((h) => h(gl))
+    Promise.all(jobs)
+      .catch(() => {})
+      .then(() => {
+        warmState.done = true
+      })
+  })
+  return null
+}
+
+// ===== air dalam: pengganti ShaderGradient =====
+// Dulu gradient "waterPlane" ini jalan di canvas WebGL KEDUA (ShaderGradientCanvas)
+// di belakang scene: dua konteks, dua layer compositing, ~4 fps melayang
+// (diukur). Sekarang quad layar penuh di canvas utama, digambar PALING BELAKANG:
+// posisinya di bidang far (z 0.99999) dengan depth test, jadi cuma ngisi
+// piksel kosong di belakang objek, persis kayak layer DOM-nya dulu.
+// Polanya ditiru dari output mentah ShaderGradient (difoto sendirian): navy
+// hampir hitam dengan gumpalan cahaya besar yang ngalir pelan. Opacity-nya
+// pakai rumus yang sama persis kayak dulu di master loop App.
+const deepVert = /* glsl */ `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = vec4(position.xy, 0.99999, 1.0);
+  }
+`
+const deepFrag = /* glsl */ `
+  varying vec2 vUv;
+  uniform float uTime;
+  uniform float uOpacity;
+  uniform float uAspect;
+  uniform vec3 uC0;
+  uniform vec3 uC1;
+  uniform vec3 uC2;
+  uniform vec3 uC3;
+  float hash(vec2 p) {
+    p = fract(p * vec2(123.34, 456.21));
+    p += dot(p, p + 45.32);
+    return fract(p.x * p.y);
+  }
+  float noise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),
+               mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
+  }
+  void main() {
+    vec2 p = vec2(vUv.x * uAspect, vUv.y) * 1.5;
+    float t = uTime;
+    // domain warp pelan: gumpalan cahaya yang bergeser kayak permukaan air dari bawah
+    vec2 q = vec2(noise(p + vec2(0.0, t * 0.35)), noise(p + vec2(5.2, -t * 0.3)));
+    float n = noise(p * 0.9 + q * 1.7 + vec2(t * 0.12, -t * 0.08));
+    n = 0.65 * n + 0.35 * noise(p * 2.1 - q + t * 0.2);
+    vec3 c = mix(uC0, uC1, smoothstep(0.18, 0.46, n));
+    c = mix(c, uC2, smoothstep(0.46, 0.7, n));
+    c = mix(c, uC3, smoothstep(0.7, 0.92, n));
+    gl_FragColor = vec4(c, uOpacity);
+    #include <colorspace_fragment>
+  }
+`
+function DeepWater() {
+  const mesh = useRef()
+  const size = useThree((s) => s.size)
+  const mat = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        uniforms: {
+          uTime: { value: 0 },
+          uOpacity: { value: 0 },
+          uAspect: { value: 1 },
+          uC0: { value: new THREE.Color('#04070d') },
+          uC1: { value: new THREE.Color('#0b1723') },
+          uC2: { value: new THREE.Color('#1b2e3e') },
+          uC3: { value: new THREE.Color('#324759') },
+        },
+        vertexShader: deepVert,
+        fragmentShader: deepFrag,
+        transparent: true,
+        depthWrite: false,
+      }),
+    []
+  )
+  useFrame((state) => {
+    const S = introState
+    const rv = S.phase === 'idle' ? 1 : S.reveal
+    const dk = scrollState.depthK
+    const o = THREE.MathUtils.clamp((dk - 0.24) / 0.4, 0, 1) * 0.5 * rv
+    mat.uniforms.uOpacity.value = o
+    mat.uniforms.uTime.value = state.clock.elapsedTime * 0.22
+    mat.uniforms.uAspect.value = size.width / Math.max(1, size.height)
+    if (mesh.current) mesh.current.visible = o > 0.002
+  })
+  return (
+    <mesh ref={mesh} material={mat} frustumCulled={false} renderOrder={-1000} visible={false}>
+      <planeGeometry args={[2, 2]} />
+    </mesh>
   )
 }
 

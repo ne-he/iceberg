@@ -10,11 +10,11 @@ const MODEL = '/models/iceberg.glb'
 
 // setelan material es. Versi HP ngebuang semua ornamen fragment shader yang
 // mahal (aberasi kromatik, distorsi, clearcoat) dan motong jumlah sampling
-// refraksi jadi 2. Hasilnya tetep refraksi es beneran, cuma gak sedetail desktop
+// refraksi jadi 2. Hasilnya tetep refraksi es beneran, cuma gak sedetail desktop.
+// `resolution` sengaja gak ada lagi di sini, lihat IceBuffer di bawah.
 const ICE = LOW
   ? {
       samples: 2,
-      resolution: 128,
       chromaticAberration: 0,
       anisotropy: 0,
       distortion: 0,
@@ -25,7 +25,6 @@ const ICE = LOW
     }
   : {
       samples: 4,
-      resolution: 256,
       chromaticAberration: 0.05,
       anisotropy: 0.15,
       distortion: 0.08,
@@ -34,6 +33,95 @@ const ICE = LOW
       clearcoat: 1,
       clearcoatRoughness: 0.12,
     }
+
+// ===== SATU buffer refraksi, dipakai bareng semua batu =====
+// Dulu material es pakai `transmissionSampler`: tiap frame three ngerender
+// ulang scene ke render target RESOLUSI PENUH, MSAA 4x, HalfFloat, plus bikin
+// rantai mipmap-nya. Itu biang lag di section batu (diukur 24 Sep 2026, Iris Xe:
+// 46 sampai 52 fps, transmission dimatiin langsung 59). `resolution: 256` yang
+// niatnya ngirit gak pernah kepake, soalnya jalur sampler ngabaikan setelan itu.
+//
+// Sekarang satu buffer dirender sekali per frame di skala ~0.62 dari layar,
+// tanpa MSAA, tanpa mipmap, dan dibagi ke semua batu. 0.62 bukan angka asal:
+// jalur sampler lama nge-sample di mip level log2(lebar) * roughness * (ior*2-2)
+// = kira-kira 0.68, alias udah 2^-0.68 = 0.62 kali lebih buram dari layar. Jadi
+// tampilannya setara, cuma bayarnya sepertiga piksel.
+//
+// Isinya disamain PERSIS sama pass bawaan three: cuma objek opaque yang
+// kegambar (yang transparan & batu es-nya sendiri disembunyiin), tone mapping
+// mati, dan kalau canvas transparan, clear-nya putih alpha 0.5.
+const ICE_SCALE = LOW ? 0.5 : 0.62
+export const iceTarget = new THREE.WebGLRenderTarget(1, 1, {
+  type: THREE.HalfFloatType,
+  minFilter: THREE.LinearFilter,
+  magFilter: THREE.LinearFilter,
+  generateMipmaps: false,
+})
+// mesh es yang lagi ke-mount, didaftarin sama Crystal
+const iceMeshes = new Set()
+const _frustum = new THREE.Frustum()
+const _pv = new THREE.Matrix4()
+const _clear = new THREE.Color()
+const _hidden = []
+
+const isTransparent = (m) => (Array.isArray(m) ? m.some((x) => x.transparent) : !!m?.transparent)
+function chainVisible(o) {
+  for (let p = o; p; p = p.parent) if (!p.visible) return false
+  return true
+}
+
+function renderIceBuffer(gl, scene, camera) {
+  // gak ada batu es yang kelihatan = gak ada yang butuh buffer ini, skip total
+  camera.updateMatrixWorld()
+  _pv.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
+  _frustum.setFromProjectionMatrix(_pv)
+  let any = false
+  for (const m of iceMeshes) {
+    if (!chainVisible(m)) continue
+    m.updateWorldMatrix(true, false)
+    if (_frustum.intersectsObject(m)) {
+      any = true
+      break
+    }
+  }
+  if (!any) return
+  const w = Math.max(1, Math.round(gl.domElement.width * ICE_SCALE))
+  const h = Math.max(1, Math.round(gl.domElement.height * ICE_SCALE))
+  if (iceTarget.width !== w || iceTarget.height !== h) iceTarget.setSize(w, h)
+
+  _hidden.length = 0
+  scene.traverse((o) => {
+    if (!o.visible || !(o.isMesh || o.isPoints || o.isLine || o.isSprite)) return
+    if (iceMeshes.has(o) || isTransparent(o.material)) {
+      o.visible = false
+      _hidden.push(o)
+    }
+  })
+  const prevTarget = gl.getRenderTarget()
+  const prevTone = gl.toneMapping
+  gl.getClearColor(_clear)
+  const prevAlpha = gl.getClearAlpha()
+  gl.toneMapping = THREE.NoToneMapping
+  if (prevAlpha < 1) gl.setClearColor(0xffffff, 0.5)
+  gl.setRenderTarget(iceTarget)
+  // clear MANUAL: EffectComposer (postprocessing) matiin gl.autoClear, jadi
+  // tanpa ini buffer-nya gak pernah dibersihin dan batunya ngerefraksi hitam
+  gl.clear()
+  gl.render(scene, camera)
+  gl.setRenderTarget(prevTarget)
+  gl.setClearColor(_clear, prevAlpha)
+  gl.toneMapping = prevTone
+  for (let i = 0; i < _hidden.length; i++) _hidden[i].visible = true
+  _hidden.length = 0
+}
+
+// dipasang PALING BELAKANG di Experience: useFrame-nya didaftarin paling akhir,
+// jadi jalan setelah CameraRig, Float, dan animasi batu. Kalau kebalik, buffer
+// ketinggalan satu frame dari kamera dan refraksinya "berenang" pas di-scroll
+export function IceBuffer() {
+  useFrame(({ gl, scene, camera }) => renderIceBuffer(gl, scene, camera))
+  return null
+}
 
 // ===== selubung wireframe LOKAL pas hover (permintaan Nehemiah) =====
 // dulu: hover = wireframe nyala di SELURUH batu (keliatan kayak model 3D telanjang).
@@ -247,6 +335,7 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
   const group = useRef()
   const spinner = useRef()
   const veil = useRef()
+  const ice = useRef()
   const dragging = useRef(null)
   const dragMoved = useRef(false) // true kalau gesture terakhir beneran muter (bukan klik)
   const [hovered, setHovered] = useState(false)
@@ -284,6 +373,15 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
       }),
     []
   )
+  // daftarin mesh es ke IceBuffer: disembunyiin pas buffer dirender, dan dipakai
+  // buat ngecek masih ada batu yang kelihatan atau nggak
+  useEffect(() => {
+    const m = ice.current
+    if (!m) return
+    iceMeshes.add(m)
+    return () => iceMeshes.delete(m)
+  }, [])
+
   useEffect(() => {
     // radius area yang kebuka ~ separuh badan batu, cukup buat kerasa "lokal"
     if (veilGeo) veilMat.uniforms.uRadius.value = (veilGeo.boundingSphere?.radius ?? 1) * 0.55
@@ -302,7 +400,13 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
       const u = veilMat.uniforms
       u.uTime.value += delta
       easing.damp(u.uReach, 'value', hovered ? 1 : 0, 0.22, delta)
-      if (u.uReach.value > 0.002) {
+      // di luar hover shader-nya discard semua fragment, tapi mesh-nya tetep
+      // digambar full (vertex shader + rasterisasi) di 5 batu tiap frame.
+      // Disembunyiin total pas gak dipakai. Raycast hover gak kepengaruh:
+      // yang nangkep pointer itu mesh es-nya, bukan selubung ini
+      const on = u.uReach.value > 0.002
+      veil.current.visible = on
+      if (on) {
         veil.current.worldToLocal(lv.copy(hoverPt.current))
         easing.damp3(u.uPoint.value, lv, 0.1, delta)
       }
@@ -401,9 +505,13 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
     <Float speed={1.1} rotationIntensity={draggable ? 0 : 0.1} floatIntensity={0.4}>
       <group ref={group} position={data.position} scale={0.001} {...events}>
         <group ref={spinner} rotation={[0, data.yaw ?? 0, 0]}>
-          <mesh geometry={geometry}>
+          <mesh ref={ice} geometry={geometry}>
+            {/* buffer = IceBuffer bareng (lihat atas). resolution={1}: drei tetep
+                bikin dua FBO internal per material walau buffer-nya dari luar,
+                dulu 256 x tinggi layar x 10 biji buat nganggur, sekarang 1 piksel */}
             <MeshTransmissionMaterial
-              transmissionSampler
+              buffer={iceTarget.texture}
+              resolution={1}
               transmission={1}
               thickness={1.8}
               roughness={0.1}
@@ -417,7 +525,7 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
           </mesh>
           {/* selubung wireframe lokal: cuma sekitar kursor yang kebuka garis
               geometrinya, disapu gelombang cincin keluar (shader di atas) */}
-          {veilGeo && <mesh ref={veil} geometry={veilGeo} material={veilMat} scale={1.004} />}
+          {veilGeo && <mesh ref={veil} geometry={veilGeo} material={veilMat} scale={1.004} visible={false} />}
           <Artifact type={data.artifact} />
         </group>
         {interactive && (

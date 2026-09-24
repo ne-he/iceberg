@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useProgress } from '@react-three/drei'
 import { beginIntro, bgVideoState, faceState, introState, scrollState } from './scrollState'
+import { warmState } from './warmup'
 import { CONTACT, PANELS, SECTION_WORDS } from './content'
 import DecryptedText from './components/DecryptedText'
 
@@ -354,11 +355,13 @@ export function Loader() {
     // useProgress cuma ngitung asset three.js, video langit (scene.mp4) di luar
     // itu, jadi ditunggu juga (bgVideoState) biar pas tirai kebuka videonya udah
     // nongol, bukan putih dulu sedetik. Batas nunggu video 3 detik.
+    // warmState: shader & geometri semua section udah dipanasin di balik tirai
+    // (lihat src/warmup.js). Batas nunggu 4,5 detik biar HP lemot gak ketahan.
     if (progress >= 100 || !active) {
       const t0 = performance.now()
       const id = setInterval(() => {
         const el = performance.now() - t0
-        if (el >= 600 && (bgVideoState.ready || el > 3000)) {
+        if (el >= 600 && (bgVideoState.ready || el > 3000) && (warmState.done || el > 4500)) {
           clearInterval(id)
           setDone(true)
           beginIntro() // loader kelar → batu hero mulai jatuh
