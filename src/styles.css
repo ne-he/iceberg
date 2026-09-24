@@ -108,20 +108,48 @@ body {
 }
 .hint-inner { display: inline-block; animation: pulse 2.4s ease-in-out infinite; }
 @keyframes pulse { 0%, 100% { opacity: 0.75; } 50% { opacity: 0.25; } }
+/* tombol OPEN <SECTION>: nongol di tempat aba-aba scroll pas satu batu lagi
+   di-frame. Bahasa HUD (mono + bracket kayak CLOSE), bukan tombol pil.
+   PERF: ini fixed di atas canvas WebGL, jadi yang dianimasi cuma opacity +
+   transform (ditulis loop rAF di UI.jsx). Latarnya gradient solid, nol
+   backdrop-filter, nol shadow yang gerak */
+.rock-open {
+  position: absolute; bottom: 28px; left: 50%;
+  transform: translate(-50%, 10px); opacity: 0; visibility: hidden; pointer-events: none;
+  display: flex; align-items: center; gap: 14px;
+  min-height: 44px; padding: 0 20px;
+  background: linear-gradient(180deg, rgba(14, 26, 38, 0.72), rgba(10, 20, 30, 0.82));
+  border: 1px solid rgba(214, 234, 248, 0.42);
+  color: #f2f8fc; font: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0.22em;
+  text-transform: uppercase; white-space: nowrap; cursor: pointer;
+}
+.rock-open:hover { border-color: rgba(230, 244, 255, 0.85); }
+.rock-open:focus-visible { outline: 2px solid #cfe8fa; outline-offset: 3px; }
+.rock-open-br { opacity: 0.6; font-size: 15px; font-weight: 400; }
 .progress-bar {
   position: absolute; bottom: 0; left: 0; height: 2px; width: 100%;
   background: rgba(255, 255, 255, 0.85); transform-origin: 0 50%; transform: scaleX(0);
 }
 
+/* judul section raksasa. Dulu kanan tengah: nabrak readout DPT/TEMP, nutupin
+   bagian batu yang paling rame, dan kepotong di tepi kanan HP. Sekarang nempel
+   kiri bawah kayak judul rubrik majalah: kiri dikasih jarak dari penggaris
+   kedalaman, lebarnya dibatasin biar berhenti sebelum tombol OPEN di tengah
+   bawah, dan batu (yang selalu di-frame di tengah) cuma kesenggol ujung bawahnya */
 .bigword {
-  position: fixed; top: 44%; right: 5vw; transform: translateY(-50%);
-  font-size: clamp(44px, 8.5vw, 118px); font-weight: 600; letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.55);
+  position: fixed; left: 128px; bottom: 44px;
+  font-size: clamp(44px, 6vw, 96px); font-weight: 600; letter-spacing: 0.04em; line-height: 1;
+  color: rgba(255, 255, 255, 0.72);
   /* halo gelap di belakang huruf, background-nya "digelapin" biar putihnya
-     gak nyamar ketelen kabut terang */
-  text-shadow: 0 0 26px rgba(38, 47, 56, 0.5), 0 0 80px rgba(38, 47, 56, 0.65);
+     gak nyamar ketelen kabut terang (lautan awan di bawah section atas) */
+  text-shadow: 0 0 22px rgba(30, 40, 50, 0.55), 0 0 70px rgba(30, 40, 50, 0.6);
   z-index: 2; pointer-events: none; text-transform: uppercase;
   opacity: 0; white-space: nowrap;
+}
+.bigword-code {
+  font-size: 11px; font-weight: 500; letter-spacing: 0.24em; margin: 0 0 10px 4px;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 12px rgba(30, 40, 50, 0.6);
 }
 
 /* ---------- HERO / OUTRO ---------- */
@@ -201,28 +229,39 @@ body {
 .soc-current::after { right: 0; border-left: none; }
 
 /* ---------- label anotasi ala igloo ---------- */
+/* Label ini satu-satunya tanda batu bisa dibuka, dulu 9-10px putih polos di atas
+   kabut pucat, nyaris gak kebaca. Sekarang ada pelat gelap tipis yang pudar ke
+   kanan (tetep kerasa readout HUD, bukan tombol pil), huruf lebih gede, dan
+   panah kecil yang nyenggol pelan biar kebaca "bisa diklik" */
 .anno {
-  position: relative; padding-left: 16px;
-  color: #fff; font-size: 11px; font-weight: 500; line-height: 1.5;
-  letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap;
+  position: relative; padding: 9px 30px 10px 16px;
+  color: #fff; font-size: 12px; font-weight: 500; line-height: 1.45;
+  letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap;
+  background: linear-gradient(90deg, rgba(12, 24, 36, 0.7) 0%, rgba(12, 24, 36, 0.5) 60%, rgba(12, 24, 36, 0) 100%);
   opacity: 0; transform: translateY(6px);
   transition: opacity 0.55s ease, transform 0.55s ease;
   cursor: pointer;
-  text-shadow: 0 2px 20px rgba(70, 80, 90, 0.75), 0 0 8px rgba(120, 130, 140, 0.4);
+  text-shadow: 0 1px 10px rgba(8, 16, 24, 0.55);
 }
 .anno::before {
-  content: ''; position: absolute; left: 0; top: 3px; bottom: 3px; width: 2px;
-  background: rgba(255, 255, 255, 0.8);
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px;
+  background: rgba(255, 255, 255, 0.95);
 }
 .anno::after {
   content: ''; position: absolute; left: -34px; top: 50%; width: 34px; height: 1px;
-  background: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.75);
 }
 .anno.is-visible { opacity: 1; transform: none; }
-.anno-code { opacity: 0.9; font-size: 9.5px; }
-.anno-name { font-size: 19px; font-weight: 600; letter-spacing: 0.12em; margin-top: 4px; }
-.anno-cta { margin-top: 8px; font-size: 10px; opacity: 0.8; transition: opacity 0.3s; }
-.anno.is-hot .anno-cta { opacity: 1; }
+.anno-code { font-size: 11px; letter-spacing: 0.18em; color: rgba(232, 243, 251, 0.88); }
+.anno-name { font-size: 22px; font-weight: 600; letter-spacing: 0.12em; margin-top: 3px; }
+.anno-cta {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 7px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.16em; color: #cfe8fa;
+}
+/* panah cuma gerak transform = murah */
+.anno-cta::after { content: '\2192'; display: inline-block; animation: anno-nudge 1.8s ease-in-out infinite; }
+.anno.is-hot .anno-cta { color: #fff; }
+@keyframes anno-nudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(4px); } }
 
 /* ---------- panel batu = layar penuh "di dalam es" ---------- */
 .rock-modal {
@@ -673,9 +712,18 @@ body {
      Padahal "scroll to descend" satu-satunya aba-aba cara mulai, jadi
      dua-duanya dinaikin sampai lewat atas tombol */
   .hint { bottom: 88px; }
+  /* tombol OPEN duduk di slot yang sama kayak aba-aba scroll (di atas tombol
+     chat). Keduanya gak pernah nongol bareng: aba-aba udah pudar di dk 0.06,
+     batu pertama baru di-frame dari 0.14 */
+  .rock-open { bottom: 80px; }
   .outro { padding-bottom: 100px; }
-  .bigword { right: 2vw; }
-  .anno-name { font-size: 15px; }
+  /* judul section di atas tombol OPEN, sejajar kiri sama logo. 13.5vw biar
+     kata terpanjang (PROJECTS) tetep muat di 360px tanpa kepotong */
+  .bigword { left: 20px; bottom: 142px; font-size: 13.5vw; }
+  .bigword-code { font-size: 10px; margin-bottom: 8px; }
+  /* di layar sempit labelnya jatuh di luar layar (offset 3D-nya kelebaran),
+     paling banter nongol kepotong di tepi. Tombol OPEN yang ngambil alih */
+  .anno { display: none; }
   .rock-content { padding: 15vh 8vw 12vh; }
   .rock-scrim { background: linear-gradient(180deg, rgba(6, 12, 18, 0.55) 0%, rgba(6, 12, 18, 0.86) 100%); }
   .rock-logo { font-size: 17px; left: 20px; top: 20px; }

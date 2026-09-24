@@ -48,7 +48,9 @@ export const CRYSTALS = [
     spin: 0.055,
     yaw: 4.2,
     artifact: 'torusknot',
-    labelOffset: [-2.4, 1.3, 0],
+    // dulu [-2.4, 1.3]: labelnya mentok kiri atas dan numpuk sama penggaris
+    // kedalaman. Batu ini paling gede (scale 1.3), jadi offset kecil pun udah jauh
+    labelOffset: [-1.85, 0.95, 0],
     draggable: true,
   },
   {

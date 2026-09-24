@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useProgress } from '@react-three/drei'
-import { beginIntro, bgVideoState, faceState, introState, scrollState } from './scrollState'
+import { beginIntro, bgVideoState, chatState, faceState, focusState, introState, scrollState } from './scrollState'
 import { warmState } from './warmup'
-import { CONTACT, PANELS, SECTION_WORDS } from './content'
+import { CONTACT, CRYSTALS, PANELS, SECTION_WORDS } from './content'
 import DecryptedText from './components/DecryptedText'
 
 // glyph acak buat efek decode judul, huruf kapital + angka + simbol instrumen,
@@ -94,7 +94,7 @@ function SpeakerIcon({ on }) {
   )
 }
 
-export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
+export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
   const hero = useRef()
   const outro = useRef()
   const words = useRef([])
@@ -104,6 +104,15 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
   const hint = useRef()
   const ruler = useRef()
   const outroIn = useRef()
+  // tombol "OPEN <SECTION>" di HUD: satu-satunya petunjuk di HP (label batu
+  // ke-crop keluar layar di sana) dan satu-satunya jalan buat pengguna keyboard
+  // (batu 3D gak bisa di-Tab). Isinya ditulis langsung ke DOM dari loop rAF,
+  // bukan state React per frame
+  const openBtn = useRef()
+  const openName = useRef()
+  const framed = useRef(0) // index batu terakhir yang di-frame kamera
+  const openShown = useRef(null) // visibility terakhir yang ditulis (biar gak nulis tiap frame)
+  const openLive = useRef(null) // pointer-events terakhir yang ditulis
 
   // simpan konten panel terakhir biar teks gak hilang pas animasi nutup
   const lastRef = useRef(null)
@@ -164,7 +173,46 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
       if (depth.current) depth.current.textContent = `DPT ${String(Math.round(dk * 380)).padStart(3, '0')}M`
       if (temp.current) temp.current.textContent = `TEMP ${(-1.2 - dk * 27.3).toFixed(2)}`
       if (bar.current) bar.current.style.transform = `scaleX(${lp})`
-      if (hint.current) hint.current.style.opacity = clamp(1 - (dk - 0.82) / 0.06, 0, 1) * rv
+      // aba-aba scroll cuma perlu sebelum orang mulai turun. Dulu nongol terus
+      // sampai dk 0.82, numpuk sama tombol OPEN. Karena pakai dk (yang retrace
+      // pas bridge), dia otomatis balik lagi pas mendarat di hero
+      if (hint.current) hint.current.style.opacity = clamp(1 - dk / 0.06, 0, 1) * rv
+      if (openBtn.current) {
+        // batu i di-frame kalau damped deket anchor snap-nya, (i+1)/(N+1), rumus
+        // yang sama kayak anchor di App. Penuh dalam 0.035, pudar habis di 0.06.
+        // Mati pas bridge, pas lagi nyelam/panel kebuka, dan pas chat kebuka
+        let fi = -1
+        let fo = 0
+        if (br === 0 && focusState.phase === 'idle' && !focusState.panelOpen && !chatState.open) {
+          const n = CRYSTALS.length + 1
+          for (let i = 0; i < CRYSTALS.length; i++) {
+            const o = clamp(1 - (Math.abs(t - (i + 1) / n) - 0.035) / 0.025, 0, 1)
+            if (o > fo) {
+              fo = o
+              fi = i
+            }
+          }
+        }
+        fo *= rv
+        if (fi !== -1 && fi !== framed.current) {
+          framed.current = fi
+          if (openName.current) openName.current.textContent = CRYSTALS[fi].name
+        }
+        const b = openBtn.current
+        b.style.opacity = fo
+        b.style.transform = `translate(-50%, ${((1 - fo) * 10).toFixed(2)}px)`
+        // hidden = gak bisa ke-Tab pas gak keliatan
+        const shown = fo > 0.02
+        if (shown !== openShown.current) {
+          openShown.current = shown
+          b.style.visibility = shown ? 'visible' : 'hidden'
+        }
+        const live = fo > 0.5
+        if (live !== openLive.current) {
+          openLive.current = live
+          b.style.pointerEvents = live ? 'auto' : 'none'
+        }
+      }
       if (ruler.current) {
         const travel = ruler.current.offsetHeight - window.innerHeight
         if (travel > 0) ruler.current.style.transform = `translateY(${-dk * travel}px)`
@@ -230,11 +278,28 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat }) {
         <div className="hint" ref={hint}>
           <span className="hint-inner">SCROLL TO DESCEND ▾</span>
         </div>
+        <button
+          className="rock-open cursor-target"
+          ref={openBtn}
+          onClick={() => {
+            const c = CRYSTALS[framed.current]
+            if (c) onOpenRock?.(c.id, c.position)
+          }}
+        >
+          <span className="rock-open-br" aria-hidden="true">⌐</span>
+          <span>
+            OPEN <span ref={openName}>{CRYSTALS[0].name}</span>
+          </span>
+          <span className="rock-open-br" aria-hidden="true">¬</span>
+        </button>
         <div className="progress-bar" ref={bar} />
       </div>
 
+      {/* judul section: nempel kiri bawah (grid editorial), gak lagi di kanan
+          tengah yang nabrak readout DPT/TEMP dan nutupin badan batu */}
       {SECTION_WORDS.map((w, i) => (
-        <div key={w.word} className="bigword" ref={(el) => (words.current[i] = el)}>
+        <div key={w.word} className="bigword" ref={(el) => (words.current[i] = el)} aria-hidden="true">
+          <div className="bigword-code">SEC {CRYSTALS[i]?.tag}</div>
           <DecryptedText
             text={w.word}
             animateOn="manual"
