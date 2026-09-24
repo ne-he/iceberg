@@ -81,7 +81,7 @@ export const PANELS = {
     rows: [
       {
         h: 'NEHEMIAH WILHELMUS JUNAIDI',
-        p: 'Data Science undergraduate at Binus University, Jakarta. Semester 4, building at the intersection of machine learning and the web.',
+        p: 'Data Science undergraduate at Binus University, Jakarta. Semester 5, building at the intersection of machine learning and the web.',
       },
       {
         h: 'WHAT I DO',
@@ -122,11 +122,15 @@ export const PANELS = {
       },
       {
         h: '2026 / SEMESTER 4',
-        tag: 'NOW',
         p: 'Retrieval systems and agentic workflows: an analyst agent that recomputes its own arithmetic a second way before it answers, a streaming air-quality platform that retrains itself when the data drifts, a 10-K RAG engine with a hallucination gate, a resume chatbot that is live, and this 3D site. Building at the intersection of machine learning and the web.',
       },
+      {
+        h: 'SEP 2026 / SEMESTER 5',
+        tag: 'NOW',
+        p: 'Taking earlier builds all the way to public. FinSight was rewritten from a Python prototype into one deployed Next.js app, with its refusal threshold set from measured data instead of a guess. KENNETH, a parking app for a venture course team, went live on Firebase.',
+      },
     ],
-    foot: 'TIMELINE / UPDATED 08.2026',
+    foot: 'TIMELINE / UPDATED 09.2026',
   },
   projects: {
     code: 'ICEBERG_SEC_03',
@@ -278,7 +282,7 @@ export const PANELS = {
         p: 'Three.js, React Three Fiber, Next.js, TypeScript, Blender, Vite, GSAP.',
       },
     ],
-    foot: 'STACK / SEMESTER 4 SNAPSHOT',
+    foot: 'STACK / SEMESTER 5 SNAPSHOT',
   },
 }
 
