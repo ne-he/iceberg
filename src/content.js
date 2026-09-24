@@ -135,6 +135,7 @@ export const PANELS = {
     // Urutan asli permintaan Nehemiah langsung, dengan VERDICT dan PULSE
     // disisipkan di depan waktu keduanya masuk roster (9 Agu 2026). Sepuluh
     // teratas dikasih link; sisanya cukup disebut di satu baris penutup.
+    // 24 Sep 2026: FinSight naik ke v2 (live), KENNETH masuk di sebelah projek produk.
     rows: [
       {
         h: 'VERDICT ANALYST',
@@ -152,10 +153,13 @@ export const PANELS = {
         links: [{ label: 'REPO', href: 'https://github.com/ne-he/pulse' }],
       },
       {
-        h: 'FINSIGHT / SEC 10-K RAG',
-        tag: 'RETRIEVAL · FINANCE',
-        p: 'Answers questions about public companies strictly from their SEC 10-K filings. Section-aware chunking that follows the 10-K Item skeleton, hybrid dense and BM25 retrieval fused with Reciprocal Rank Fusion, metadata filtering by company and fiscal year, and a confidence gate that says "not found in the filings" instead of inventing a number. Every claim carries its exact section citation.',
-        links: [{ label: 'REPO', href: 'https://github.com/ne-he/RAG_businessAnalysis_assist' }],
+        h: 'FINSIGHT V2 / SEC 10-K RAG',
+        tag: 'LIVE · FINANCIAL RAG',
+        p: 'Answers questions about public companies strictly from their SEC 10-K filings, cited down to the section, or refuses when the filing does not support an answer. v2 rewrites the Python original as one Next.js app on Vercel with Supabase for sign-in, history and vector search. Hybrid vector and full-text retrieval fused with Reciprocal Rank Fusion, one search per company so comparisons never lose a side, and a refusal gate set at the midpoint of the measured gap. On 936 chunks and a 22-question golden set: hit-rate@6 18/18, out-of-scope refusals 4/4, zero false refusals. Every citation opens its source passage beside the answer.',
+        links: [
+          { label: 'LIVE', href: 'https://finsight-v2-nine.vercel.app' },
+          { label: 'REPO', href: 'https://github.com/ne-he/finsight-v2' },
+        ],
       },
       {
         h: 'PHISHGUARD V2',
@@ -206,6 +210,15 @@ export const PANELS = {
         links: [
           { label: 'LIVE', href: 'https://dashboard-nehemiah.vercel.app' },
           { label: 'REPO', href: 'https://github.com/ne-he/nemi-dashboard' },
+        ],
+      },
+      {
+        h: 'KENNETH / JAKARTA PARKING',
+        tag: 'LIVE · VENTURE',
+        p: 'A mobile web app that shows how full a Jakarta car park is before you leave home, how long the gate queue is, and which nearby place still has space. Google Maps stops at the building entrance, KENNETH starts there. Twenty malls and BINUS campuses, priority entry, building valet and EV charger booking, routing to the least busy gate, and a partner dashboard for building managers. Built for the BINUS Venture Creation course: the team set the product and business case, I built the app. React, TypeScript, MapLibre and three.js on Firebase. The data is simulated and every location says so.',
+        links: [
+          { label: 'LIVE', href: 'https://kenneth-park.web.app' },
+          { label: 'REPO', href: 'https://github.com/ne-he/kenneth' },
         ],
       },
       {
