@@ -2,6 +2,9 @@
 
 /* font display buat elemen UI chat, biar beda dari mono HUD & gak berasa template */
 :root { --font-display: 'Space Grotesk', 'Segoe UI', system-ui, sans-serif; }
+/* font badan teks panel + kartu kontak: IBM Plex Sans, sekeluarga sama Plex Mono
+   HUD jadi nyambung, tapi jauh lebih enak dibaca buat paragraf panjang */
+:root { --font-body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; }
 
 html, body { background: #b9c0c7; }
 /* scrollbar browser disembunyiin total, scroll tetap jalan (progress bar bawah jadi penunjuknya) */
@@ -282,77 +285,143 @@ body {
     linear-gradient(158deg, #0c1620 0%, #17242f 44%, #0a1219 100%);
 }
 /* scrim gelap sisi kiri biar kolom teks kebaca di atas es (ala ss#1 igloo) */
+/* scrim gelap biar teks kebaca di atas es. Layout panel sekarang lebar (kolom
+   judul kiri + isi kanan), jadi sisi kanan juga harus kebagian gelap, gak cuma
+   kiri kayak dulu (ala ss#1 igloo) */
 .rock-scrim {
   position: absolute; inset: 0;
   background:
-    linear-gradient(90deg, rgba(6, 12, 18, 0.9) 0%, rgba(6, 12, 18, 0.62) 46%, rgba(6, 12, 18, 0.16) 82%, rgba(6, 12, 18, 0.05) 100%),
+    linear-gradient(90deg, rgba(6, 12, 18, 0.9) 0%, rgba(6, 12, 18, 0.76) 45%, rgba(6, 12, 18, 0.62) 100%),
     radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 42%, rgba(4, 9, 14, 0.6) 100%);
 }
+/* kepala panel: pelat gradient solid, pekat di atas terus pudar. Teks yang
+   di-scroll lewat bawahnya ilang di balik pelat, gak numpuk sama logo/CLOSE.
+   Pelatnya sendiri tembus klik, cuma tombolnya yang nangkep */
+.rock-top {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 3;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 20px 34px 46px;
+  background: linear-gradient(180deg, rgba(6, 12, 18, 0.97) 0%, rgba(6, 12, 18, 0.9) 50%, rgba(6, 12, 18, 0) 100%);
+  pointer-events: none;
+}
+.rock-top > * { pointer-events: auto; }
 .rock-logo {
-  position: absolute; top: 28px; left: 34px; z-index: 2;
   font-size: 22px; font-weight: 600; letter-spacing: 0.24em;
-  color: #eef4f8; text-transform: uppercase;
+  color: #eef4f8; text-transform: uppercase; white-space: nowrap;
   text-shadow: 0 0 22px rgba(150, 200, 240, 0.5);
 }
+.rock-controls { display: flex; align-items: center; gap: 12px; }
 .rock-close {
-  position: absolute; top: 30px; right: 34px; z-index: 3;
   background: none; border: none; color: #dfe7ec;
   font: inherit; font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase;
-  cursor: pointer; padding: 8px 6px; display: flex; align-items: center; gap: 12px;
+  cursor: pointer; padding: 0 6px; min-height: 44px; display: flex; align-items: center; gap: 12px;
   opacity: 0.85; transition: opacity 0.25s;
 }
 .rock-close:hover { opacity: 1; }
 .rock-close-br { opacity: 0.55; font-size: 15px; }
+/* toggle suara video dalam-glacier. Pindah dari pojok kiri bawah ke kepala
+   panel. PERF: nol backdrop-filter, di belakangnya video yang ganti frame terus */
+.rock-sound {
+  display: flex; align-items: center; gap: 8px; min-height: 36px;
+  background: rgba(150, 200, 240, 0.07);
+  border: 1px solid rgba(150, 200, 240, 0.28); border-radius: 100px;
+  color: #dbe9f4; font: inherit; font-size: 10.5px; letter-spacing: 0.2em; text-transform: uppercase;
+  padding: 0 14px; cursor: pointer; opacity: 0.88;
+  transition: opacity 0.25s, border-color 0.25s;
+}
+.rock-sound:hover { opacity: 1; border-color: rgba(180, 220, 255, 0.55); }
+.rock-sound svg { flex: none; }
 .rock-content {
   position: relative; z-index: 1;
-  max-width: 640px; height: 100%; margin: 0 auto;
-  padding: 16vh 6vw 12vh; overflow-y: auto;
-  color: #c7d2da; letter-spacing: 0.02em;
+  height: 100%; overflow-y: auto; overscroll-behavior: contain;
+  padding: 0 6vw;
+  color: #c7d2da;
   transform: translateY(26px); transition: transform 0.9s cubic-bezier(0.22, 0.9, 0.24, 1);
   scrollbar-width: none;
 }
 .rock-content::-webkit-scrollbar { display: none; }
 .rock-modal.is-open .rock-content { transform: none; }
-.rock-kicker { font-family: var(--font-display); font-size: 14px; font-weight: 400; letter-spacing: 0.005em; color: #8fa2b1; }
+.rock-inner {
+  max-width: 1160px; margin: 0 auto; padding: 17vh 0 14vh;
+  display: grid; grid-template-columns: minmax(200px, 270px) minmax(0, 1fr);
+  gap: 0 clamp(40px, 5vw, 84px); align-items: start;
+}
+/* kolom judul ikut nempel pas isinya di-scroll, jadi selalu jelas lagi di section apa */
+.rock-aside { position: sticky; top: 17vh; }
+.rock-code { font-size: 11px; letter-spacing: 0.22em; color: #7f98ab; }
+.rock-kicker { margin-top: 14px; font-family: var(--font-display); font-size: 15px; font-weight: 400; letter-spacing: 0.005em; color: #9fb3c2; }
 .rock-content h2 {
-  font-size: clamp(30px, 5vw, 52px); font-weight: 600; letter-spacing: 0.1em;
-  margin: 14px 0 30px; color: #f2f7fb; text-transform: uppercase;
+  font-size: clamp(30px, 3.6vw, 50px); font-weight: 600; letter-spacing: 0.1em; line-height: 1.1;
+  margin: 10px 0 0; color: #f2f7fb; text-transform: uppercase;
   text-shadow: 0 2px 30px rgba(120, 170, 210, 0.35);
 }
-.rock-row { border-top: 1px solid rgba(180, 205, 224, 0.16); padding: 20px 0; }
+/* kolom teks penuh dijaga ~70 karakter per baris biar enak dibaca */
+.rock-rows { max-width: 720px; }
+.rock-row { border-top: 1px solid rgba(180, 205, 224, 0.16); padding: 22px 0 24px; }
 .rock-row h3 {
-  font-size: 14px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #e6eef4;
+  font-size: 13px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #eef4f8;
   /* flex + nowrap di tag: kalau kepanjangan, tag-nya TURUN UTUH ke baris bawah,
      bukan pecah di tengah kata ("... ML / ENG") */
-  display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px;
 }
-.rock-row h3 span { opacity: 0.55; font-weight: 400; letter-spacing: 0.14em; white-space: nowrap; }
-.rock-row p { margin-top: 8px; font-size: 14.5px; line-height: 1.85; color: #aebcc7; }
-/* link repo/live per projek: chip mono kecil biar tetep minimalis */
-.rock-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.rock-row h3 span { font-size: 10.5px; font-weight: 500; letter-spacing: 0.16em; color: #8fb6d2; white-space: nowrap; }
+/* badan teks pindah ke sans: mono 14px di kolom sempit itu yang bikin panel
+   kerasa tembok teks. Mono tetep buat judul, tag, chip, dan tombol (bahasa HUD) */
+.rock-p {
+  margin-top: 10px; font-family: var(--font-body);
+  font-size: 16px; line-height: 1.7; letter-spacing: 0; color: #b9c7d1;
+}
+.rock-hook {
+  margin-top: 10px; font-family: var(--font-body);
+  font-size: 17px; line-height: 1.5; letter-spacing: 0; color: #e8f0f6;
+}
+.rock-row--skim .rock-p { margin-top: 16px; font-size: 15.5px; }
+.rock-facts { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.rock-facts li {
+  font-size: 11.5px; line-height: 1.35; letter-spacing: 0.02em; color: #d3e5f2;
+  background: rgba(150, 200, 240, 0.08); border: 1px solid rgba(150, 200, 240, 0.2);
+  padding: 5px 9px;
+}
+.rock-act { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 16px; }
+/* link repo/live per projek: chip mono kecil biar tetep minimalis, tingginya
+   dinaikin ke 32px biar gampang di-tap */
+.rock-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.rock-act .rock-links { margin-top: 0; }
 .rock-links a {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 11px; border: 1px solid rgba(150, 200, 240, 0.28);
+  display: inline-flex; align-items: center; gap: 6px; min-height: 32px;
+  padding: 0 12px; border: 1px solid rgba(150, 200, 240, 0.3);
   color: #cfe2f0; text-decoration: none;
-  font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+  font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase;
   transition: border-color 0.22s, color 0.22s, background 0.22s;
 }
 .rock-links a:hover { border-color: rgba(190, 228, 255, 0.7); color: #f2f9ff; background: rgba(150, 200, 240, 0.1); }
 .rock-links a svg { opacity: 0.6; }
 .rock-links a:hover svg { opacity: 1; }
-.rock-foot { margin-top: 40px; font-size: 11px; letter-spacing: 0.2em; color: #6d7b86; text-transform: uppercase; }
-/* toggle suara buat video dalam-glacier */
-.rock-sound {
-  position: absolute; left: 34px; bottom: 28px; z-index: 3;
-  display: flex; align-items: center; gap: 8px;
-  background: rgba(8, 16, 24, 0.4); backdrop-filter: blur(8px);
-  border: 1px solid rgba(150, 200, 240, 0.24); border-radius: 100px;
-  color: #dbe9f4; font: inherit; font-size: 10.5px; letter-spacing: 0.2em; text-transform: uppercase;
-  padding: 8px 15px; cursor: pointer; opacity: 0.85;
-  transition: opacity 0.25s, border-color 0.25s, background 0.25s;
+.rock-more {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 6px;
+  background: none; border: none; color: #9fc4de;
+  font: inherit; font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer;
+  transition: color 0.2s;
 }
-.rock-sound:hover { opacity: 1; border-color: rgba(180, 220, 255, 0.5); background: rgba(8, 16, 24, 0.6); }
-.rock-sound svg { flex: none; }
+.rock-more:hover { color: #eaf5fd; }
+.rock-more svg { transition: transform 0.25s; }
+.rock-more[aria-expanded='true'] svg { transform: rotate(180deg); }
+.rock-links a:focus-visible, .rock-more:focus-visible, .rock-close:focus-visible, .rock-sound:focus-visible {
+  outline: 2px solid #cfe8fa; outline-offset: 2px;
+}
+.rock-foot { grid-column: 1 / -1; margin-top: 40px; font-size: 11px; letter-spacing: 0.2em; color: #71808b; text-transform: uppercase; }
+/* layar lebar: PROJECTS (13 baris) dan SKILLS jadi dua kolom kartu, isinya
+   kebaca sekali pandang. Urutan tetap kiri ke kanan, bukan kolom koran */
+@media (min-width: 1180px) {
+  .rock-inner--projects .rock-rows, .rock-inner--skills .rock-rows {
+    max-width: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 40px; align-items: start;
+  }
+}
+@media (max-width: 860px) {
+  .rock-inner { display: block; padding: 118px 0 12vh; }
+  .rock-aside { position: static; margin-bottom: 26px; }
+}
 
 /* ---------- ECHO chat (RAG chatbot) ---------- */
 /* tombol chatbot kanan-bawah, "nyala" pelan biar jelas bisa diajak ngobrol */
@@ -724,9 +793,17 @@ body {
   /* di layar sempit labelnya jatuh di luar layar (offset 3D-nya kelebaran),
      paling banter nongol kepotong di tepi. Tombol OPEN yang ngambil alih */
   .anno { display: none; }
-  .rock-content { padding: 15vh 8vw 12vh; }
-  .rock-scrim { background: linear-gradient(180deg, rgba(6, 12, 18, 0.55) 0%, rgba(6, 12, 18, 0.86) 100%); }
-  .rock-logo { font-size: 17px; left: 20px; top: 20px; }
+  .rock-content { padding: 0 22px; }
+  .rock-scrim { background: linear-gradient(180deg, rgba(6, 12, 18, 0.62) 0%, rgba(6, 12, 18, 0.88) 100%); }
+  .rock-top { padding: 12px 14px 34px 20px; }
+  .rock-logo { font-size: 17px; }
+  .rock-controls { gap: 4px; }
+  /* di HP tombol suara cukup ikon (aria-label tetep nyebut fungsinya), biar
+     logo + suara + CLOSE muat satu baris di 360px */
+  .rock-sound { padding: 0; width: 40px; min-height: 40px; justify-content: center; }
+  .rock-sound-txt { display: none; }
+  .rock-p { font-size: 15.5px; }
+  .rock-hook { font-size: 16.5px; }
   .echo-drawer { width: 100vw; }
   .echo-btn { right: 14px; bottom: 16px; padding: 10px 15px 10px 11px; }
   .echo-btn-orb { width: 34px; height: 34px; }

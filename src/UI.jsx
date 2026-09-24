@@ -70,6 +70,80 @@ function SocialCarousel() {
 }
 const smooth = (x) => x * x * (3 - 2 * x)
 
+function RowLinks({ links }) {
+  if (!links?.length) return null
+  return (
+    <div className="rock-links">
+      {links.map((l) => (
+        <a key={l.href} className="cursor-target" href={l.href} target="_blank" rel="noreferrer">
+          {l.label}
+          <svg width="9" height="9" viewBox="0 0 9 9" fill="none" aria-hidden="true">
+            <path d="M1 8L8 1M8 1H2.5M8 1V6.5" stroke="currentColor" strokeWidth="1.2" />
+          </svg>
+        </a>
+      ))}
+    </div>
+  )
+}
+
+// satu baris panel. Baris projek (yang punya hook) tampil versi skim dulu:
+// judul + tag, hook, chip fakta, link, baru paragraf penuh di balik Details.
+// Recruiter nyekim, 13 paragraf 100 kata sekaligus gak bakal kebaca. Baris
+// ABOUT/JOURNEY/SKILLS tetep teks penuh, isinya udah pendek
+function PanelRow({ r, id }) {
+  const [open, setOpen] = useState(false)
+  const skim = !!r.hook
+  // paragraf yang cuma dikit lebih panjang dari hook-nya gak perlu Details,
+  // isinya udah kewakilan hook + chip (contoh: FAMILY TASK BOARD)
+  const more = skim && r.p.length > r.hook.length + 80
+  return (
+    <article className={`rock-row ${skim ? 'rock-row--skim' : ''}`}>
+      <h3>
+        {r.h}
+        {r.tag ? <span>{r.tag}</span> : null}
+      </h3>
+      {skim ? (
+        <>
+          <p className="rock-hook">{r.hook}</p>
+          {r.facts?.length ? (
+            <ul className="rock-facts" aria-label="Key facts">
+              {r.facts.map((f) => (
+                <li key={f}>{f}</li>
+              ))}
+            </ul>
+          ) : null}
+          <div className="rock-act">
+            <RowLinks links={r.links} />
+            {more && (
+              <button
+                className="rock-more cursor-target"
+                aria-expanded={open}
+                aria-controls={id}
+                onClick={() => setOpen((o) => !o)}
+              >
+                {open ? 'Hide details' : 'Details'}
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                  <path d="M2 3.5 5 6.5 8 3.5" stroke="currentColor" strokeWidth="1.3" />
+                </svg>
+              </button>
+            )}
+          </div>
+          {more && (
+            <p className="rock-p" id={id} hidden={!open}>
+              {r.p}
+            </p>
+          )}
+        </>
+      ) : (
+        <>
+          <p className="rock-p">{r.p}</p>
+          <RowLinks links={r.links} />
+        </>
+      )}
+    </article>
+  )
+}
+
 // ikon speaker buat toggle suara video dalam-glacier
 function SpeakerIcon({ on }) {
   return (
@@ -362,46 +436,45 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
           <div className="rock-bg rock-bg--fallback" />
         )}
         <div className="rock-scrim" />
-        <div className="rock-logo">THE ICEBERG</div>
-        <button className="rock-close" onClick={onClose}>
-          <span className="rock-close-br">⌐</span> CLOSE <span className="rock-close-br">¬</span>
-        </button>
-        {hasGlacier && (
-          <button
-            className="rock-sound"
-            onClick={() => setSoundOn((s) => !s)}
-            aria-label={soundOn ? 'Mute the background video' : 'Turn the background sound on'}
-          >
-            <SpeakerIcon on={soundOn} />
-            {soundOn ? 'SOUND ON' : 'SOUND OFF'}
-          </button>
-        )}
+        {/* kepala panel: logo kiri, suara + CLOSE kanan, di atas pelat gradient
+            solid. Dulu logo/CLOSE ngambang tanpa latar jadi numpuk sama teks pas
+            di-scroll, dan tombol suara di pojok kiri bawah nutupin link LIVE/REPO
+            di HP. Sekarang semua kontrol yang nempel layar ngumpul di sini */}
+        <div className="rock-top">
+          <div className="rock-logo">THE ICEBERG</div>
+          <div className="rock-controls">
+            {hasGlacier && (
+              <button
+                className="rock-sound cursor-target"
+                onClick={() => setSoundOn((s) => !s)}
+                aria-label={soundOn ? 'Mute the background video' : 'Turn the background sound on'}
+              >
+                <SpeakerIcon on={soundOn} />
+                <span className="rock-sound-txt">{soundOn ? 'SOUND ON' : 'SOUND OFF'}</span>
+              </button>
+            )}
+            <button className="rock-close cursor-target" onClick={onClose}>
+              <span className="rock-close-br">⌐</span> CLOSE <span className="rock-close-br">¬</span>
+            </button>
+          </div>
+        </div>
         {data && (
           <div className="rock-content" key={lastRef.current}>
-            <div className="rock-kicker">{data.kicker}</div>
-            <h2>{data.title}</h2>
-            {data.rows.map((r) => (
-              <div className="rock-row" key={r.h}>
-                <h3>
-                  {r.h}
-                  {r.tag ? <span>{r.tag}</span> : null}
-                </h3>
-                <p>{r.p}</p>
-                {r.links?.length ? (
-                  <div className="rock-links">
-                    {r.links.map((l) => (
-                      <a key={l.href} href={l.href} target="_blank" rel="noreferrer">
-                        {l.label}
-                        <svg width="9" height="9" viewBox="0 0 9 9" fill="none" aria-hidden="true">
-                          <path d="M1 8L8 1M8 1H2.5M8 1V6.5" stroke="currentColor" strokeWidth="1.2" />
-                        </svg>
-                      </a>
-                    ))}
-                  </div>
-                ) : null}
+            {/* desktop: kolom judul kiri (nempel pas di-scroll) + isi kanan, biar
+                separo kanan layar gak kosong. HP: satu kolom biasa */}
+            <div className={`rock-inner rock-inner--${lastRef.current}`}>
+              <header className="rock-aside">
+                <div className="rock-code">{data.code}</div>
+                <div className="rock-kicker">{data.kicker}</div>
+                <h2>{data.title}</h2>
+              </header>
+              <div className="rock-rows">
+                {data.rows.map((r, i) => (
+                  <PanelRow key={r.h} r={r} id={`rock-p-${lastRef.current}-${i}`} />
+                ))}
+                <div className="rock-foot">{data.foot}</div>
               </div>
-            ))}
-            <div className="rock-foot">{data.foot}</div>
+            </div>
           </div>
         )}
       </div>
