@@ -25,7 +25,9 @@ const ICE = LOW
     }
   : {
       samples: 4,
-      chromaticAberration: 0.05,
+      // 0.05 bikin tiap tepi gelap di dalam batu keluar garis pelangi yang
+      // kebaca glitch, 0.035 masih ngasih kilau spektrum tipis di facet
+      chromaticAberration: 0.035,
       anisotropy: 0.15,
       distortion: 0.08,
       distortionScale: 0.2,
@@ -557,7 +559,9 @@ function Artifact({ type }) {
       {type === 'octahedron' && <octahedronGeometry args={[0.34, 0]} />}
       {type === 'torusknot' && <torusKnotGeometry args={[0.26, 0.085, 110, 14]} />}
       {type === 'icosahedron' && <icosahedronGeometry args={[0.32, 0]} />}
-      <meshStandardMaterial color="#46505a" roughness={0.4} metalness={0.3} />
+      {/* dulu #46505a: kebaca lubang hitam, bukan benda yang kebungkus es.
+          Slate kebiruan biar tetep gelap kontras tapi ada warnanya */}
+      <meshStandardMaterial color="#56697a" roughness={0.4} metalness={0.3} />
     </mesh>
   )
 }
