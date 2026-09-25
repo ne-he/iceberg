@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { useMemo, useRef } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { Sparkles, useGLTF } from '@react-three/drei'
 import { scrollState } from './scrollState'
 
@@ -8,9 +8,18 @@ import { scrollState } from './scrollState'
 // 8 segmen dalam), di-load dari GLB. Dipasang HORIZONTAL ngambang TINGGI di atas
 // cluster kristal (jaraknya jauh): kamera nyorot lurus dari atas nembus lubangnya
 // (kristal keliatan kecil jauh di bawah), lalu NYELAM NEMBUS ring, pas nembus,
-// portal MELEDAK nyala = sensasi masuk dunia lain, baru turun ke kristal & wajah
-// (permintaan Nehemiah: "masuk lewatin portal yg nyala, kerasa different world")
+// layar kesorot cahaya es sekejap = sensasi masuk dunia lain, baru turun ke
+// kristal & wajah (permintaan Nehemiah: "masuk lewatin portal yg nyala, kerasa
+// different world")
 export const PORTAL_POS = [0, -32.8, 1.5]
+
+// prefers-reduced-motion: kilatan layar dimatiin total
+const CALM = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
+const clamp01 = (v) => Math.max(0, Math.min(1, v))
+const sstep = (a, b, x) => {
+  const t = clamp01((x - a) / (b - a))
+  return t * t * (3 - 2 * t)
+}
 
 // tekstur glow dibikin di canvas: ring cahaya + blob inti, pengganti bloom
 // post-processing yang berat. Additive + fog:false biar nembus kabut.
@@ -25,8 +34,9 @@ function makeGlowTexture(draw) {
 export function Portal() {
   const { nodes } = useGLTF('/models/portal.glb')
   const group = useRef()
-  const build = useRef() // grup world-space buat animasi "kebangun": naik dari bawah + ngembang
   const segs = useRef()
+  const ringMat = useRef()
+  const segMat = useRef()
   const glowRing = useRef()
   const glowCore = useRef()
   const light = useRef()
@@ -72,62 +82,44 @@ export function Portal() {
   useFrame((state, delta) => {
     const t = state.clock.elapsedTime
     const d = scrollState.damped
-    const clamp01 = (v) => Math.max(0, Math.min(1, v))
 
-    // animasi KEBANGUN (sinkron kamera mendekat dari atas): portal naik dari
-    // bawah sambil ngembang, segmen dalamnya muter kenceng terus settle,
-    // kesannya gerbang lagi dirakit pas visitor dateng. Kelar sebelum top-down.
-    let up = clamp01((d - 0.78) / 0.08)
-    up = up * up * (3 - 2 * up)
-    if (build.current) {
-      build.current.position.y = -10 * (1 - up)
-      build.current.scale.setScalar(0.5 + 0.5 * up)
-    }
-
-    // segmen dalam muter, kenceng selama kebangun, kalem pas udah jadi
-    if (segs.current) segs.current.rotation.z -= delta * (0.14 + (1 - up) * 2.2)
+    // portal udah JADI dari awal (dulu dirakit naik dari bawah sambil muter
+    // kenceng di 0.78..0.86, pas banget di depan kamera, yang keliatan malah
+    // kapsul putih berserakan). Sekarang dia cuma "nyala" pelan pas kamera
+    // mundur dari SKILLS dan pertama kali ngeliat dia jauh di bawah
+    const ign = sstep(0.8, 0.885, d)
+    // muter di bidang ring (sumbu Y lokal). Dulu muternya di sumbu Z, jadi
+    // ring segmen yang harusnya datar malah jungkir balik tegak di depan kamera
+    if (segs.current) segs.current.rotation.y -= delta * 0.16
     if (group.current) group.current.rotation.z = Math.sin(t * 0.18) * 0.05
-    const pulse = 0.85 + Math.sin(t * 1.4) * 0.15
-    // GERBANG NYALA + KILATAN NEMBUS:
-    //  - win  : jendela hidup glow, nyala pas top-down, padam pas udah lewat
-    //  - cross: puncak tajam pas kamera nembus BIDANG ring (d~0.935). Di sinilah
-    //    portal MELEDAK terang = "masuk dunia lain" (permintaan Nehemiah)
-    // Pas top-down inti sengaja lembut (kristal jauh di bawah tetep kebaca),
-    // baru full-blast pas nembus, layar kesorot putih-cyan sekejap, terus padam.
-    const win = up * (1 - clamp01((d - 0.965) / 0.035))
-    // lebar kilatan dulu 0.02, padahal titik snap top-down ada di 0.915: pas
-    // pengunjung BERHENTI di situ kilatannya udah 37% nyala, jadi frame diamnya
-    // selalu gumpalan putih overexposed. 0.011 = di 0.915 tinggal 4%, puncak
-    // pas nembus (0.935) tetep sama terangnya
-    const cross = Math.exp(-Math.pow((d - 0.935) / 0.011, 2))
-    // RING RIM nyala TERANG sepanjang top-down (kayak referensi igloo ss#2), plus
-    // flare ekstra pas nembus. Core (lubang tengah) setengah kebuka: tetep glow
-    // tapi kristal jauh di bawah masih keintip, full-blaze cuma pas crossing.
-    if (glowRing.current) glowRing.current.material.opacity = win * (0.92 * pulse + 0.5 * cross)
-    if (glowCore.current) glowCore.current.material.opacity = win * (0.28 * pulse + 0.7 * cross)
-    // cahaya beneran: nyorot lumayan pas top-down, meledak pas nembus
-    if (light.current) light.current.intensity = win * (9 + 33 * cross)
+    const pulse = 0.88 + Math.sin(t * 1.4) * 0.12
+    // jendela hidup glow: nyala pas didatengin, padam setelah kamera lewat.
+    // Kilatan pas nembus pindah ke PortalFlash (overlay layar yang takarannya
+    // dijaga), bukan lampu 42 yang bikin segmen & kristal putih polos
+    const win = ign * (1 - clamp01((d - 0.955) / 0.03))
+    if (ringMat.current) ringMat.current.emissiveIntensity = 0.06 + 0.2 * win
+    if (segMat.current) segMat.current.emissiveIntensity = 0.06 + 0.2 * win
+    if (glowRing.current) glowRing.current.material.opacity = win * 0.22 * pulse
+    if (glowCore.current) glowCore.current.material.opacity = win * 0.12 * pulse
+    if (light.current) light.current.intensity = win * 6
   })
 
   return (
     // GLB torus dari Blender ngadep +Y (atas) → dipasang HORIZONTAL (tanpa tilt)
-    // biar ring-nya ngebingkai kristal pas kamera natap lurus dari atas. Grup
-    // build naik-turun di sumbu Y dunia (muncul dari bawah pas visitor dateng)
+    // biar ring-nya ngebingkai kristal pas kamera natap lurus dari atas
     <group position={PORTAL_POS}>
-    <group ref={build}>
-    <group rotation={[0, 0, 0]}>
       <group ref={group}>
         {ringGeo && (
           <mesh geometry={ringGeo}>
-            {/* ring GLOW dari es sendiri (bukan cuma additive plane): emissive
-                kuat + toneMapped off biar ring-nya kebaca sebagai gerbang nyala
-                terang kayak referensi igloo, bukan putih mati */}
-            <meshStandardMaterial color="#eef7ff" roughness={0.22} emissive="#bfe6ff" emissiveIntensity={1.5} toneMapped={false} />
+            {/* es padat, bukan putih mati: emissive dulu 1.5 (desktop gak pakai
+                tone mapping, jadi apa pun di atas 1 kepotong putih rata). Sekarang
+                emissive kecil, bentuk ring kebaca dari cahaya & pantulan env */}
+            <meshStandardMaterial ref={ringMat} color="#adc6d8" roughness={0.16} metalness={0.3} emissive="#9fd6f7" emissiveIntensity={0.06} />
           </mesh>
         )}
         {segGeo && (
           <mesh ref={segs} geometry={segGeo}>
-            <meshStandardMaterial color="#b7ccdb" roughness={0.4} emissive="#86c4ec" emissiveIntensity={0.6} />
+            <meshStandardMaterial ref={segMat} color="#9fb9cc" roughness={0.3} metalness={0.15} emissive="#86c4ec" emissiveIntensity={0.08} />
           </mesh>
         )}
         {/* LIGHT-LIGHTNYA: ring cahaya + inti terang, dua-duanya additive.
@@ -138,7 +130,7 @@ export function Portal() {
           <meshBasicMaterial
             map={ringGlowTex}
             transparent
-            opacity={0.75}
+            opacity={0}
             blending={THREE.AdditiveBlending}
             depthWrite={false}
             fog={false}
@@ -151,7 +143,7 @@ export function Portal() {
           <meshBasicMaterial
             map={coreGlowTex}
             transparent
-            opacity={0.55}
+            opacity={0}
             blending={THREE.AdditiveBlending}
             depthWrite={false}
             fog={false}
@@ -162,16 +154,87 @@ export function Portal() {
         {/* debu es kecil berkilau di sekitar mulut portal (pipih ngikut bidang ring) */}
         <Sparkles count={70} scale={[6.5, 1.6, 6.5]} size={2.4} speed={0.25} opacity={0.6} color="#ffffff" />
       </group>
-      {/* cahaya beneran nyorot ke bawah, intensity digerakin di useFrame:
-          lembut pas top-down, MELEDAK pas kamera nembus ring (nyorot kristal &
-          wajah di bawah), distance digedein biar nyampe landing zone yg jauh */}
-      {/* diturunin 2.2 di bawah bidang ring: dulu lampunya pas di tengah ring,
-          nempel ke 8 segmen dalam (jarak 1 sampai 2 unit) sampai segmennya putih
-          polos tanpa bentuk. Dari sini dia tetep nyorot kristal di bawah */}
-      <pointLight ref={light} color="#eaf6ff" intensity={12} distance={22} decay={2} position={[0, -2.2, 0]} />
+      {/* cahaya beneran nyorot ke bawah, lembut. Diturunin 2.2 di bawah bidang
+          ring: kalau pas di tengah ring dia nempel ke 8 segmen dalam sampai
+          segmennya putih polos tanpa bentuk */}
+      <pointLight ref={light} color="#eaf6ff" intensity={0} distance={22} decay={2} position={[0, -2.2, 0]} />
+      <PortalFlash />
     </group>
-    </group>
-    </group>
+  )
+}
+
+// ===== kilatan pas nembus ring =====
+// Quad layar penuh digambar PALING AKHIR, warnanya dicampur (bukan additive)
+// ke biru-es terang dengan takaran maksimal PEAK: layar jadi terang tapi bentuk
+// di baliknya tetep keintip, jadi gak pernah jadi putih mati. Pemicunya posisi
+// kamera beneran terhadap bidang ring (bukan angka scroll tebakan), naik cepet
+// pas kamera nyamperin bidangnya, terus meluruh ngikut waktu biar kerasa
+// walau snap-nya ngebut lewat ring cuma dalam beberapa frame.
+const PEAK = 0.6
+const flashVert = /* glsl */ `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = vec4( position.xy, 0.0, 1.0 );
+  }
+`
+const flashFrag = /* glsl */ `
+  varying vec2 vUv;
+  uniform float uAmt;
+  uniform float uAspect;
+  uniform vec3 uCore;
+  uniform vec3 uEdge;
+  void main() {
+    vec2 p = ( vUv - 0.5 ) * vec2( uAspect, 1.0 );
+    // inti paling terang di tengah (cahaya dari lubang ring), pinggir lebih
+    // dingin & tipis, kesannya cahaya nyembur dari depan, bukan layar dicat
+    float core = exp( -dot( p, p ) * 2.6 );
+    gl_FragColor = vec4( mix( uEdge, uCore, core ), uAmt * ( 0.5 + 0.5 * core ) );
+    #include <colorspace_fragment>
+  }
+`
+function PortalFlash() {
+  const mesh = useRef()
+  const size = useThree((s) => s.size)
+  const amt = useRef(0)
+  const mat = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        uniforms: {
+          uAmt: { value: 0 },
+          uAspect: { value: 1 },
+          uCore: { value: new THREE.Color('#f2faff') },
+          uEdge: { value: new THREE.Color('#b8daf2') },
+        },
+        vertexShader: flashVert,
+        fragmentShader: flashFrag,
+        transparent: true,
+        depthTest: false,
+        depthWrite: false,
+      }),
+    []
+  )
+  useFrame((state, delta) => {
+    const cam = state.camera.position
+    const d = scrollState.damped
+    let f = 0
+    if (!CALM && scrollState.bridge === 0 && d > 0.88 && d < 0.99) {
+      // cuma kalau kamera beneran lewat LUBANG ring (bukan pinggirnya)
+      const off = Math.hypot(cam.x - PORTAL_POS[0], cam.z - PORTAL_POS[2])
+      const dy = cam.y - PORTAL_POS[1]
+      const w = dy > 0 ? 1.4 : 2.2
+      f = Math.exp(-(dy / w) * (dy / w)) * (1 - sstep(1.2, 2.6, off))
+    }
+    amt.current = Math.max(f, amt.current * Math.exp(-delta / 0.3))
+    if (amt.current < 0.003) amt.current = 0
+    mat.uniforms.uAmt.value = amt.current * PEAK
+    mat.uniforms.uAspect.value = size.width / Math.max(1, size.height)
+    if (mesh.current) mesh.current.visible = amt.current > 0
+  })
+  return (
+    <mesh ref={mesh} material={mat} frustumCulled={false} renderOrder={5000} visible={false}>
+      <planeGeometry args={[2, 2]} />
+    </mesh>
   )
 }
 
