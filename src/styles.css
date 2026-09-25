@@ -807,6 +807,26 @@ body {
   100% { transform: translate(0, 0); }
 }
 
+/* ---------- konteks WebGL dicabut browser (glRuntime.js) ----------
+   Bahasa HUD: mono, huruf kapital renggang, pelat gelap solid kayak tombol OPEN.
+   Di atas loader & semua overlay, tapi cuma kotak kecil di tengah bawah */
+.gl-lost {
+  position: fixed; z-index: 60; left: 50%; transform: translateX(-50%);
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  width: min(360px, calc(100vw - 32px));
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 10px 10px 10px 16px;
+  background: linear-gradient(180deg, rgba(14, 26, 38, 0.92), rgba(10, 20, 30, 0.96));
+  border: 1px solid rgba(214, 234, 248, 0.42);
+  color: #e6eef4; font-size: 11px; line-height: 1.5; letter-spacing: 0.08em;
+}
+.gl-lost button {
+  flex: none; min-height: 44px; padding: 0 16px;
+  background: none; border: 1px solid rgba(214, 234, 248, 0.6); color: #f2f8fc;
+  font: inherit; font-size: 11px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; cursor: pointer;
+}
+.gl-lost button:focus-visible { outline: 2px solid #cfe8fa; outline-offset: 3px; }
+
 /* ---------- loader ---------- */
 .loader {
   position: fixed; inset: 0; z-index: 50; background: #b9c0c7;

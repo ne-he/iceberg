@@ -172,10 +172,19 @@ export function gpuSimSupported(gl) {
   )
 }
 
+// jalur yang kepilih, cuma dibaca overlay ?debug (gak ngaruh apa-apa)
+export const faceSimInfo = { path: 'pending' }
+
 // bikin simulasi, balikin null kalau device-nya gak sanggup (→ jalur CPU).
 // pos/col = state awal (array CPU yang sama), scatter = titik asal di mulut
 // portal, speeds/release = data statis per partikel, calm = reduced motion
-export function createFaceSim(gl, { count, pos, col, scatter, speeds, release, calm, repelR, repelMax }) {
+export function createFaceSim(gl, opts) {
+  const sim = buildFaceSim(gl, opts)
+  faceSimInfo.path = sim ? 'gpu' : 'cpu'
+  return sim
+}
+
+function buildFaceSim(gl, { count, pos, col, scatter, speeds, release, calm, repelR, repelMax }) {
   if (!gpuSimSupported(gl)) return null
   let W = Math.ceil(Math.sqrt(count))
   while (count % W) W++

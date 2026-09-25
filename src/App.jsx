@@ -6,6 +6,8 @@ import { UI, Loader } from './UI'
 import ChatDock from './chat/ChatDock'
 import TargetCursor from './components/TargetCursor/TargetCursor'
 import { GLACIER_VIDEO, LOW, SCENE_VIDEO } from './perf'
+import { quality } from './quality'
+import { onCanvasCreated } from './glRuntime'
 import { beginFocus, bgVideoState, chatState, dragState, endFocus, faceState, focusState, introState, scrollState } from './scrollState'
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
@@ -464,7 +466,11 @@ export default function App() {
           // mahal (transmission nge-render ulang scene). Turun ke 1 = beban
           // fragment shader langsung sepertiga-nya. MSAA juga dimatiin: di HP
           // mahal, dan tepiannya udah ketutup kabut + grain CSS
-          dpr={LOW ? [1, 1] : [1, 1.5]}
+          // dpr awal HP 1, desktop sampai 1.5. Nilainya dipegang quality.js
+          // (bisa turun kalau fps jeblok), prop ini WAJIB ngikut biar re-render
+          // App gak ngereset dpr balik ke nilai awal
+          dpr={quality.dpr}
+          onCreated={onCanvasCreated}
           gl={{ antialias: !LOW, alpha: true, powerPreference: 'high-performance' }}
           camera={{ fov: 32, position: [0, 1.8, 11], near: 0.1, far: 100 }}
           style={{ touchAction: 'pan-y' }}
