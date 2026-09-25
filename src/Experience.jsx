@@ -4,7 +4,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { Environment, Sparkles, useGLTF, useProgress } from '@react-three/drei'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import { easing } from 'maath'
-import { Crystal, IceBuffer } from './Crystal'
+import { Crystal, HoverLight, IceBuffer } from './Crystal'
 import { DiveFill, stepDive } from './Dive'
 import { ParticleFace } from './ParticleFace'
 import { Portal } from './Portal'
@@ -36,6 +36,9 @@ export default function Experience({ onOpen, hasVideo }) {
       <ambientLight intensity={1.1} />
       <directionalLight position={[6, 10, 4]} intensity={1.6} />
       <directionalLight position={[-6, -4, -6]} intensity={0.5} color="#dfe8ff" />
+      {/* lampu kilau hover (Crystal.jsx): kepasang dari awal, intensitas 0 pas
+          diem. Desktop doang, HP gak punya hover */}
+      {!LOW && <HoverLight />}
       <Suspense fallback={null}>
         {/* dulu preset="city" narik file ini dari CDN pihak ketiga (raw.githack)
             tiap kunjungan, sekarang dilayanin dari domain sendiri. Versi 512 px

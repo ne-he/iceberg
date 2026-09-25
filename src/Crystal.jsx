@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { Float, Html, MeshTransmissionMaterial, useCursor, useGLTF } from '@react-three/drei'
 import { easing } from 'maath'
 import { dragState, focusState, scrollState } from './scrollState'
@@ -126,115 +126,222 @@ export function IceBuffer() {
   return null
 }
 
-// ===== selubung wireframe LOKAL pas hover (permintaan Nehemiah) =====
-// dulu: hover = wireframe nyala di SELURUH batu (keliatan kayak model 3D telanjang).
-// sekarang: garis geometri cuma "kebuka" di sekitar titik kursor, disapu
-// gelombang cincin keluar = lapisan-lapisan yang bergerak melapisi batunya.
-// Teknik: barycentric wireframe (tiap vertex dikasih koordinat sudut segitiga,
-// fragment deket tepi segitiga = garis) di-mask jarak ke titik hover.
-//
-// Yang bikin versi pertama masih kerasa "kerangka Blender": SEMUA edge segitiga
-// kegambar, termasuk diagonal hasil triangulasi yang bukan bentuk asli objek.
-// Sekarang tiap edge dikasih flag (aEdge): cuma crease & siluet yang digambar
-// (lihat buildVeilGeometry), plus garisnya dikasih fresnel, simpul di sudut,
-// dan cincin scan bertepi tajam, jadi kebaca kayak struktur/HUD, bukan mesh mentah.
-const veilVert = /* glsl */ `
+// ===== hover = cahaya di permata, bukan garis HUD =====
+// Versi lama (selubung garis kontur, cincin scan, titik simpul) kebaca kayak
+// scanner sci-fi. Kristal keliatan kristal karena CAHAYA: miringin permata di
+// bawah lampu, facet yang pas ngadep lampu nyala tajam, sisanya kalem.
+// Jadi sekarang hover = satu lampu titik beneran yang ngikutin kursor (material
+// es fisik ngasih kilau specular + clearcoat asli), ditambah shader tipis di
+// atasnya: kilatan per facet, retakan tipis di crease asli dengan kilau yang
+// jalan di sepanjang tepinya, dan percikan dispersi kecil di sudut.
+
+// status hover bareng (cuma satu batu yang bisa di-hover sekaligus).
+// point/normal = titik & normal muka di bawah kursor (dunia), light = posisi
+// lampu hover sekarang, gain = 0..1 nyala lampu
+export const hoverFx = {
+  owner: null,
+  point: new THREE.Vector3(),
+  normal: new THREE.Vector3(0, 0, 1),
+  light: new THREE.Vector3(0, 999, 0),
+  gain: 0,
+  snap: false,
+}
+const LIGHT_PEAK = 5
+const LIGHT_DIST = 2.4
+const _v = new THREE.Vector3()
+const _r = new THREE.Vector3()
+const _t1 = new THREE.Vector3()
+const _t2 = new THREE.Vector3()
+const _want = new THREE.Vector3()
+const _up = new THREE.Vector3(0, 1, 0)
+const _right = new THREE.Vector3(1, 0, 0)
+
+// Lampu hover. Dipasang SEKALI dari awal dengan intensitas 0 dan cuma
+// intensitasnya yang dianimasi: nambah/copot lampu pas runtime bikin SEMUA
+// material yang kena cahaya dikompilasi ulang (freeze pas hover pertama).
+// Posisinya = arah pantul pandangan di titik kursor, jadi facet di bawah kursor
+// pasti mantulin lampu ini ke kamera, persis kayak miringin permata ke lampu.
+// Plus goyangan kecil ala permata dipegang tangan, biar kilaunya tetep jalan
+// di facet & tepi walau kursornya diem. Desktop doang (HP gak punya hover).
+export function HoverLight() {
+  const light = useRef()
+  useFrame((state, delta) => {
+    const L = light.current
+    if (!L) return
+    if (hoverFx.owner) {
+      const P = hoverFx.point
+      _v.subVectors(state.camera.position, P).normalize()
+      const nv = hoverFx.normal.dot(_v)
+      // pantulan v terhadap normal muka: r = 2(n.v)n - v
+      _r.copy(hoverFx.normal).multiplyScalar(2 * Math.abs(nv) * Math.sign(nv || 1)).sub(_v).normalize()
+      _t1.crossVectors(_r, Math.abs(_r.y) < 0.9 ? _up : _right).normalize()
+      _t2.crossVectors(_r, _t1)
+      const w = state.clock.elapsedTime
+      _want
+        .copy(P)
+        .addScaledVector(_r, LIGHT_DIST)
+        .addScaledVector(_t1, Math.cos(w * 1.9) * 0.3)
+        .addScaledVector(_t2, Math.sin(w * 1.3) * 0.3)
+      if (hoverFx.snap) {
+        L.position.copy(_want)
+        hoverFx.snap = false
+      } else easing.damp3(L.position, _want, 0.12, delta)
+    }
+    const on = !!hoverFx.owner && focusState.phase === 'idle'
+    easing.damp(hoverFx, 'gain', on ? 1 : 0, 0.16, delta)
+    L.intensity = hoverFx.gain * LIGHT_PEAK
+    hoverFx.light.copy(L.position)
+  })
+  return <pointLight ref={light} color="#eef7ff" intensity={0} distance={7} decay={2} position={[0, 999, 0]} />
+}
+
+// shader kilau (additive, digambar di atas es). Semua dihitung di ruang lokal
+// batu: uLight/uCam/uPoint dikonversi tiap frame, batunya muter
+const glintVert = /* glsl */ `
   attribute vec3 aBary;
   attribute vec3 aEdge;
+  attribute vec3 aFaceN;
+  attribute vec3 aFaceC;
   varying vec3 vBary;
   varying vec3 vEdge;
   varying vec3 vPos;
-  varying vec3 vN;
-  varying vec3 vView;
-  uniform vec3 uPoint;
-  uniform float uTime;
-  uniform float uRadius;
-  uniform float uReach;
+  varying vec3 vFaceN;
+  varying vec3 vFaceC;
   void main() {
     vBary = aBary;
     vEdge = aEdge;
     vPos = position;
-    vN = normalize(normalMatrix * normal);
-    float d = distance(position, uPoint) / uRadius;
-    float mask = 1.0 - smoothstep(0.0, 1.0, d);
-    // "napas" lapisan: permukaan veil ngangkat tipis ngikutin gelombang yang
-    // nyapu keluar dari titik hover, kerasa ada selubung yang gerak, bukan tempelan
-    float wave = 0.5 + 0.5 * sin(d * 13.0 - uTime * 3.2);
-    vec3 p = position + normal * (0.004 + 0.022 * mask * wave) * uReach;
-    vec4 mv = modelViewMatrix * vec4(p, 1.0);
-    vView = normalize(-mv.xyz);
-    gl_Position = projectionMatrix * mv;
+    vFaceN = aFaceN;
+    vFaceC = aFaceC;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
 `
-const veilFrag = /* glsl */ `
+const glintFrag = /* glsl */ `
   varying vec3 vBary;
   varying vec3 vEdge;
   varying vec3 vPos;
-  varying vec3 vN;
-  varying vec3 vView;
+  varying vec3 vFaceN;
+  varying vec3 vFaceC;
   uniform vec3 uPoint;
-  uniform vec3 uColor;
-  uniform vec3 uHot;
-  uniform float uTime;
+  uniform vec3 uLight;
+  uniform vec3 uCam;
   uniform float uRadius;
   uniform float uReach;
+  uniform float uGain;
   void main() {
+    float k = uReach * uGain;
     float d = distance(vPos, uPoint) / uRadius;
-    float mask = 1.0 - smoothstep(0.26, 1.0, d);
-    float k = mask * uReach;
-    if (k < 0.004) discard;
+    if (k < 0.003 || d > 1.3) discard;
+    vec3 N = normalize(vFaceN);
+    vec3 V = normalize(uCam - vPos);
+    vec3 H = normalize(normalize(uLight - vPos) + V);
 
-    // edge yang dimatiin (diagonal triangulasi) jaraknya dipaksa jauh, jadi
-    // gak pernah kegambar. Sisanya: jarak fragment ke edge terdekat → garis AA
+    // 1) kilatan per facet. Half-vector dihitung di titik TENGAH muka, jadi satu
+    //    facet nyala rata kayak cermin kecil yang pas ngadep lampu (pangkat
+    //    tinggi = cuma facet yang miringnya pas, tetangganya tetep kalem)
+    vec3 Hc = normalize(normalize(uLight - vFaceC) + normalize(uCam - vFaceC));
+    float facet = pow(max(dot(N, Hc), 0.0), 320.0);
+    // titik panas pantulan lampunya sendiri di dalam facet
+    float spot = pow(max(dot(N, H), 0.0), 2600.0);
+    float nearF = 1.0 - smoothstep(0.35, 1.25, d);
+
+    // 2) retakan tipis, CUMA di crease asli (diagonal triangulasi & lipatan
+    //    landai dimatiin lewat aEdge), dan cuma deket kursor
     vec3 b = mix(vec3(4.0), vBary, step(0.5, vEdge));
     float w = min(b.x, min(b.y, b.z));
     float aa = max(fwidth(w), 1e-5);
-    float line = 1.0 - smoothstep(0.0, aa * 2.0, w);
-    float halo = 1.0 - smoothstep(0.0, aa * 9.0, w); // pendar tipis di sekitar garis
+    float line = 1.0 - smoothstep(aa * 0.4, aa * 1.4, w);
+    float glow = 1.0 - smoothstep(0.0, aa * 3.0, w);
+    float nearE = 1.0 - smoothstep(0.15, 0.85, d);
 
-    // simpul kecil di titik sudut mesh (cuma sudut yang punya edge aktif)
-    float c = max(vBary.x, max(vBary.y, vBary.z));
-    float node = smoothstep(0.978, 0.999, c) * max(vEdge.x, max(vEdge.y, vEdge.z));
+    // kilau yang jalan di tepi: tepi dianggap bevel bulat tipis, normalnya
+    // miring dari muka ke arah luar tepi (gradien barycentric-nya). Titik yang
+    // pas mantulin lampu = titik terang di tepi, dan titik itu GESER sepanjang
+    // tepi tiap lampu/kursor/batu gerak
+    vec3 dpx = dFdx(vPos);
+    vec3 dpy = dFdy(vPos);
+    vec3 bx = dFdx(vBary);
+    vec3 by = dFdy(vBary);
+    vec3 ng = cross(dpx, dpy);
+    vec3 r1 = cross(dpy, ng);
+    vec3 r2 = cross(ng, dpx);
+    float det = dot(dpx, r1);
+    float bi = w == b.x ? 0.0 : (w == b.y ? 1.0 : 2.0);
+    vec2 db = bi < 0.5 ? vec2(bx.x, by.x) : (bi < 1.5 ? vec2(bx.y, by.y) : vec2(bx.z, by.z));
+    vec3 g = (db.x * r1 + db.y * r2) * sign(det);
+    vec3 outward = length(g) > 1e-20 ? -normalize(g) : vec3(0.0);
+    vec3 Nb = normalize(N + outward * 0.5);
+    float edge = pow(max(dot(Nb, H), 0.0), 700.0);
 
-    // fresnel: garis yang miring ngadep tepi siluet lebih nyala, kesan selubung
-    // beneran MEMBUNGKUS permukaan, bukan tekstur garis yang ditempel datar
-    float fres = pow(1.0 - abs(dot(normalize(vN), normalize(vView))), 2.0);
-
-    // cincin scan nyapu keluar dari titik sentuh: tepi depan tajam, ekor meredup
-    float ph = fract(d * 2.4 - uTime * 0.5);
-    float scan = pow(1.0 - ph, 9.0);
-
-    // garis kontur konsentris yang ngikutin lekuk permukaan (kayak garis
-    // topografi), ini yang bikin kebaca "lagi dipindai berlapis", bukan
-    // kerangka mesh. Tebalnya dihitung dari turunan biar tetep tipis rata
-    float cd = d * 7.5 - uTime * 0.42;
-    float cw = fwidth(cd) * 1.3;
-    float contour = smoothstep(0.5 - cw, 0.5, abs(fract(cd) - 0.5));
-    contour *= 1.0 - smoothstep(0.55, 0.95, d); // ngilang mulus di tepi selubung
-    // tepi selubungnya sendiri ikut bergaris = "lapisan" punya batas yang kebaca
-    float rim = smoothstep(0.82, 0.96, d) * (1.0 - smoothstep(0.96, 1.04, d));
-
-    float energy = 0.5 + 0.65 * fres + 1.5 * scan;
-    // warna dinaikin di puncak cincin sampai lewat ambang bloom (0.88),
-    // jadi garisnya dapet pendar GPU beneran, bukan cuma putih datar
-    vec3 col = mix(uColor, uHot, clamp(scan * 1.15 + fres * 0.3, 0.0, 1.0)) * (1.0 + 1.5 * scan);
-    float a = line * energy + halo * 0.1 * (0.35 + fres) + node * 0.9 + rim * 0.3 + fres * 0.06
-            + contour * 0.32 * (0.45 + 0.55 * fres);
-    gl_FragColor = vec4(col, a * k);
+    vec3 ice = vec3(0.84, 0.93, 1.0);
+    float fl = facet * nearF;
+    vec3 col = ice * (fl * 0.6 + line * 0.14 * nearE)
+             + vec3(1.0) * (spot * nearF * 1.5 + edge * glow * nearE * 1.8);
+    // facet yang nyala dapet sedikit pelangi di pinggir lobus-nya (dispersi es)
+    float rim = pow(max(dot(N, Hc), 0.0), 120.0) - facet;
+    col += vec3(-0.05, 0.02, 0.12) * rim * nearF * 0.8;
+    gl_FragColor = vec4(max(col, 0.0) * k, 1.0);
   }
 `
 
-// geometri veil dipakai bareng antar batu yang modelnya sama → cache biar
-// analisis crease-nya cuma sekali per model
-const veilCache = new WeakMap()
+// percikan dispersi di sudut: sprite bintang 4 sinar, tiap kanal warna ukurannya
+// beda tipis jadi tepinya pecah pelangi. Nyala cuma di sudut yang lagi mantulin
+// lampu dan deket kursor, plus kedip kecil
+const sparkVert = /* glsl */ `
+  attribute vec3 aN;
+  attribute float aSeed;
+  uniform vec3 uPoint;
+  uniform vec3 uLight;
+  uniform vec3 uCam;
+  uniform float uRadius;
+  uniform float uReach;
+  uniform float uGain;
+  uniform float uTime;
+  uniform float uPx;
+  varying float vI;
+  void main() {
+    vec3 N = normalize(aN);
+    vec3 V = normalize(uCam - position);
+    vec3 H = normalize(normalize(uLight - position) + V);
+    float g = pow(max(dot(N, H), 0.0), 48.0);
+    float d = distance(position, uPoint) / uRadius;
+    float nearS = 1.0 - smoothstep(0.1, 0.75, d);
+    float tw = 0.55 + 0.45 * sin(uTime * (4.0 + aSeed * 5.0) + aSeed * 40.0);
+    vI = g * nearS * tw * uReach * uGain * step(0.05, dot(N, V));
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    // naik dikit ke arah kamera biar gak ketelen permukaan es sendiri
+    mv.xyz += normalize(-mv.xyz) * 0.04;
+    gl_Position = projectionMatrix * mv;
+    gl_PointSize = vI > 0.01 ? uPx * (0.45 + 0.55 * vI) : 0.0;
+  }
+`
+const sparkFrag = /* glsl */ `
+  varying float vI;
+  float star(vec2 q) {
+    float r = length(q);
+    float core = exp(-r * r * 90.0);
+    float rays = exp(-abs(q.x) * 55.0) * exp(-abs(q.y) * 5.0) + exp(-abs(q.y) * 55.0) * exp(-abs(q.x) * 5.0);
+    return core + rays * 0.55;
+  }
+  void main() {
+    vec2 q = gl_PointCoord - 0.5;
+    vec3 c = vec3(star(q * 0.94), star(q), star(q * 1.1));
+    c *= 1.0 - smoothstep(0.34, 0.5, max(abs(q.x), abs(q.y)));
+    gl_FragColor = vec4(c * vI * 1.7, 1.0);
+  }
+`
 
-// Bangun geometri selubung: non-indexed + koordinat barycentric + flag edge.
-// Flag-nya nentuin edge mana yang layak digambar: edge batas (cuma dipunya 1
-// segitiga) selalu ikut, sisanya dinilai dari sudut dihedral antar dua muka.
-// Ambangnya diambil dari persentil (bukan angka mati) biar densitas garisnya
-// konsisten dipakai di model manapun: rapat atau jarang triangulasinya.
-function buildVeilGeometry(src) {
-  const cached = veilCache.get(src)
+// geometri kilau dipakai bareng antar batu yang modelnya sama → cache biar
+// analisis crease-nya cuma sekali per model
+const glintCache = new WeakMap()
+
+// Bangun geometri kilau: non-indexed + barycentric + flag crease + normal &
+// titik tengah per muka, plus titik-titik sudut buat percikan.
+// Crease = edge yang sudut dihedral-nya tajam. Ambangnya persentil 75 (dikurung
+// 30°..50°): di batu ini persentil 50 cuma 21°, itu masih lipatan landai hasil
+// triangulasi, yang kebaca "kerangka mesh", bukan retakan kristal.
+function buildGlintGeometry(src) {
+  const cached = glintCache.get(src)
   if (cached) return cached
 
   const g = src.index ? src.toNonIndexed() : src.clone()
@@ -250,8 +357,9 @@ function buildVeilGeometry(src) {
   }
   const ek = (i, j) => (keys[i] < keys[j] ? `${keys[i]}|${keys[j]}` : `${keys[j]}|${keys[i]}`)
 
-  // normal per muka
+  // normal + titik tengah per muka
   const fn = new Float32Array(tri * 3)
+  const fc = new Float32Array(tri * 3)
   const va = new THREE.Vector3()
   const vb = new THREE.Vector3()
   const vc = new THREE.Vector3()
@@ -266,6 +374,9 @@ function buildVeilGeometry(src) {
     fn[t * 3] = nr.x
     fn[t * 3 + 1] = nr.y
     fn[t * 3 + 2] = nr.z
+    fc[t * 3] = (va.x + vb.x + vc.x) / 3
+    fc[t * 3 + 1] = (va.y + vb.y + vc.y) / 3
+    fc[t * 3 + 2] = (va.z + vb.z + vc.z) / 3
   }
 
   // muka-muka yang berbagi tiap edge. Barycentric x=0 di edge SEBERANG vertex 0,
@@ -286,7 +397,7 @@ function buildVeilGeometry(src) {
     }
   }
 
-  // sudut dihedral per edge (edge batas = tak hingga, selalu digambar)
+  // sudut dihedral per edge (edge batas = tak hingga, selalu dihitung crease)
   const angle = new Map()
   const inner = []
   share.forEach((ts, k) => {
@@ -301,21 +412,22 @@ function buildVeilGeometry(src) {
     angle.set(k, ang)
     inner.push(ang)
   })
-  // ambang = persentil 52 (kira-kira separuh edge kebuang), dikurung 3.5°..20°
-  // biar mesh halus gak jadi kosong melompong dan mesh faceted gak ramai lagi
   inner.sort((a, b) => a - b)
-  const p52 = inner.length ? inner[Math.floor(inner.length * 0.52)] : 0.2
-  const limit = Math.min(0.35, Math.max(0.06, p52))
+  const p75 = inner.length ? inner[Math.floor(inner.length * 0.75)] : 0.6
+  const limit = Math.min(0.87, Math.max(0.52, p75))
 
   const bary = new Float32Array(n * 3)
   const emask = new Float32Array(n * 3)
+  const faceN = new Float32Array(n * 3)
+  const faceC = new Float32Array(n * 3)
+  // jumlah crease per simpul + normal rata-rata muka di sekitarnya (buat sudut)
+  const vCrease = new Map()
+  const vNormal = new Map()
+  const bump = (i) => vCrease.set(keys[i], (vCrease.get(keys[i]) ?? 0) + 1)
   for (let t = 0; t < tri; t++) {
     const i0 = t * 3
-    const on = [
-      angle.get(ek(i0 + 1, i0 + 2)) >= limit ? 1 : 0,
-      angle.get(ek(i0 + 2, i0)) >= limit ? 1 : 0,
-      angle.get(ek(i0, i0 + 1)) >= limit ? 1 : 0,
-    ]
+    const ks = [ek(i0 + 1, i0 + 2), ek(i0 + 2, i0), ek(i0, i0 + 1)]
+    const on = ks.map((k) => (angle.get(k) >= limit ? 1 : 0))
     for (let v = 0; v < 3; v++) {
       const o = (i0 + v) * 3
       bary[o + v] = 1
@@ -323,24 +435,74 @@ function buildVeilGeometry(src) {
       emask[o] = on[0]
       emask[o + 1] = on[1]
       emask[o + 2] = on[2]
+      for (let c = 0; c < 3; c++) {
+        faceN[o + c] = fn[t * 3 + c]
+        faceC[o + c] = fc[t * 3 + c]
+      }
+      const vk = keys[i0 + v]
+      const acc = vNormal.get(vk) ?? [0, 0, 0, i0 + v]
+      acc[0] += fn[t * 3]
+      acc[1] += fn[t * 3 + 1]
+      acc[2] += fn[t * 3 + 2]
+      vNormal.set(vk, acc)
+    }
+    // tiap crease edge dihitung sekali per muka, jadi dibagi 2 nanti
+    if (on[0]) {
+      bump(i0 + 1)
+      bump(i0 + 2)
+    }
+    if (on[1]) {
+      bump(i0 + 2)
+      bump(i0)
+    }
+    if (on[2]) {
+      bump(i0)
+      bump(i0 + 1)
     }
   }
 
   g.setAttribute('aBary', new THREE.BufferAttribute(bary, 3))
   g.setAttribute('aEdge', new THREE.BufferAttribute(emask, 3))
+  g.setAttribute('aFaceN', new THREE.BufferAttribute(faceN, 3))
+  g.setAttribute('aFaceC', new THREE.BufferAttribute(faceC, 3))
   g.computeBoundingSphere()
-  veilCache.set(src, g)
-  return g
+
+  // sudut beneran = simpul yang ketemu >= 3 crease
+  const cp = []
+  const cn = []
+  const cs = []
+  vNormal.forEach((acc, vk) => {
+    if ((vCrease.get(vk) ?? 0) / 2 < 3) return
+    const i = acc[3]
+    const l = Math.hypot(acc[0], acc[1], acc[2]) || 1
+    cp.push(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2])
+    cn.push(acc[0] / l, acc[1] / l, acc[2] / l)
+    const h = Math.sin(pos[i * 3] * 127.1 + pos[i * 3 + 1] * 311.7 + pos[i * 3 + 2] * 74.7) * 43758.5453
+    cs.push(h - Math.floor(h))
+  })
+  const corners = new THREE.BufferGeometry()
+  corners.setAttribute('position', new THREE.Float32BufferAttribute(cp, 3))
+  corners.setAttribute('aN', new THREE.Float32BufferAttribute(cn, 3))
+  corners.setAttribute('aSeed', new THREE.Float32BufferAttribute(cs, 1))
+  corners.computeBoundingSphere()
+
+  const out = { veil: g, corners }
+  glintCache.set(src, out)
+  return out
 }
 
-// efek tambahan di dalam batu gak boleh nangkep pointer
+// efek tambahan di dalam batu gak boleh nangkep pointer: raycast Points
+// punya ambang 1 unit, bakal "kena" duluan dan event-nya gak punya face
 const noRaycast = () => null
+const _lp = new THREE.Vector3()
 
 export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
   const { nodes } = useGLTF(data.model ?? MODEL)
+  const camera = useThree((s) => s.camera)
   const group = useRef()
   const spinner = useRef()
-  const veil = useRef()
+  const glint = useRef()
+  const spark = useRef()
   const win = useRef()
   const ice = useRef()
   const dragging = useRef(null)
@@ -355,30 +517,48 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
 
   const geometry = useMemo(() => Object.values(nodes).find((n) => n.isMesh)?.geometry, [nodes])
 
-  // geometri veil (barycentric + flag edge), di-cache per model.
+  // geometri kilau (barycentric + crease + sudut), di-cache per model.
   // Di HP gak dibangun sama sekali: ini efek HOVER, dan layar sentuh gak punya
-  // hover. Lagipula buildVeilGeometry itu analisis crease per-segitiga (bikin
-  // string key tiap vertex + Map antar muka) yang bikin loading nyendat di HP
-  const veilGeo = useMemo(() => (geometry && !LOW ? buildVeilGeometry(geometry) : null), [geometry])
+  // hover. Lagipula analisis crease per-segitiga (string key tiap vertex + Map
+  // antar muka) bikin loading nyendat di HP
+  const glintGeo = useMemo(() => (geometry && !LOW ? buildGlintGeometry(geometry) : null), [geometry])
 
-  const veilMat = useMemo(
+  const uniforms = useMemo(
+    () => ({
+      uPoint: { value: new THREE.Vector3(0, 999, 0) },
+      uLight: { value: new THREE.Vector3(0, 999, 0) },
+      uCam: { value: new THREE.Vector3() },
+      uRadius: { value: 1 },
+      uReach: { value: 0 },
+      uGain: { value: 0 },
+      uTime: { value: 0 },
+      uPx: { value: 26 },
+    }),
+    []
+  )
+  const glintMat = useMemo(
     () =>
       new THREE.ShaderMaterial({
-        uniforms: {
-          uPoint: { value: new THREE.Vector3(0, 999, 0) },
-          uColor: { value: new THREE.Color('#bfe2ff') }, // garis: biru es
-          uHot: { value: new THREE.Color('#ffffff') }, // puncak cincin scan
-          uTime: { value: 0 },
-          uRadius: { value: 1 },
-          uReach: { value: 0 },
-        },
-        vertexShader: veilVert,
-        fragmentShader: veilFrag,
+        uniforms,
+        vertexShader: glintVert,
+        fragmentShader: glintFrag,
         transparent: true,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
       }),
-    []
+    [uniforms]
+  )
+  const sparkMat = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        uniforms,
+        vertexShader: sparkVert,
+        fragmentShader: sparkFrag,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    [uniforms]
   )
   // daftarin mesh es ke IceBuffer: disembunyiin pas buffer dirender, dan dipakai
   // buat ngecek masih ada batu yang kelihatan atau nggak
@@ -390,17 +570,14 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
   }, [])
 
   useEffect(() => {
-    // radius area yang kebuka ~ separuh badan batu, cukup buat kerasa "lokal"
-    if (veilGeo) veilMat.uniforms.uRadius.value = (veilGeo.boundingSphere?.radius ?? 1) * 0.55
-  }, [veilGeo, veilMat])
-
-  useEffect(() => {
     if (!geometry) return
     if (!geometry.boundingSphere) geometry.computeBoundingSphere()
     const bs = geometry.boundingSphere
     // radius dunia batu buat titik berhenti kamera pas nyelam (Dive.jsx)
     rockRadius.set(data.id, (bs.radius + bs.center.length()) * (data.scale ?? 1))
-  }, [geometry, data.id, data.scale])
+    // radius area kilau ~ separuh badan batu, cukup buat kerasa "lokal"
+    uniforms.uRadius.value = bs.radius * 0.55
+  }, [geometry, data.id, data.scale, uniforms])
 
   useFrame((state, delta) => {
     if (!group.current || !spinner.current) return
@@ -417,21 +594,26 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
     // udah nutup penuh, es aslinya disembunyiin (hemat transmission + IceBuffer)
     if (win.current) win.current.visible = mine && diveFx.k > 0.001
     if (ice.current) ice.current.visible = !(mine && diveFx.k > 0.999)
-    // selubung wireframe lokal: fade in/out + titik hover dikejar pake damping
-    // (batunya muter, jadi titik world harus dikonversi ulang ke local tiap frame)
-    if (veil.current) {
-      const u = veilMat.uniforms
+
+    if (glint.current) {
+      const u = uniforms
       u.uTime.value += delta
-      easing.damp(u.uReach, 'value', hovered && F.phase === 'idle' ? 1 : 0, 0.22, delta)
+      const want = hovered && F.phase === 'idle' && hoverFx.owner === data.id
+      easing.damp(u.uReach, 'value', want ? 1 : 0, 0.2, delta)
+      u.uGain.value = hoverFx.gain
       // di luar hover shader-nya discard semua fragment, tapi mesh-nya tetep
       // digambar full (vertex shader + rasterisasi) di 5 batu tiap frame.
-      // Disembunyiin total pas gak dipakai. Raycast hover gak kepengaruh:
-      // yang nangkep pointer itu mesh es-nya, bukan selubung ini
+      // Disembunyiin total pas gak dipakai
       const on = u.uReach.value > 0.002
-      veil.current.visible = on
+      glint.current.visible = on
+      if (spark.current) spark.current.visible = on
       if (on) {
-        veil.current.worldToLocal(lv.copy(hoverPt.current))
+        const g = glint.current
+        g.worldToLocal(lv.copy(hoverPt.current))
         easing.damp3(u.uPoint.value, lv, 0.1, delta)
+        u.uLight.value.copy(g.worldToLocal(_lp.copy(hoverFx.light)))
+        u.uCam.value.copy(g.worldToLocal(_lp.copy(state.camera.position)))
+        u.uPx.value = 26 * state.viewport.dpr
       }
     }
     if (interactive) {
@@ -441,26 +623,50 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
     }
   })
 
+  // titik hover dari hasil raycast: titik + normal MUKA (flat) di dunia
+  const aim = (e) => {
+    hoverFx.owner = data.id
+    hoverFx.point.copy(e.point)
+    hoverPt.current.copy(e.point)
+    if (e.face) hoverFx.normal.copy(e.face.normal).transformDirection(e.object.matrixWorld)
+  }
+  // hover lewat label (gak ada titik raycast): pura-pura kursor di muka depan batu
+  const aimFront = () => {
+    if (!group.current) return
+    group.current.getWorldPosition(wp)
+    _v.subVectors(camera.position, wp).normalize()
+    hoverFx.owner = data.id
+    hoverFx.normal.copy(_v)
+    hoverFx.point.copy(wp).addScaledVector(_v, (rockRadius.get(data.id) ?? 1.4) * 0.7)
+    hoverPt.current.copy(hoverFx.point)
+    hoverFx.snap = true
+  }
+  const unaim = () => {
+    setHovered(false)
+    if (hoverFx.owner === data.id) hoverFx.owner = null
+  }
+
   const events = {
     onPointerOver: (e) => {
       e.stopPropagation()
       // di layar sentuh, pointerOver ikut kepicu pas jari nyentuh TAPI pointerOut
       // sering gak pernah dateng, jadi hover-nya nyangkut nyala selamanya:
-      // batu ke-scale 1.07 terus dan shader veil terus jalan. Sekalian percuma,
+      // batu ke-scale 1.07 terus dan shader kilau terus jalan. Sekalian percuma,
       // HP emang gak punya hover.
       if (e.pointerType === 'touch') return
       setHovered(true)
-      // titik masuk langsung di-snap (tanpa damping) biar veil-nya nongol pas
+      aim(e)
+      // titik masuk langsung di-snap (tanpa damping) biar kilaunya nongol pas
       // di tempat kursor nyentuh, bukan nyapu dari posisi hover sebelumnya
-      hoverPt.current.copy(e.point)
-      if (veil.current) veilMat.uniforms.uPoint.value.copy(veil.current.worldToLocal(lv.copy(e.point)))
+      hoverFx.snap = true
+      if (glint.current) uniforms.uPoint.value.copy(glint.current.worldToLocal(lv.copy(e.point)))
     },
     onPointerMove: (e) => {
       if (e.pointerType === 'touch') return
-      hoverPt.current.copy(e.point)
+      aim(e)
     },
-    onPointerOut: () => setHovered(false),
-    onPointerCancel: () => setHovered(false),
+    onPointerOut: unaim,
+    onPointerCancel: unaim,
   }
   if (interactive) {
     events.onClick = (e) => {
@@ -546,9 +752,26 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
               {...ICE}
             />
           </mesh>
-          {/* selubung wireframe lokal: cuma sekitar kursor yang kebuka garis
-              geometrinya, disapu gelombang cincin keluar (shader di atas) */}
-          {veilGeo && <mesh ref={veil} geometry={veilGeo} material={veilMat} scale={1.004} visible={false} />}
+          {/* kilau hover: facet, retakan, percikan sudut (shader di atas) */}
+          {glintGeo && (
+            <mesh
+              ref={glint}
+              geometry={glintGeo.veil}
+              material={glintMat}
+              scale={1.004}
+              visible={false}
+              raycast={noRaycast}
+            />
+          )}
+          {glintGeo && (
+            <points
+              ref={spark}
+              geometry={glintGeo.corners}
+              material={sparkMat}
+              visible={false}
+              raycast={noRaycast}
+            />
+          )}
           {/* jendela video pas nyelam (material bareng dari Dive.jsx) */}
           {interactive && (
             <mesh
@@ -568,8 +791,11 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
               className={`anno ${near ? 'is-visible' : ''} ${hovered ? 'is-hot' : ''}`}
               style={{ pointerEvents: near ? 'auto' : 'none' }}
               onClick={() => onOpen?.(data.id, data.position)}
-              onPointerOver={() => setHovered(true)}
-              onPointerOut={() => setHovered(false)}
+              onPointerOver={() => {
+                setHovered(true)
+                aimFront()
+              }}
+              onPointerOut={unaim}
             >
               <div className="anno-code">{data.tag}</div>
               <div className="anno-name">{data.name}</div>
