@@ -5,7 +5,7 @@ import Experience from './Experience'
 import { UI, Loader } from './UI'
 import ChatDock from './chat/ChatDock'
 import TargetCursor from './components/TargetCursor/TargetCursor'
-import { LOW } from './perf'
+import { GLACIER_VIDEO, LOW, SCENE_VIDEO } from './perf'
 import { beginFocus, bgVideoState, chatState, dragState, endFocus, faceState, focusState, introState, scrollState } from './scrollState'
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
@@ -413,7 +413,7 @@ export default function App() {
       closeChat,
     }
     // cek beneran video, dev server Vite ngebales 200 text/html buat file yang gak ada
-    fetch('/scene/scene.mp4', { method: 'HEAD' })
+    fetch(SCENE_VIDEO, { method: 'HEAD' })
       .then((r) => {
         const type = r.headers.get('content-type') || ''
         if (r.ok && type.includes('video')) setHasVideo(true)
@@ -424,7 +424,7 @@ export default function App() {
       })
     // video loop "dalam glacier" buat background panel batu. File-nya di
     // public/glacier_inside.mp4; kalau ga ketemu, panel fallback ke gradient es.
-    fetch('/glacier_inside.mp4', { method: 'HEAD' })
+    fetch(GLACIER_VIDEO, { method: 'HEAD' })
       .then((r) => {
         const type = r.headers.get('content-type') || ''
         if (r.ok && type.includes('video')) setHasGlacier(true)
@@ -438,7 +438,7 @@ export default function App() {
         <video
           ref={videoRef}
           className="bg-video"
-          src="/scene/scene.mp4"
+          src={SCENE_VIDEO}
           autoPlay
           muted
           loop

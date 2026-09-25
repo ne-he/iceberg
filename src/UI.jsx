@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useProgress } from '@react-three/drei'
 import { beginIntro, bgVideoState, chatState, faceState, focusState, introState, scrollState } from './scrollState'
 import { warmState } from './warmup'
+import { GLACIER_VIDEO } from './perf'
 import { AVAILABILITY, CONTACT, CRYSTALS, PANELS, RESUME_URL, SECTION_WORDS } from './content'
 import DecryptedText from './components/DecryptedText'
 
@@ -215,7 +216,7 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
   // panel nongol). Sekali dipasang gak dilepas lagi
   const [vidArmed, setVidArmed] = useState(false)
   const vidArmedRef = useRef(false)
-  const vidSrc = vidArmed || panel ? '/glacier_inside.mp4' : undefined
+  const vidSrc = vidArmed || panel ? GLACIER_VIDEO : undefined
 
   useEffect(() => {
     // HUD render only, scrollState di-drive master di App.jsx (infinite loop).
