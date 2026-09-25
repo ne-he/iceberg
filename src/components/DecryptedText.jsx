@@ -382,7 +382,7 @@ export default function DecryptedText({
       style={styles.wrapper}
       {...animateProps}
       {...props}>
-      <span style={styles.srOnly}>{displayText}</span>
+      <span style={styles.srOnly}>{text}</span>
       <span aria-hidden="true">
         {displayText.split('').map((char, index) => {
           const isRevealedOrDone = revealedIndices.has(index) || (!isAnimating && isDecrypted);

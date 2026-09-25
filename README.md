@@ -4,7 +4,7 @@ A scrollable 3D web CV. Instead of a static resume page, the whole site is one c
 camera descent through a foggy monochrome glacier, where each section of my background
 surfaces as a piece of the scene.
 
-**Live:** https://iceberg-eight.vercel.app
+**Live:** https://nemiiceberg.vercel.app
 
 ## What it does
 

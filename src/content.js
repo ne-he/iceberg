@@ -176,8 +176,9 @@ export const PANELS = {
     kicker: "things i've built",
     title: 'PROJECTS',
     // Urutan asli permintaan Nehemiah langsung, dengan VERDICT dan PULSE
-    // disisipkan di depan waktu keduanya masuk roster (9 Agu 2026). Sepuluh
-    // teratas dikasih link; sisanya cukup disebut di satu baris penutup.
+    // disisipkan di depan waktu keduanya masuk roster (9 Agu 2026). Tiap projek
+    // yang punya demo/repo dikasih link; projek kecil cukup disebut di baris
+    // ALSO SHIPPED paling bawah.
     // 24 Sep 2026: FinSight naik ke v2 (live), KENNETH masuk di sebelah projek produk.
     // hook + facts: versi skim buat recruiter (panel nampilin ini dulu, paragraf
     // penuh baru kebuka lewat tombol Details). thumb = screenshot halaman depan
@@ -220,9 +221,9 @@ export const PANELS = {
         h: 'PHISHGUARD V2',
         thumb: '/thumbs/phishguard.webp',
         tag: 'ML · SECURITY',
-        hook: 'Phishing URL detection API. v2 is a deliberate rebuild because v1 had real defects.',
-        facts: ['Roughly 81k labelled URLs', '17 tests', 'Label-orientation regression test'],
-        p: 'Phishing URL detection API trained on roughly 81k labelled URLs: sentence-transformer embeddings feeding a small Keras dense network. v2 exists because v1 had real defects, so it is a deliberate rebuild: strict URL validation, a health endpoint that admits when the model failed to load, config from the environment, and 17 tests including a regression test that locks the label orientation.',
+        hook: 'Phishing URL detection API, rebuilt solo because v1 had real defects.',
+        facts: ['95.7% accuracy on a 1,000-URL holdout', '95.8% recall', '37 tests'],
+        p: 'Phishing URL detection API. Every URL passes three layers: a live phishing blocklist, a curated allowlist of trusted domains, and only then the model, all-MiniLM-L6-v2 sentence embeddings plus 20 hand-built lexical features feeding a small dense network that runs as a plain numpy forward pass. Trained on a balanced 20k subsample of a 132k-URL dataset. On a strict holdout of 1,000 URLs that never entered training: 95.70% accuracy, 95.80% recall, 95.61% precision. v2 is a solo rebuild of a group project because v1 had real defects: strict URL validation, a health endpoint that admits when the model failed to load, and 37 tests including a regression test that locks the label orientation.',
         links: [
           { label: 'LIVE', href: 'https://url-detection-one.vercel.app' },
           { label: 'REPO', href: 'https://github.com/ne-he/URL_Detection' },
@@ -235,7 +236,10 @@ export const PANELS = {
         hook: 'A portfolio you talk to instead of read.',
         facts: ['Gemini embeddings (768-dim)', 'Streamed answers with citations', 'Runs as the chat on this site'],
         p: 'A portfolio you talk to instead of read. Gemini embeddings (768-dim) over a curated personal knowledge base in Supabase pgvector, hybrid retrieval, a confidence gate, and streamed answers with citations. It already runs inside this site as the chat assistant.',
-        links: [{ label: 'LIVE', href: 'https://web-portofolio-rag.vercel.app' }],
+        links: [
+          { label: 'LIVE', href: 'https://web-portofolio-rag.vercel.app' },
+          { label: 'REPO', href: 'https://github.com/ne-he/web_portofolio_RAG' },
+        ],
       },
       {
         h: 'FEATURE STORE MVP',
@@ -265,9 +269,9 @@ export const PANELS = {
         h: 'WASTE CLASSIFIER BENCHMARK',
         thumb: '/thumbs/waste.webp',
         tag: 'DEEP LEARNING · VISION',
-        hook: 'Three CNNs benchmarked on TrashNet, then fused into a soft-voting ensemble.',
-        facts: ['MobileNetV2: 90.3% validation accuracy', 'Baseline CNN: 54.5%', 'Grad-CAM'],
-        p: 'TrashNet, six waste classes, 2,527 images. Benchmarked ResNet50, EfficientNet-B0 and MobileNetV2 with selective fine-tuning, then fused them into a soft-voting ensemble. Class imbalance handled with weighted sampling and label smoothing. MobileNetV2 transfer learning reached 90.3% validation accuracy against a 54.5% baseline CNN, and Grad-CAM shows what the model actually looked at.',
+        hook: 'Three CNNs benchmarked on TrashNet in PyTorch, the winner runs the live demo.',
+        facts: ['ResNet50: 91.6% test accuracy', 'Macro AUC 0.99', 'Grad-CAM in the demo'],
+        p: 'TrashNet, six waste classes, 2,527 images, split 70/15/15 with the test set untouched until the end. Benchmarked ResNet50, EfficientNet-B0 and MobileNetV2 in PyTorch with selective fine-tuning, plus a soft-voting ensemble of all three. Class imbalance handled with weighted sampling and label smoothing. On the held-out test set ResNet50 came first at 91.6% accuracy (macro AUC 0.99), ahead of the ensemble at 91.0%, MobileNetV2 at 84.2% and EfficientNet-B0 at 80.5%, so the live demo runs ResNet50, with Grad-CAM showing what the model actually looked at.',
         links: [
           { label: 'LIVE', href: 'https://deep-learning-imageclassif.vercel.app' },
           { label: 'REPO', href: 'https://github.com/ne-he/Deep_Learning_imageclassif' },
@@ -319,10 +323,11 @@ export const PANELS = {
       {
         h: 'ALSO SHIPPED',
         tag: 'SMALLER BUILDS',
-        hook: 'Armory Hall, HCI Lab, SimpleNotes for iOS, a Second Brain CLI and four more.',
-        facts: ['OpenAPI contract generates the hooks', 'Native SwiftUI for iOS 16', 'Roughly 40% cheaper token usage'],
-        p: 'Armory Hall, a cinematic two-act portfolio where a dark room powers on as you scroll, built on GSAP choreography and canvas frame-scrubbing. HCI Lab, a TypeScript monorepo where the OpenAPI contract generates the frontend hooks, so the two halves cannot silently diverge. A churn pipeline that will not promote a model until it clears an accuracy gate, a credit scorer fronted by a form built for a loan officer rather than a data scientist, and a workout-load scorer that rates a training program before you run it. SimpleNotes, a native SwiftUI notes app for iOS 16. A to-do and focus dashboard from a Software Engineering mini project. And a Second Brain CLI: deterministic index-and-score retrieval over my course materials so the model opens only the top-ranked section, A/B tested at roughly 40% cheaper token usage.',
+        hook: 'Suara Rakyat, Armory Hall, HCI Lab, SimpleNotes for iOS, a Second Brain CLI and more.',
+        facts: ['617,722 reviews, 0.668 macro-F1', 'OpenAPI contract generates the hooks', 'Native SwiftUI for iOS 16'],
+        p: 'Suara Rakyat, a Software Engineering group project that reads the tone of reviews of Indonesian public-service apps: trained on the IGAR dataset of 617,722 Google Play reviews, three classical models with a Linear SVM as the default at 0.668 test macro-F1, and IndoBERTweet as the comparison at 0.692, on Next.js and Vercel. Armory Hall, a cinematic two-act portfolio where a dark room powers on as you scroll, built on GSAP choreography and canvas frame-scrubbing. HCI Lab, a TypeScript monorepo where the OpenAPI contract generates the frontend hooks, so the two halves cannot silently diverge. A churn pipeline that will not promote a model until it clears an accuracy gate, a credit scorer fronted by a form built for a loan officer rather than a data scientist, and a workout-load scorer that rates a training program before you run it. SimpleNotes, a native SwiftUI notes app for iOS 16. A to-do and focus dashboard from a Software Engineering mini project. And a Second Brain CLI: deterministic index-and-score retrieval over my course materials so the model opens only the top-ranked section, A/B tested at roughly 40% cheaper token usage.',
         links: [
+          { label: 'SUARA RAKYAT', href: 'https://suara-rakyat-xi.vercel.app' },
           { label: 'ARMORY HALL', href: 'https://armory-rouge.vercel.app' },
           { label: 'HCI LAB', href: 'https://web-hci-final-clash-of-bang.vercel.app' },
         ],
@@ -347,7 +352,7 @@ export const PANELS = {
       },
       {
         h: 'AI / LLM',
-        p: 'Gemini API, retrieval-augmented generation, hybrid dense and BM25 retrieval fused with RRF, embeddings and vector search (pgvector), confidence gating, and eval harnesses that measure hit-rate and faithfulness.',
+        p: 'Gemini API, retrieval-augmented generation, hybrid dense and BM25 retrieval fused with RRF, embeddings and vector search (pgvector), confidence gating, and golden-set evals that measure retrieval hit-rate and refusal accuracy.',
         links: [{ label: 'FINSIGHT V2', href: 'https://finsight-v2-nine.vercel.app' }, { label: 'VERDICT', href: 'https://agentic-verdict-sand.vercel.app' }],
       },
       {
