@@ -3,14 +3,15 @@ import { useChat } from './useChat'
 import { renderMarkdown } from './markdown'
 import ShardCanvas from './Shard'
 
-// pertanyaan starter. Maknanya sama kayak di repo RAG, tapi situs ini satu
-// bahasa (Inggris, penontonnya recruiter), jadi versi Inggris. Bot-nya ngikut
-// bahasa si penanya, jadi chip Inggris = jawaban Inggris juga
+// pertanyaan starter. Situs ini satu bahasa (Inggris, penontonnya recruiter),
+// bot-nya ngikut bahasa si penanya, jadi chip Inggris = jawaban Inggris juga.
+// Nama di chip disamain "Nehemiah" (dulu campur Nemi), dan chip makanan diganti
+// pertanyaan yang emang ditanya recruiter
 const SUGGESTIONS = [
   'What work experience does Nehemiah have?',
-  'What AI/ML projects has Nemi built?',
-  'What is Nemi like as a person?',
-  'What food does Nemi like?',
+  'What AI/ML projects has Nehemiah built?',
+  'What makes Nehemiah stand out?',
+  'What is Nehemiah like as a person?',
 ]
 
 // ikon kristal es, motif iceberg. Badan drawer sekarang putih, jadi versi
