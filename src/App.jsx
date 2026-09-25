@@ -99,6 +99,10 @@ const DESCEND = 100 / 120
 // anchor auto-center (dalam satuan descend 0..1) → dikonversi ke satuan loop
 const DESCEND_ANCHORS = [0, 0.2, 0.4, 0.6, 0.8, 0.915, 1]
 const LOOP_ANCHORS = DESCEND_ANCHORS.map((a) => a * DESCEND)
+// anchor snap = anchor descend + ujung jembatan (1 = hero loop berikutnya).
+// Dulu snap cuma jalan di descend, jadi scroll dikit dari outro bikin halaman
+// parkir permanen di tengah jembatan (bridge 0.69, layar kabut biru terus)
+const SNAP_ANCHORS = [...LOOP_ANCHORS, 1]
 // tinggi 1 periode loop dalam layar (≈ sama feel-nya kayak 480vh descend lama).
 // DIBULATIN: 844 * 5.8 = 4895.2, dan di layar dpr 3 window.scrollTo ke angka
 // pecahan mendarat meleset subpixel, cukup buat bikin loop 0 kebaca 0.9999
@@ -160,7 +164,7 @@ export default function App() {
     // bukan ke kelipatan P: di HP dpr 3 scrollTo mendarat meleset subpixel, dan
     // frac() dari meleset-dikit-ke-bawah itu 0.9999 alias ujung bridge. Efeknya
     // halaman kebuka langsung nyangkut di zona transisi loop, dan auto-snap
-    // GAK PERNAH nyala di situ (snap cuma jalan kalau loopRaw <= DESCEND).
+    // GAK PERNAH nyala di situ (dulu snap cuma jalan kalau loopRaw <= DESCEND).
     let originY = 0
     let loopDamped = 0 // posisi loop ter-smoothing (0..1), damping SIRKULAR
     let lastNow = performance.now()
@@ -278,30 +282,38 @@ export default function App() {
         // ke infinite loop kita: idle 450ms → SELALU dikunci ke anchor (gak ada
         // posisi nyangkut di tengah section), dan DIRECTIONAL, lewat 22% gap
         // searah gerakan terakhir udah dianggap "niat pindah section"
-        if (!snapTween && now - lastUser > 450 && !dragState.active && focusState.phase === 'idle' && loopRaw <= DESCEND + 1e-3) {
+        if (!snapTween && now - lastUser > 450 && !dragState.active && focusState.phase === 'idle') {
           // dua anchor pengapit posisi sekarang
-          let lo = LOOP_ANCHORS[0]
-          let hi = LOOP_ANCHORS[LOOP_ANCHORS.length - 1]
-          for (let i = 0; i < LOOP_ANCHORS.length - 1; i++) {
-            if (loopRaw >= LOOP_ANCHORS[i] - 1e-6 && loopRaw <= LOOP_ANCHORS[i + 1] + 1e-6) {
-              lo = LOOP_ANCHORS[i]
-              hi = LOOP_ANCHORS[i + 1]
+          let lo = SNAP_ANCHORS[0]
+          let hi = SNAP_ANCHORS[SNAP_ANCHORS.length - 1]
+          for (let i = 0; i < SNAP_ANCHORS.length - 1; i++) {
+            if (loopRaw >= SNAP_ANCHORS[i] - 1e-6 && loopRaw <= SNAP_ANCHORS[i + 1] + 1e-6) {
+              lo = SNAP_ANCHORS[i]
+              hi = SNAP_ANCHORS[i + 1]
               break
             }
           }
+          // di jembatan: lanjut ke hero atau balik ke outro, gak boleh diem di tengah
+          const inBridge = lo >= DESCEND - 1e-6
           const g = hi > lo ? (loopRaw - lo) / (hi - lo) : 0
           let A
           if (dir > 0) A = g > 0.22 ? hi : lo
           else if (dir < 0) A = g < 0.78 ? lo : hi
           else A = g < 0.5 ? lo : hi
-          const targetY = originY + (Math.round((y - originY) / P - A) + A) * P
+          // ujung jembatan (A = 1) dilebihin 1.5px: damping sirkular ngejar
+          // target dari bawah, kalau pas di seam dia nyangkut di 0.9999 (state
+          // "outro" padahal layar hero). Lewat dikit = nyebrang ke 0 beneran
+          const targetY = originY + (Math.round((y - originY) / P - A) + A) * P + (A === 1 ? 1.5 : 0)
           if (Math.abs(targetY - y) > 2) {
             const proxy = { y }
+            const dist = Math.abs(targetY - y) / P
             snapTween = gsap.to(proxy, {
               y: targetY,
-              // ~1 detik ala scrollingSpeed fullPage, dikit lebih lama kalau jauh
-              duration: Math.min(1.5, 0.85 + (Math.abs(targetY - y) / P) * 1.2),
-              ease: 'power2.out', // tarikan tegas di awal, mendarat lembut
+              // ~1 detik ala scrollingSpeed fullPage, dikit lebih lama kalau jauh.
+              // Jembatan dikasih waktu lebih: isinya animasi nyelam + emerge,
+              // kalau disapu 1 detik kerasa kebut
+              duration: inBridge ? Math.min(2.2, 1.2 + dist * 6) : Math.min(1.5, 0.85 + dist * 1.2),
+              ease: inBridge ? 'power1.inOut' : 'power2.out', // tarikan tegas di awal, mendarat lembut
               onUpdate: () => window.scrollTo(0, proxy.y),
               onComplete: () => {
                 snapTween = null
