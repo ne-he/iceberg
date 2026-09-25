@@ -93,6 +93,16 @@ body {
   text-align: right; line-height: 1.7;
   text-shadow: 0 1px 12px rgba(90, 100, 110, 0.5);
 }
+.hud-cv {
+  position: absolute; top: 80px; right: 32px; pointer-events: auto;
+  display: inline-flex; align-items: center; gap: 6px; min-height: 32px;
+  color: inherit; font-size: 11px; font-weight: 600; letter-spacing: 0.18em; text-decoration: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.55);
+  text-shadow: 0 1px 12px rgba(90, 100, 110, 0.5);
+  transition: border-color 0.25s;
+}
+.hud-cv:hover { border-bottom-color: #fff; }
+.hud-cv:focus-visible { outline: 2px solid #cfe8fa; outline-offset: 3px; }
 .readout {
   position: absolute; top: 50%; right: 32px; transform: translateY(-50%);
   font-size: 10px; letter-spacing: 0.14em; text-align: right; line-height: 1.9; opacity: 0.85;
@@ -197,6 +207,7 @@ body {
 @media (min-width: 1200px) and (min-aspect-ratio: 8/5) {
   .outro { align-items: flex-start; padding: 0 0 14vh calc(50% + 23vh); text-align: left; }
   .outro-in { width: 360px; align-items: flex-start; padding: 28px 30px 20px; }
+  .outro-links { justify-content: flex-start; }
 }
 .outro h2 {
   font-family: var(--font-display);
@@ -211,7 +222,11 @@ body {
   font-size: 14px; font-weight: 500; letter-spacing: 0.12em; text-decoration: none;
   border-bottom: 1px solid rgba(17, 27, 34, 0.5); padding-bottom: 2px;
 }
-.outro-mail { margin-top: 14px; }
+.outro-links {
+  margin-top: 14px; display: flex; flex-wrap: wrap; align-items: baseline;
+  justify-content: center; gap: 8px 20px;
+}
+.outro .outro-cv { font-size: 12px; letter-spacing: 0.16em; }
 /* petunjuk loop di bawah carousel, kecil, napas pelan biar kebaca tapi gak ganggu.
    Batas bawah napasnya dinaikin (dulu 0.32, nyaris ilang di kartu terang) */
 .loop-hint {
@@ -394,6 +409,13 @@ body {
   font-size: 17px; line-height: 1.5; letter-spacing: 0; color: #e8f0f6;
 }
 .rock-row--skim .rock-p { margin-top: 16px; font-size: 15.5px; }
+/* bukti visual per projek: potongan atas halaman demo live */
+.rock-thumb {
+  display: block; width: 100%; height: auto; aspect-ratio: 16 / 7; object-fit: cover; object-position: top;
+  margin-top: 12px; border: 1px solid rgba(150, 200, 240, 0.18); background: rgba(150, 200, 240, 0.06);
+  opacity: 0.88; transition: opacity 0.3s;
+}
+.rock-row--skim:hover .rock-thumb { opacity: 1; }
 .rock-facts { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
 .rock-facts li {
   font-size: 11.5px; line-height: 1.35; letter-spacing: 0.02em; color: #d3e5f2;
@@ -801,6 +823,9 @@ body {
      saling tindih (paling parah di 360px). Nama diturunin ke bawah logo, tetep
      rata kanan biar bacaannya masih kaya HUD instrumen */
   .meta { right: 20px; top: 52px; font-size: 10.5px; letter-spacing: 0.1em; }
+  /* tap target 44px, dan di outro minggir: kartunya udah punya link CV sendiri */
+  .hud-cv { right: 20px; top: 88px; min-height: 44px; font-size: 10.5px; border-bottom: none; text-decoration: underline; text-underline-offset: 4px; }
+  html.at-outro .hud-cv { opacity: 0; pointer-events: none; }
   .readout { display: none; }
   .ruler { display: none; }
   /* sub judul jangan nempel dua tepi layar, kasih napas biar wrap-nya wajar */

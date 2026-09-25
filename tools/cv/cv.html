@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Nehemiah Wilhelmus Junaidi · CV</title>
+<!-- Sumber CV PDF di public/. Render ulang: python tools/cv/render.py
+     Isinya sengaja sama persis kayak src/content.js dan knowledge base Ask Nemi.
+     Nomor HP gak dicantumin karena file ini publik di situs.
+     Aturan: tanpa IPK, tanpa tahun lulus, tanpa SMA, tanpa foto. -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ink: #111b22;
+    --soft: #3a4a55;
+    --mute: #5d6c77;
+    --line: #d5dee5;
+    --accent: #1d6693;
+    --band: #0f1d29;
+  }
+  html, body { width: 210mm; height: 297mm; }
+  body {
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    color: var(--ink); font-size: 8.6pt; line-height: 1.37;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  a { color: inherit; text-decoration: none; }
+  a.u { color: var(--accent); border-bottom: 0.6pt solid rgba(29, 102, 147, 0.45); }
+
+  header {
+    background: var(--band); color: #eef5fa;
+    padding: 9.5mm 14mm 7mm;
+    display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 8mm;
+  }
+  header h1 {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+    font-size: 21pt; letter-spacing: 0.06em; line-height: 1.05;
+  }
+  header .role { margin-top: 2.2mm; font-size: 9.6pt; letter-spacing: 0.08em; color: #a9c8de; text-transform: uppercase; font-weight: 500; }
+  header .contact { text-align: right; font-size: 8.4pt; line-height: 1.62; color: #d7e6f0; }
+  header .contact a { color: #eef5fa; }
+
+  .ask {
+    padding: 2.6mm 14mm; background: #e8f0f6; color: var(--soft); font-size: 8.3pt;
+    border-bottom: 0.6pt solid var(--line);
+  }
+  .ask b { color: var(--ink); font-weight: 600; }
+
+  main { display: grid; grid-template-columns: 1fr 52mm; gap: 6.5mm; padding: 5mm 14mm 0; }
+  h2 {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600;
+    font-size: 9.2pt; letter-spacing: 0.07em; text-transform: uppercase; color: var(--accent);
+    padding-bottom: 1.2mm; border-bottom: 0.8pt solid var(--line); margin: 3.6mm 0 2mm;
+  }
+  section:first-child h2 { margin-top: 0; }
+  p + p { margin-top: 1.4mm; }
+
+  .item { margin-bottom: 2.2mm; }
+  .item:last-child { margin-bottom: 0; }
+  .item .top { display: flex; justify-content: space-between; align-items: baseline; gap: 4mm; }
+  .item h3 { font-size: 9.4pt; font-weight: 600; }
+  .item .when { font-size: 8pt; color: var(--mute); white-space: nowrap; }
+  .item .meta { font-size: 7.9pt; color: var(--mute); margin: 0.3mm 0 0.8mm; }
+  .item .meta a.u { font-weight: 500; }
+
+  aside h2:first-child { margin-top: 0; }
+  aside .grp { margin-bottom: 2.2mm; }
+  aside .grp b { display: block; font-size: 7.8pt; letter-spacing: 0.08em; text-transform: uppercase; color: var(--soft); font-weight: 600; margin-bottom: 0.4mm; }
+  aside ul { list-style: none; }
+  aside li { margin-bottom: 1.3mm; }
+  aside ul.tight li { margin-bottom: 0.9mm; }
+  aside ul.tight b { font-weight: 600; }
+  aside li span, aside .edu span { display: block; color: var(--mute); font-size: 7.9pt; }
+  aside .edu span { margin-top: 0.8mm; }
+
+  footer {
+    position: absolute; left: 14mm; right: 14mm; bottom: 8mm;
+    display: flex; justify-content: space-between; font-size: 7.6pt; color: var(--mute);
+    border-top: 0.6pt solid var(--line); padding-top: 2mm;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>NEHEMIAH WILHELMUS JUNAIDI</h1>
+      <div class="role">Data Science Undergraduate · AI / ML Engineering</div>
+    </div>
+    <div class="contact">
+      Jakarta, Indonesia<br />
+      <a href="mailto:nehewj@gmail.com">nehewj@gmail.com</a><br />
+      <a href="https://www.linkedin.com/in/nehemiahwj/">linkedin.com/in/nehemiahwj</a><br />
+      <a href="https://github.com/ne-he">github.com/ne-he</a>
+    </div>
+  </header>
+  <div class="ask">
+    <b>Interactive portfolio:</b> <a class="u" href="https://iceberg-eight.vercel.app">iceberg-eight.vercel.app</a>
+    &nbsp;·&nbsp; <b>Ask my CV anything:</b> <a class="u" href="https://web-portofolio-rag.vercel.app">web-portofolio-rag.vercel.app</a>
+  </div>
+
+  <main>
+    <div>
+      <section>
+        <h2>Profile</h2>
+        <p>Data Science undergraduate at BINUS University on a full merit scholarship, focused on ML engineering and applied GenAI. I build systems that survive past the notebook: RAG with hybrid retrieval and confidence gating, an agent that verifies its own numbers, a feature store serving in 22 ms. Most repositories ship with tests, CI, and Docker. Two years of client-facing work means I can present the work as well as build it.</p>
+      </section>
+
+      <section>
+        <h2>Projects</h2>
+        <div class="item">
+          <div class="top"><h3>VERDICT ANALYST: Causal Analytics Agent</h3></div>
+          <div class="meta">Python · Gemini · FastAPI · DuckDB · Docker · <a class="u" href="https://agentic-verdict-sand.vercel.app">Live demo</a></div>
+          <p>Writes and runs its own analysis code in a locked Docker sandbox, then recomputes every number a second independent way (pandas against DuckDB SQL), so confidence is measured rather than claimed. Causal questions skip the language model and go to a deterministic statistics engine tested on recovering known ground truth.</p>
+        </div>
+        <div class="item">
+          <div class="top"><h3>FinSight v2: RAG over SEC 10-K Filings</h3></div>
+          <div class="meta">Next.js · Supabase pgvector · Gemini · Vercel · <a class="u" href="https://finsight-v2-nine.vercel.app">Live demo</a></div>
+          <p>Answers strictly from 10-K filings, cited to the section, or refuses. Hybrid vector and full-text retrieval fused with RRF, one search per company so comparisons keep both sides, refusal gate set from measured data. On 936 chunks and a 22-question golden set: hit-rate@6 18/18, out-of-scope refusals 4/4, zero false refusals.</p>
+        </div>
+        <div class="item">
+          <div class="top"><h3>Feature Store: ML Feature Serving</h3></div>
+          <div class="meta">PostgreSQL · Redis · FastAPI · Evidently · Docker · <a class="u" href="https://ne-he-feature-store-mvp.hf.space">Live demo</a></div>
+          <p>Turns raw e-commerce transactions into 23 user-level features across an offline store (PostgreSQL) and an online store (Redis), serving a single user in roughly 22 ms with automatic fallback to PostgreSQL. Daily refresh, drift monitoring, 174 tests at 95% coverage.</p>
+        </div>
+        <div class="item">
+          <div class="top"><h3>Ask Nemi: The Resume You Can Talk To</h3></div>
+          <div class="meta">Next.js · Gemini · Supabase pgvector · <a class="u" href="https://web-portofolio-rag.vercel.app">Live demo</a></div>
+          <p>A live RAG chatbot over a curated personal knowledge base with hybrid retrieval, a confidence gate and streamed, cited answers, so it admits what it does not know instead of inventing facts. Also runs as the chat in my 3D portfolio.</p>
+        </div>
+        <div class="item">
+          <p><b>Also built:</b> PhishGuard v2, a hardened phishing-URL detection API · PULSE, a streaming air-quality pipeline that retrains itself on drift · KENNETH, a live Jakarta parking app for a venture course team · a waste classifier benchmark (MobileNetV2 90.3% validation accuracy against a 54.5% baseline CNN) · ICEBERG, a real-time 3D portfolio.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2>Experience</h2>
+        <div class="item">
+          <div class="top"><h3>Admissions Marketing (Part-Time) · BINUS University</h3><span class="when">Aug 2024 to Present</span></div>
+          <p>Run campus tours, in-school workshops, and aptitude-test sessions, presenting weekly to prospective students, parents, and teachers. Personal record of 45 enrollments in a single month against a monthly target of 3.</p>
+        </div>
+        <div class="item">
+          <div class="top"><h3>Performing-Arts Coach (Freelance) · Jakarta</h3><span class="when">Jul 2025 to May 2026</span></div>
+          <p>Coached around 40 junior and senior high-school students for storytelling and monologue competitions. Students took 1st place at FLS3N Storytelling and advanced to the provincial round, alongside other city-level first places.</p>
+        </div>
+        <div class="item">
+          <div class="top"><h3>Content Creator &amp; Event Organizer (Intern) · HOPHOP Office</h3><span class="when">Mar to Sep 2024</span></div>
+          <p>Content ideation and on-ground execution for the Genshin Impact x HopHop Indonesia 2024 event.</p>
+        </div>
+      </section>
+
+    </div>
+
+    <aside>
+      <h2>Education</h2>
+      <div class="grp edu"><b>BINUS University</b>Bachelor of Data Science, School of Computer Science. Full four-year merit-based scholarship.<span>Coursework: Machine Learning, Deep Learning, Statistics, Databases, Big Data. BINUS Ambassador. DataHeist ML competition participant.</span></div>
+
+      <h2>Technical Skills</h2>
+      <div class="grp"><b>Languages</b>Python (primary), SQL, R, JavaScript / TypeScript</div>
+      <div class="grp"><b>Machine Learning</b>scikit-learn, PyTorch, TensorFlow / Keras, CatBoost, pandas, NumPy, SHAP</div>
+      <div class="grp"><b>GenAI &amp; LLM</b>RAG (hybrid retrieval, RRF, confidence gating), agentic systems, Gemini API, LangChain, pgvector</div>
+      <div class="grp"><b>MLOps &amp; Serving</b>FastAPI, Docker, GitHub Actions, MLflow, Evidently, Streamlit, AWS (SageMaker, EC2, Lambda)</div>
+      <div class="grp"><b>Data &amp; Storage</b>PostgreSQL / Supabase, Redis, DuckDB</div>
+      <div class="grp"><b>Web &amp; 3D</b>Next.js, React Three Fiber, Three.js, Blender</div>
+
+      <h2>Certifications</h2>
+      <ul class="tight">
+        <li><b>NVIDIA</b> Deep Learning (PyTorch)</li>
+        <li><b>RevoU</b> Applied AI &amp; Integration</li>
+        <li><b>DSarea</b> AI Engineering &amp; Data Mining</li>
+        <li><b>MySkill</b> Data Analyst &amp; Visualization</li>
+        <li><b>talenta.id</b> n8n Automation</li>
+      </ul>
+
+      <h2>Languages</h2>
+      <ul class="tight">
+        <li><b>Indonesian</b> native</li>
+        <li><b>English</b> professional working (IELTS 6.5)</li>
+        <li><b>Mandarin</b> elementary, still learning</li>
+      </ul>
+    </aside>
+  </main>
+
+  <footer>
+    <span>All code at <a class="u" href="https://github.com/ne-he">github.com/ne-he</a></span>
+    <span>Updated September 2026</span>
+  </footer>
+</body>
+</html>

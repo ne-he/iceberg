@@ -72,6 +72,10 @@ export const CRYSTALS = [
 // kartu LET'S CONNECT. Jangan ditambahin tanggal atau janji lain di sini
 export const AVAILABILITY = 'Open to AI/ML and data internships.'
 
+// CV satu halaman, digenerate dari data yang sama kayak situs ini (bukan file
+// Canva di folder CV). Nomor HP sengaja gak masuk: ini file publik
+export const RESUME_URL = '/Nehemiah-Wilhelmus-Junaidi-CV.pdf'
+
 export const SECTION_WORDS = [
   { word: 'ABOUT', center: 0.2 },
   { word: 'JOURNEY', center: 0.4 },
@@ -92,6 +96,16 @@ export const PANELS = {
       {
         h: 'AVAILABILITY',
         p: AVAILABILITY,
+      },
+      {
+        h: 'EDUCATION',
+        tag: 'FULL MERIT SCHOLARSHIP',
+        p: 'Bachelor of Data Science, School of Computer Science, BINUS University, on a full four-year merit-based scholarship. Coursework in machine learning, deep learning, statistics, databases and big data. BINUS Ambassador, and a participant in the DataHeist 2025 ML competition.',
+      },
+      {
+        h: 'RESUME',
+        p: 'The one-page version of everything on this site, as a PDF.',
+        links: [{ label: 'DOWNLOAD CV', href: RESUME_URL }],
       },
       {
         h: 'WHAT I DO',
@@ -115,12 +129,27 @@ export const PANELS = {
     title: 'JOURNEY',
     rows: [
       {
+        h: 'MAR TO SEP 2024 / HOPHOP OFFICE',
+        tag: 'INTERNSHIP',
+        p: 'Content creator and event organizer intern. Content ideas and on-ground execution for the Genshin Impact x HopHop Indonesia 2024 event. The same year, a liaison officer at the BNI National Conference 2024, escorting international directors.',
+      },
+      {
         h: '2024 / BINUS UNIVERSITY',
-        p: 'Started the Data Science undergraduate program in Jakarta. First lines of Python, first real datasets.',
+        p: 'Started the Data Science undergraduate program in Jakarta on a full merit scholarship. First lines of Python, first real datasets.',
+      },
+      {
+        h: 'AUG 2024 TO NOW / BINUS ADMISSIONS',
+        tag: 'PART-TIME',
+        p: 'Admissions marketing alongside the degree: campus tours, in-school workshops and aptitude-test sessions, presenting every week to prospective students, parents and teachers. Personal record of 45 enrollments in a single month against a monthly target of 3.',
       },
       {
         h: '2025 / FOUNDATIONS',
         p: 'Statistics, data wrangling with pandas, exploratory data analysis, and classical machine learning with scikit-learn, all hands-on in Jupyter.',
+      },
+      {
+        h: 'JUL 2025 TO MAY 2026 / PERFORMING-ARTS COACH',
+        tag: 'FREELANCE',
+        p: 'Coached around 40 junior and senior high-school students for storytelling and monologue competitions. Students took 1st place at FLS3N Storytelling and went on to the provincial round, alongside other city-level first places.',
       },
       {
         h: 'EARLY 2026 / OUT OF THE NOTEBOOK',
@@ -151,7 +180,9 @@ export const PANELS = {
     // teratas dikasih link; sisanya cukup disebut di satu baris penutup.
     // 24 Sep 2026: FinSight naik ke v2 (live), KENNETH masuk di sebelah projek produk.
     // hook + facts: versi skim buat recruiter (panel nampilin ini dulu, paragraf
-    // penuh baru kebuka lewat tombol Details). Dua-duanya WAJIB dicomot dari
+    // penuh baru kebuka lewat tombol Details). thumb = screenshot halaman depan
+    // demo live-nya (public/thumbs, 640x280 webp). VERDICT sama Family Task
+    // Board sengaja tanpa thumb: layar awalnya kosong / halaman login. Dua-duanya WAJIB dicomot dari
     // paragrafnya sendiri, angkanya harus sama persis. Ganti paragraf = cek ulang ini.
     rows: [
       {
@@ -175,6 +206,7 @@ export const PANELS = {
       },
       {
         h: 'FINSIGHT V2 / SEC 10-K RAG',
+        thumb: '/thumbs/finsight.webp',
         tag: 'LIVE · FINANCIAL RAG',
         hook: 'Answers from SEC 10-K filings, cited down to the section, or refuses.',
         facts: ['hit-rate@6 18/18', 'Out-of-scope refusals 4/4', 'Zero false refusals'],
@@ -186,6 +218,7 @@ export const PANELS = {
       },
       {
         h: 'PHISHGUARD V2',
+        thumb: '/thumbs/phishguard.webp',
         tag: 'ML · SECURITY',
         hook: 'Phishing URL detection API. v2 is a deliberate rebuild because v1 had real defects.',
         facts: ['Roughly 81k labelled URLs', '17 tests', 'Label-orientation regression test'],
@@ -197,6 +230,7 @@ export const PANELS = {
       },
       {
         h: 'ASK NEMI / RESUME RAG',
+        thumb: '/thumbs/asknemi.webp',
         tag: 'LIVE · GENAI',
         hook: 'A portfolio you talk to instead of read.',
         facts: ['Gemini embeddings (768-dim)', 'Streamed answers with citations', 'Runs as the chat on this site'],
@@ -205,10 +239,11 @@ export const PANELS = {
       },
       {
         h: 'FEATURE STORE MVP',
+        thumb: '/thumbs/featurestore.webp',
         tag: 'DATA ENGINEERING · MLOPS',
         hook: 'An e-commerce feature store, end to end.',
-        facts: ['20+ user-level features', 'PostgreSQL offline, Redis online', 'Evidently drift watch'],
-        p: 'An e-commerce feature store, end to end. Ingests transaction data, computes 20+ user-level features in batch, keeps PostgreSQL as the offline store and Redis as the online store, and serves them through a low-latency FastAPI. A Streamlit dashboard backed by Evidently watches feature freshness and drift.',
+        facts: ['23 user-level features', 'One user served in about 22 ms', '174 tests, 95% coverage'],
+        p: 'An e-commerce feature store, end to end. Ingests raw transaction data, computes 23 user-level features in batch, keeps PostgreSQL as the offline store and Redis as the online store, and serves a single user through FastAPI in roughly 22 ms, falling back to PostgreSQL automatically when Redis is down. A Streamlit dashboard backed by Evidently watches feature freshness and drift. Ships with 174 tests at 95% coverage.',
         links: [
           { label: 'LIVE', href: 'https://ne-he-feature-store-mvp.hf.space' },
           { label: 'REPO', href: 'https://github.com/ne-he/Feature_shopz' },
@@ -216,6 +251,7 @@ export const PANELS = {
       },
       {
         h: 'PHONE ADDICTION PREDICTOR V2',
+        thumb: '/thumbs/addiction.webp',
         tag: 'FLAGSHIP',
         hook: 'A CatBoost regressor that scores smartphone addiction from 1 to 10.',
         facts: ['One Preprocessor for training and serving', 'SHAP, tests, CI and Docker', '0.95 R² flagged as a synthetic-data artifact'],
@@ -227,6 +263,7 @@ export const PANELS = {
       },
       {
         h: 'WASTE CLASSIFIER BENCHMARK',
+        thumb: '/thumbs/waste.webp',
         tag: 'DEEP LEARNING · VISION',
         hook: 'Three CNNs benchmarked on TrashNet, then fused into a soft-voting ensemble.',
         facts: ['MobileNetV2: 90.3% validation accuracy', 'Baseline CNN: 54.5%', 'Grad-CAM'],
@@ -238,6 +275,7 @@ export const PANELS = {
       },
       {
         h: 'E-COMMERCE SALES ANALYSIS',
+        thumb: '/thumbs/sales.webp',
         tag: 'LIVE · ANALYTICS',
         hook: '20,848 marketplace orders read for three decisions an owner actually has to make.',
         facts: ['Eleven order-status variants normalised', 'Missing months kept as gaps', 'Revenue never double counted'],
@@ -249,6 +287,7 @@ export const PANELS = {
       },
       {
         h: 'KENNETH / JAKARTA PARKING',
+        thumb: '/thumbs/kenneth.webp',
         tag: 'LIVE · VENTURE',
         hook: 'Shows how full a Jakarta car park is before you leave home.',
         facts: ['Twenty malls and BINUS campuses', 'Team set the case, I built the app', 'Simulated data, and it says so'],
@@ -299,26 +338,40 @@ export const PANELS = {
       {
         h: 'DATA & ANALYSIS',
         p: 'Python, pandas, NumPy, Polars, DuckDB, SQL, exploratory data analysis, Jupyter. Used across the Feature Store, the e-commerce analysis, and every model below.',
+        links: [{ label: 'FEATURE STORE', href: 'https://ne-he-feature-store-mvp.hf.space' }, { label: 'SALES ANALYSIS', href: 'https://dashboard-nehemiah.vercel.app' }],
       },
       {
         h: 'MACHINE LEARNING',
         p: 'scikit-learn, CatBoost, PyTorch, TensorFlow and Keras. Transfer learning, class imbalance handling, and explanation with SHAP and Grad-CAM rather than a bare accuracy number.',
+        links: [{ label: 'ADDICTION V2', href: 'https://addictv2.vercel.app' }, { label: 'WASTE CLASSIFIER', href: 'https://deep-learning-imageclassif.vercel.app' }],
       },
       {
         h: 'AI / LLM',
         p: 'Gemini API, retrieval-augmented generation, hybrid dense and BM25 retrieval fused with RRF, embeddings and vector search (pgvector), confidence gating, and eval harnesses that measure hit-rate and faithfulness.',
+        links: [{ label: 'FINSIGHT V2', href: 'https://finsight-v2-nine.vercel.app' }, { label: 'VERDICT', href: 'https://agentic-verdict-sand.vercel.app' }],
       },
       {
         h: 'SERVING & INFRA',
         p: 'FastAPI, PostgreSQL, Redis, Docker, GitHub Actions, MLflow, Streamlit, pytest. Enough to take a model from notebook to a deployed endpoint that stays up.',
+        links: [{ label: 'FEATURE STORE', href: 'https://ne-he-feature-store-mvp.hf.space' }, { label: 'PHISHGUARD V2', href: 'https://url-detection-one.vercel.app' }],
       },
       {
         h: 'AGENTIC WORKFLOWS',
         p: 'Claude Code, MCP tool pipelines (Blender-to-web asset generation), automation-first development.',
+        links: [{ label: 'ICEBERG REPO', href: 'https://github.com/ne-he/iceberg' }],
       },
       {
         h: 'CREATIVE / WEB',
         p: 'Three.js, React Three Fiber, Next.js, TypeScript, Blender, Vite, GSAP.',
+        links: [{ label: 'ICEBERG REPO', href: 'https://github.com/ne-he/iceberg' }, { label: 'KENNETH', href: 'https://kenneth-park.web.app' }],
+      },
+      {
+        h: 'CERTIFICATIONS',
+        p: 'NVIDIA: Deep Learning (PyTorch). RevoU: Applied AI and Integration. DSarea: AI Engineering and Data Mining. MySkill: Data Analyst and Visualization. talenta.id: n8n Automation.',
+      },
+      {
+        h: 'LANGUAGES',
+        p: 'Indonesian, native. English, professional working proficiency (IELTS 6.5). Mandarin, elementary and still learning.',
       },
     ],
     foot: 'STACK / SEMESTER 5 SNAPSHOT',
@@ -328,7 +381,9 @@ export const PANELS = {
 export const CONTACT = {
   email: 'nehewj@gmail.com',
   github: 'https://github.com/ne-he',
-  linkedin: 'https://www.linkedin.com/in/nehemiah-wilhelmus-b90391327/',
+  // custom URL yang dipakai profil live dan CV. Link lama
+  // (/in/nehemiah-wilhelmus-b90391327) mati sejak custom URL dipasang
+  linkedin: 'https://www.linkedin.com/in/nehemiahwj/',
   whatsapp: 'https://wa.me/6281911497766',
   armory: 'https://armory-rouge.vercel.app',
 }

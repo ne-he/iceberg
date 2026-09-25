@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useProgress } from '@react-three/drei'
 import { beginIntro, bgVideoState, chatState, faceState, focusState, introState, scrollState } from './scrollState'
 import { warmState } from './warmup'
-import { AVAILABILITY, CONTACT, CRYSTALS, PANELS, SECTION_WORDS } from './content'
+import { AVAILABILITY, CONTACT, CRYSTALS, PANELS, RESUME_URL, SECTION_WORDS } from './content'
 import DecryptedText from './components/DecryptedText'
 
 // glyph acak buat efek decode judul, huruf kapital + angka + simbol instrumen,
@@ -104,6 +104,9 @@ function PanelRow({ r, id }) {
       </h3>
       {skim ? (
         <>
+          {/* screenshot demo. Gak di-lazy: baris cuma ada pas panelnya kebuka,
+              dan lazy bikin kotaknya kosong sedetik pas panel baru nongol */}
+          {r.thumb && <img className="rock-thumb" src={r.thumb} alt="" width="640" height="280" decoding="async" />}
           <p className="rock-hook">{r.hook}</p>
           {r.facts?.length ? (
             <ul className="rock-facts" aria-label="Key facts">
@@ -390,6 +393,10 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
           <br />
           JAKARTA / 2026
         </div>
+        {/* jalan pintas buat recruiter yang gak mau scroll sampai bawah */}
+        <a className="hud-cv cursor-target" href={RESUME_URL} target="_blank" rel="noopener">
+          CV (PDF) <span aria-hidden="true">↗</span>
+        </a>
         <div className="readout">
           <div ref={depth}>DPT 000M</div>
           <div ref={temp}>TEMP -1.20</div>
@@ -453,9 +460,14 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
         <div className="outro-in" ref={outroIn}>
         <h2>LET'S CONNECT</h2>
         <p className="outro-avail">{AVAILABILITY}</p>
-        <a className="outro-mail" href={`mailto:${CONTACT.email}`}>
-          {CONTACT.email.toUpperCase()}
-        </a>
+        <div className="outro-links">
+          <a className="outro-mail" href={`mailto:${CONTACT.email}`}>
+            {CONTACT.email.toUpperCase()}
+          </a>
+          <a className="outro-cv" href={RESUME_URL} target="_blank" rel="noopener">
+            CV (PDF) ↗
+          </a>
+        </div>
         {/* carousel ala igloo: pilih platform → partikel morph jadi logonya */}
         <SocialCarousel />
         {/* pintu masuk chatbot dari klimaks: udah ketemu muka partikel, langsung
