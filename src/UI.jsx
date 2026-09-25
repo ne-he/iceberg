@@ -220,6 +220,21 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
     // balik ke 0 pas bridge (ujung loop == awal, gak nge-pop)
     let raf
     let idleAt = 0 // kapan intro pertama kali kelar (buat jadwal video panel)
+    // Tinggi penggaris kedalaman diukur SEKALI (plus tiap resize), gak per frame.
+    // Dulu offsetHeight dibaca tiap frame persis setelah teks DPT/TEMP ditulis:
+    // itu maksa browser layout ulang 60x per detik (~70 ms JS/detik di outro,
+    // ketemu pas profiling 25 Sep 2026)
+    let travel = 0
+    const measure = () => {
+      if (ruler.current) travel = ruler.current.offsetHeight - window.innerHeight
+    }
+    measure()
+    // font web bisa nyampe belakangan dan ngubah tinggi baris penggaris
+    document.fonts?.ready.then(measure)
+    window.addEventListener('resize', measure)
+    // teks readout cuma ditulis kalau nilainya beneran berubah
+    let lastDepth = ''
+    let lastTemp = ''
     const tick = () => {
       if (!vidArmedRef.current) {
         const now = performance.now()
@@ -270,8 +285,10 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
           }
         }
       })
-      if (depth.current) depth.current.textContent = `DPT ${String(Math.round(dk * 380)).padStart(3, '0')}M`
-      if (temp.current) temp.current.textContent = `TEMP ${(-1.2 - dk * 27.3).toFixed(2)}`
+      const dTxt = `DPT ${String(Math.round(dk * 380)).padStart(3, '0')}M`
+      const tTxt = `TEMP ${(-1.2 - dk * 27.3).toFixed(2)}`
+      if (depth.current && dTxt !== lastDepth) depth.current.textContent = lastDepth = dTxt
+      if (temp.current && tTxt !== lastTemp) temp.current.textContent = lastTemp = tTxt
       if (bar.current) bar.current.style.transform = `scaleX(${lp})`
       // aba-aba scroll cuma perlu sebelum orang mulai turun. Dulu nongol terus
       // sampai dk 0.82, numpuk sama tombol OPEN. Karena pakai dk (yang retrace
@@ -313,15 +330,13 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
           b.style.pointerEvents = live ? 'auto' : 'none'
         }
       }
-      if (ruler.current) {
-        const travel = ruler.current.offsetHeight - window.innerHeight
-        if (travel > 0) ruler.current.style.transform = `translateY(${-dk * travel}px)`
-      }
+      if (ruler.current && travel > 0) ruler.current.style.transform = `translateY(${-dk * travel}px)`
       raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
     return () => {
       cancelAnimationFrame(raf)
+      window.removeEventListener('resize', measure)
       document.documentElement.classList.remove('at-outro')
     }
   }, [])
