@@ -10,7 +10,7 @@ import { Portal } from './Portal'
 import { Glacier, heroFade } from './Glacier'
 import { CRYSTALS, HERO_CRYSTAL } from './content'
 import { LOW } from './perf'
-import { chatState, dragState, focusState, introState, scrollState } from './scrollState'
+import { chatState, dragState, faceState, focusState, introState, scrollState } from './scrollState'
 import { warmHooks, warmState } from './warmup'
 
 export const FOG_COLOR = '#b9c0c7'
@@ -458,21 +458,24 @@ function OutroStage() {
   return (
     <group position={[0, -44.35, 1.5]}>
       <mesh geometry={geo}>
-        {/* es padat biru-pucat, flat shading biar tiap facet kristal kebaca.
-            Dinaikin shine-nya (permintaan Nehemiah: "stand tajem dibikin lebih
-            shining"): roughness turun, emissive naik biar tiap facet berkilau */}
+        {/* es padat biru, flat shading biar tiap facet kristal kebaca. Tetep
+            berkilau (permintaan Nehemiah: "stand tajem dibikin lebih shining"),
+            tapi kilaunya dari pantulan env (metalness + roughness rendah), bukan
+            dari warna dasar & emissive yang tinggi: desktop gak pakai tone
+            mapping, jadi dulu semua facet yang ngadep atas kepotong putih rata
+            pas kamera nyelam dari atas */}
         <meshStandardMaterial
-          color="#c6d8e4"
-          roughness={0.16}
-          metalness={0.12}
-          emissive="#7ba7cc"
-          emissiveIntensity={0.4}
+          color="#8fadc4"
+          roughness={0.14}
+          metalness={0.28}
+          emissive="#5f8fb8"
+          emissiveIntensity={0.2}
           flatShading
         />
       </mesh>
       {/* shell tipis lebih terang = rim subsurface, kesan cahaya nembus es */}
       <mesh geometry={geo} scale={1.014}>
-        <meshBasicMaterial color="#f0f9ff" transparent opacity={0.12} depthWrite={false} toneMapped={false} />
+        <meshBasicMaterial color="#f0f9ff" transparent opacity={0.08} depthWrite={false} toneMapped={false} />
       </mesh>
       {/* dua ring cahaya melingkar di lantai dais, lebih terang & double biar
           panggungnya kerasa "shining" ala referensi */}
@@ -511,7 +514,16 @@ function FaceAura() {
     return new THREE.CanvasTexture(c)
   }, [])
   useFrame((state) => {
-    const a = smoothstep(0.92, 0.99, scrollState.damped) * (1 - smoothstep(0, 0.12, scrollState.bridge))
+    // aura nyala NGIKUT wajah jadi (faceState.assemble, ditulis ParticleFace),
+    // bukan ngikut scroll: selama salju masih terbang latarnya biru dalam, jadi
+    // partikel es terangnya kebaca. Pas partikel mendarat & jadi warna foto,
+    // kamarnya ikut terang di belakang, wajahnya "muncul" kayak foto dicuci
+    const asm = faceState.assemble ?? 0
+    const fade = 1 - smoothstep(0, 0.12, scrollState.bridge)
+    const a = smoothstep(0.15, 0.9, asm) * (faceState.develop ?? 0) * fade
+    // cincin cuma pas kamera udah natap wajah dari depan: selama kamera masih
+    // ngayun turun, cincin segede ini lewat di layar jadi garis lengkung acak
+    const ringA = a * smoothstep(0.975, 0.997, scrollState.damped) * smoothstep(0.5, 1, asm)
     const t = state.clock.elapsedTime
     // pas ECHO (chatbot) lagi ngetik & kita di section wajah: aura "denyut" lebih
     // terang, kesannya muka partikel lagi ngomong (avatar chatbot hidup)
@@ -519,11 +531,11 @@ function FaceAura() {
     if (glow.current) glow.current.material.opacity = 0.85 * a * talk
     // dua cincin tipis pelan berputar = kesan spiral cahaya di ss#4
     if (ring1.current) {
-      ring1.current.material.opacity = 0.3 * a * talk
+      ring1.current.material.opacity = 0.3 * ringA * talk
       ring1.current.rotation.z = t * 0.05
     }
     if (ring2.current) {
-      ring2.current.material.opacity = 0.18 * a * talk
+      ring2.current.material.opacity = 0.18 * ringA * talk
       ring2.current.rotation.z = -t * 0.035
     }
     if (light.current) light.current.intensity = 3.4 * a * talk
@@ -711,36 +723,112 @@ function CameraRig() {
           look: v(...c.position),
           hold: HOLD,
         })),
-        // koreografi portal (permintaan Nehemiah): abis batu terakhir kamera
-        // recenter & natap lurus dari ATAS nembus lubang ring, kristal keliatan
-        // KECIL JAUH di bawah (portal tinggi, jaraknya jauh). Lalu kamera NYELAM
-        // LURUS turun nembus TENGAH ring (z tetep ~1.5, jadi bener2 masuk lubang,
-        // bukan lewat samping), pas nembus portal meledak nyala = "dunia lain",
-        // baru turun ke landing zone & swing ke depan natap wajah di 100/120
-        { t: 0.86, pos: v(0, -26.5, 5.5), look: v(0, -33, 1.5), hold: 0 },
-        { t: 0.905, pos: v(0, -26.8, 1.6), look: v(0, -42.5, 1.5), hold: 0.02 },
-        { t: 0.95, pos: v(0, -34.6, 1.4), look: v(0, -43, 1.5), hold: 0 },
-        { t: 0.978, pos: v(0, -39.6, 5.5), look: v(0, -41, 1.5), hold: 0 },
-        { t: 1, pos: v(0, -40.7, 11.5), look: v(0, -40.8, 1.5), hold: 0 },
+        // koreografi portal, tiga ketukan:
+        //  1. dari SKILLS kamera MUNDUR naik sambil nunduk (crane), portal yang
+        //     udah jadi keliatan kecil jauh di bawah, lalu geser ke atasnya dan
+        //     berhenti natap lurus ke bawah nembus lubang ring (titik snap 0.915,
+        //     kristal & kamar wajah keliatan kecil jauh di bawah)
+        //  2. NYELAM LURUS turun nembus TENGAH ring, kilatan cahaya dari
+        //     PortalFlash (Portal.jsx) pas kamera lewat bidang ring
+        //  3. sambil turun kamera mundur & ndongak ke depan, salju partikel
+        //     ngalir dari portal dan mendarat jadi wajah
+        // Sepanjang bagian yang hampir tegak lurus, titik tatap SELALU sedikit di
+        // belakang kamera (look.z < pos.z). Dulu z-nya nyebrang (1.6 lawan 1.5
+        // lalu 1.4 lawan 1.5), lookAt ketemu arah tegak lurus persis dan layar
+        // muter 180 derajat sekali frame di tengah nyelam
+        // rest = titik istirahat (snap), spline = ikut jalur halus portalPath
+        // Portal di y -32.8, lubang bersihnya radius 1.52 (segmen dalam mulai
+        // di situ): anchor 0.942 = kamera pas di bidang ring, 0.8 dari sumbu
+        { t: 0.868, pos: v(0.8, -22.8, 11.8), look: v(0, -33.4, 1.0), hold: 0, spline: true },
+        { t: 0.915, pos: v(1.2, -23.2, 2.7), look: v(0, -44, 0.6), hold: 0.012, spline: true, rest: true },
+        { t: 0.942, pos: v(0, -32.8, 2.3), look: v(0, -45, 0.2), hold: 0, spline: true },
+        { t: 0.962, pos: v(0, -37.2, 4.6), look: v(0, -43.4, 0.2), hold: 0, spline: true },
+        { t: 0.982, pos: v(0, -39.9, 8.8), look: v(0, -41.4, 1.0), hold: 0, spline: true },
+        { t: 1, pos: v(0, -40.7, 11.5), look: v(0, -40.8, 1.5), hold: 0, spline: true, rest: true },
       ],
     ]
   }, [])
+
+  // ===== jalur kamera portal: spline, bukan patah-patah per anchor =====
+  // Interpolasi per segmen di bawah (smoothstep tiap pasang anchor) bikin
+  // kamera BERHENTI di tiap anchor. Buat batu itu pas (tiap batu memang titik
+  // istirahat), tapi di koreografi portal jadinya denyut maju-berhenti-maju
+  // 4 kali dalam sekali snap. Di sini anchor portal dilewatin pakai spline
+  // Catmull-Rom non-uniform (waktu = t anchor), kecepatannya nyambung, dan
+  // easing-nya cuma satu per rentang: dari batu terakhir ke titik istirahat
+  // 0.915, lalu dari situ ke wajah
+  const portalPath = useMemo(() => {
+    const first = anchors.findIndex((x) => x.spline)
+    const spans = []
+    let s0 = first - 1
+    for (let j = first; j < anchors.length; j++) {
+      if (anchors[j].rest) {
+        spans.push([s0, j])
+        s0 = j
+      }
+    }
+    const g0 = new THREE.Vector3()
+    const g3 = new THREE.Vector3()
+    const A = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()]
+    const B = [new THREE.Vector3(), new THREE.Vector3()]
+    // Barry-Goldman: titik di antara P1 & P2 pada waktu x, knot t0 < t1 < t2 < t3
+    const cr = (out, P0, P1, P2, P3, t0, t1, t2, t3, x) => {
+      A[0].copy(P0).multiplyScalar((t1 - x) / (t1 - t0)).addScaledVector(P1, (x - t0) / (t1 - t0))
+      A[1].copy(P1).multiplyScalar((t2 - x) / (t2 - t1)).addScaledVector(P2, (x - t1) / (t2 - t1))
+      A[2].copy(P2).multiplyScalar((t3 - x) / (t3 - t2)).addScaledVector(P3, (x - t2) / (t3 - t2))
+      B[0].copy(A[0]).multiplyScalar((t2 - x) / (t2 - t0)).addScaledVector(A[1], (x - t0) / (t2 - t0))
+      B[1].copy(A[1]).multiplyScalar((t3 - x) / (t3 - t1)).addScaledVector(A[2], (x - t1) / (t3 - t1))
+      return out.copy(B[0]).multiplyScalar((t2 - x) / (t2 - t1)).addScaledVector(B[1], (x - t1) / (t2 - t1))
+    }
+    const along = (out, key, s0, s1, j, x) => {
+      const a1 = anchors[j]
+      const a2 = anchors[j + 1]
+      // ujung rentang: titik bayangan dicerminin biar arah geraknya tetep masuk akal
+      const a0 = j > s0 ? anchors[j - 1] : null
+      const a3 = j + 1 < s1 ? anchors[j + 2] : null
+      const P0 = a0 ? a0[key] : g0.copy(a1[key]).multiplyScalar(2).sub(a2[key])
+      const P3 = a3 ? a3[key] : g3.copy(a2[key]).multiplyScalar(2).sub(a1[key])
+      const t0 = a0 ? a0.t : 2 * a1.t - a2.t
+      const t3 = a3 ? a3.t : 2 * a2.t - a1.t
+      return cr(out, P0, a1[key], a2[key], P3, t0, a1.t, a2.t, t3, x)
+    }
+    return {
+      from: anchors[first - 1].t,
+      eval(k, pos, look) {
+        let s = spans.find(([, b]) => k <= anchors[b].t) || spans[spans.length - 1]
+        const [s0, s1] = s
+        const lo = anchors[s0].t + anchors[s0].hold
+        const hi = anchors[s1].t - anchors[s1].hold
+        let u = THREE.MathUtils.clamp((k - lo) / Math.max(1e-4, hi - lo), 0, 1)
+        u = u * u * (3 - 2 * u)
+        const x = anchors[s0].t + u * (anchors[s1].t - anchors[s0].t)
+        let j = s0
+        while (j < s1 - 1 && x > anchors[j + 1].t) j++
+        along(pos, 'pos', s0, s1, j, x)
+        along(look, 'look', s0, s1, j, x)
+      },
+    }
+  }, [anchors])
 
   useFrame((state, delta) => {
     // damped di-smoothing di App (master loop), di sini tinggal baca
     const k = THREE.MathUtils.clamp(scrollState.damped, 0, 1)
 
-    // cari segmen anchor aktif, lalu interpolasi dengan plateau per-anchor
-    let i = 0
-    while (i < anchors.length - 2 && k > anchors[i + 1].t) i++
-    const a = anchors[i]
-    const b = anchors[i + 1]
-    const start = a.t + a.hold
-    const end = b.t - b.hold
-    let u = THREE.MathUtils.clamp((k - start) / Math.max(1e-4, end - start), 0, 1)
-    u = u * u * (3 - 2 * u)
-    p.lerpVectors(a.pos, b.pos, u)
-    t.lerpVectors(a.look, b.look, u)
+    if (k > portalPath.from) {
+      portalPath.eval(k, p, t)
+    } else {
+      // cari segmen anchor aktif, lalu interpolasi dengan plateau per-anchor
+      let i = 0
+      while (i < anchors.length - 2 && k > anchors[i + 1].t) i++
+      const a = anchors[i]
+      const b = anchors[i + 1]
+      const start = a.t + a.hold
+      const end = b.t - b.hold
+      let u = THREE.MathUtils.clamp((k - start) / Math.max(1e-4, end - start), 0, 1)
+      u = u * u * (3 - 2 * u)
+      p.lerpVectors(a.pos, b.pos, u)
+      t.lerpVectors(a.look, b.look, u)
+    }
 
     // ---- jembatan loop (100→120): animasi MENYELAM, bukan fade. Dari panggung,
     //      kamera turun ke bawah podium natap batu asal yg naik dari bawah
