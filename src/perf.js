@@ -34,6 +34,12 @@ function detect() {
 export const TIER = detect()
 export const LOW = TIER.low
 
+// layar sentuh (termasuk laptop sentuh). Dipakai buat nunda lompatan recenter
+// scroll sampai inersia jari selesai, lihat scrollSettle.js
+export const TOUCH =
+  typeof window !== 'undefined' &&
+  ((window.navigator?.maxTouchPoints || 0) > 0 || window.matchMedia?.('(pointer: coarse)').matches === true)
+
 // video latar versi HP: 1,75 MB 720p + audio (padahal selalu muted) itu file
 // terbesar di jalur loading. Versi HP-nya 540p tanpa audio, faststart
 export const SCENE_VIDEO = LOW ? '/scene/scene_mobile.mp4' : '/scene/scene.mp4'

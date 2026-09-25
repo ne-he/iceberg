@@ -8,6 +8,7 @@ import TargetCursor from './components/TargetCursor/TargetCursor'
 import { GLACIER_VIDEO, LOW, SCENE_VIDEO } from './perf'
 import { quality } from './quality'
 import { onCanvasCreated } from './glRuntime'
+import { scrollSettled } from './scrollSettle'
 import { beginFocus, bgVideoState, chatState, dragState, endFocus, faceState, focusState, introState, scrollState } from './scrollState'
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
@@ -244,13 +245,15 @@ export default function App() {
         let y = window.scrollY
         // recenter tak-kasat-mata biar gak pernah mentok tepi (dua arah).
         // Batasnya diukur dari originY, dan lebarnya 4P (dulu 2P), lompatannya
-        // jadi separuh lebih jarang
+        // jadi separuh lebih jarang. Di HP nunggu luncuran inersia kelar dulu
+        // (scrollSettle.js), lompatan di tengah luncuran motong gerakannya
         let recentered = false
-        if (y < originY - 1.5 * P) {
+        const settled = scrollSettled(now)
+        if (settled && y < originY - 1.5 * P) {
           y += P
           window.scrollTo(0, y)
           recentered = true
-        } else if (y > originY + 2.5 * P) {
+        } else if (settled && y > originY + 2.5 * P) {
           y -= P
           window.scrollTo(0, y)
           recentered = true
