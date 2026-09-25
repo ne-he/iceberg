@@ -29,13 +29,16 @@ export const chatState = { open: false, streaming: false }
 // panelOpen ditulis App pas modal batu bener-bener nongol/ketutup. Dipisah dari
 // phase karena pas panel kebuka frameloop R3F di-stop → phase bisa beku di 'in'
 // (useFrame yang naikin ke 'open' ikut berhenti), jadi phase gak bisa dipakai
-// buat deteksi "panel lagi kebuka" di master loop
-export const focusState = { id: null, pos: [0, 0, 0], phase: 'idle', t0: 0, panelOpen: false }
+// buat deteksi "panel lagi kebuka" di master loop.
+// mode: 'dive' (koreografi nyelam, lihat Dive.jsx) | 'fade' (prefers-reduced-motion:
+// kamera diem, cuma crossfade pendek ke video panel)
+export const focusState = { id: null, pos: [0, 0, 0], phase: 'idle', t0: 0, panelOpen: false, mode: 'dive' }
 
 // dipanggil pas batu diklik, mulai animasi menyelam
-export function beginFocus(id, pos) {
+export function beginFocus(id, pos, mode = 'dive') {
   focusState.id = id
   focusState.pos = pos
+  focusState.mode = mode
   focusState.phase = 'in'
   focusState.t0 = performance.now()
 }

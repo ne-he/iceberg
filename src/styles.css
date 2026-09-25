@@ -303,7 +303,13 @@ body {
 .rock-modal {
   position: fixed; inset: 0; z-index: 30;
   opacity: 0; pointer-events: none; overflow: hidden;
-  transition: opacity 0.7s ease;
+  /* serah terima dari canvas (Dive.jsx): pas panel dipasang, layar canvas udah
+     isinya video panel yang sama persis, jadi lapisan video di sini langsung
+     nongol penuh tanpa fade (dulu crossfade 0.7s = scene 3D numpuk di belakang
+     teks). Yang mudar cuma scrim, kepala, dan teks. Pas ditutup kebalikannya:
+     lapisan ini nunggu teksnya mudar dulu (0.32s, samain DIVE.MODAL_OUT) baru
+     ilang, di bawahnya canvas nahan frame video yang sama */
+  transition: opacity 0s linear 0.32s;
   /* latar cadangan = gradient es fallback. Kepake kalau panel kebuka sebelum
      video dalam-glacier dapet frame pertama (video-nya sekarang dimuat
      belakangan), biar yang keliatan es gelap, bukan scene beku di belakang */
@@ -311,7 +317,10 @@ body {
     radial-gradient(ellipse at 50% 26%, rgba(150, 190, 224, 0.4) 0%, rgba(150, 190, 224, 0) 58%),
     linear-gradient(158deg, #0c1620 0%, #17242f 44%, #0a1219 100%);
 }
-.rock-modal.is-open { opacity: 1; pointer-events: auto; }
+.rock-modal.is-open { opacity: 1; pointer-events: auto; transition: none; }
+.rock-scrim, .rock-top { opacity: 0; transition: opacity 0.3s ease; }
+.rock-modal.is-open .rock-scrim,
+.rock-modal.is-open .rock-top { opacity: 1; transition: opacity 0.6s ease; }
 /* background: video loop dalam-glacier (generate Nehemiah) atau gradient es fallback */
 .rock-bg {
   position: absolute; inset: 0; width: 100%; height: 100%;
@@ -378,11 +387,15 @@ body {
   height: 100%; overflow-y: auto; overscroll-behavior: contain;
   padding: 0 6vw;
   color: #c7d2da;
-  transform: translateY(26px); transition: transform 0.9s cubic-bezier(0.22, 0.9, 0.24, 1);
+  transform: translateY(26px); opacity: 0;
+  transition: transform 0.9s cubic-bezier(0.22, 0.9, 0.24, 1), opacity 0.3s ease;
   scrollbar-width: none;
 }
 .rock-content::-webkit-scrollbar { display: none; }
-.rock-modal.is-open .rock-content { transform: none; }
+.rock-modal.is-open .rock-content {
+  transform: none; opacity: 1;
+  transition: transform 0.9s cubic-bezier(0.22, 0.9, 0.24, 1), opacity 0.6s ease 0.08s;
+}
 .rock-inner {
   max-width: 1160px; margin: 0 auto; padding: 17vh 0 calc(14vh + env(safe-area-inset-bottom));
   display: grid; grid-template-columns: minmax(200px, 270px) minmax(0, 1fr);
@@ -781,6 +794,8 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .echo-btn::before, .echo-btn::after, .echo-empty-orb::before,
   .echo-gem, .echo-btn-dot { animation: none; }
+  /* panel batu: tanpa geser naik, cuma fade */
+  .rock-content, .rock-modal.is-open .rock-content { transform: none; }
 }
 
 /* ---------- depth ruler kiri: penggaris kedalaman yang ikut scroll ---------- */
@@ -801,6 +816,17 @@ body {
   position: fixed; inset: 0; z-index: 8; pointer-events: none;
   background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 55%, rgba(18, 22, 26, 0.34) 100%);
 }
+
+/* ---------- nyelam ke batu: HUD minggir (kelas dari UI.jsx) ----------
+   Judul section, OPEN, dan aba-aba scroll dipudarin loop rAF di UI.jsx, sisanya
+   yang statis lewat kelas ini. Vignette ikut ilang: panel gak punya vignette,
+   kalau dibiarin sudut layar kebaca "loncat terang" pas serah terima ke panel.
+   PERF: yang dianimasi cuma opacity, aman di atas canvas */
+.logo, .meta, .readout, .progress-bar, .ruler, .vignette { transition: opacity 0.35s ease; }
+html.is-diving .logo, html.is-diving .meta, html.is-diving .readout,
+html.is-diving .progress-bar, html.is-diving .ruler, html.is-diving .vignette { opacity: 0; }
+html.is-diving .anno { opacity: 0; transition-duration: 0.25s; pointer-events: none !important; }
+html.is-diving .echo-btn { opacity: 0; pointer-events: none; }
 
 /* ---------- film grain halus di atas segalanya (tekstur ala igloo) ---------- */
 .grain {

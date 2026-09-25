@@ -5,6 +5,7 @@ import { Float, Html, MeshTransmissionMaterial, useCursor, useGLTF } from '@reac
 import { easing } from 'maath'
 import { dragState, focusState, scrollState } from './scrollState'
 import { LOW } from './perf'
+import { diveFx, rockRadius, windowMat } from './Dive'
 
 const MODEL = '/models/iceberg.glb'
 
@@ -332,11 +333,15 @@ function buildVeilGeometry(src) {
   return g
 }
 
+// efek tambahan di dalam batu gak boleh nangkep pointer
+const noRaycast = () => null
+
 export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
   const { nodes } = useGLTF(data.model ?? MODEL)
   const group = useRef()
   const spinner = useRef()
   const veil = useRef()
+  const win = useRef()
   const ice = useRef()
   const dragging = useRef(null)
   const dragMoved = useRef(false) // true kalau gesture terakhir beneran muter (bukan klik)
@@ -389,19 +394,35 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
     if (veilGeo) veilMat.uniforms.uRadius.value = (veilGeo.boundingSphere?.radius ?? 1) * 0.55
   }, [veilGeo, veilMat])
 
+  useEffect(() => {
+    if (!geometry) return
+    if (!geometry.boundingSphere) geometry.computeBoundingSphere()
+    const bs = geometry.boundingSphere
+    // radius dunia batu buat titik berhenti kamera pas nyelam (Dive.jsx)
+    rockRadius.set(data.id, (bs.radius + bs.center.length()) * (data.scale ?? 1))
+  }, [geometry, data.id, data.scale])
+
   useFrame((state, delta) => {
     if (!group.current || !spinner.current) return
+    const F = focusState
+    const mine = F.phase !== 'idle' && F.id === data.id
     // hanya mesh-nya yang muter, label anotasi tetap diam ala igloo.
     // pas lagi di-drag, auto-spin berhenti biar gak rebutan kendali.
     if (!dragging.current) spinner.current.rotation.y += delta * (data.spin ?? 0.06)
     const s = (data.scale ?? 1) * (interactive && hovered ? 1.07 : 1)
     easing.damp3(group.current.scale, [s, s, s], 0.25, delta)
+    // "napas" kecil pas ancang-ancang nyelam
+    spinner.current.scale.setScalar(mine ? 1 + 0.045 * diveFx.breath : 1)
+    // nyelam: batu berubah jadi jendela video (Dive.jsx). Begitu jendelanya
+    // udah nutup penuh, es aslinya disembunyiin (hemat transmission + IceBuffer)
+    if (win.current) win.current.visible = mine && diveFx.k > 0.001
+    if (ice.current) ice.current.visible = !(mine && diveFx.k > 0.999)
     // selubung wireframe lokal: fade in/out + titik hover dikejar pake damping
     // (batunya muter, jadi titik world harus dikonversi ulang ke local tiap frame)
     if (veil.current) {
       const u = veilMat.uniforms
       u.uTime.value += delta
-      easing.damp(u.uReach, 'value', hovered ? 1 : 0, 0.22, delta)
+      easing.damp(u.uReach, 'value', hovered && F.phase === 'idle' ? 1 : 0, 0.22, delta)
       // di luar hover shader-nya discard semua fragment, tapi mesh-nya tetep
       // digambar full (vertex shader + rasterisasi) di 5 batu tiap frame.
       // Disembunyiin total pas gak dipakai. Raycast hover gak kepengaruh:
@@ -528,6 +549,17 @@ export function Crystal({ data, onOpen, interactive = true, snapT = 0 }) {
           {/* selubung wireframe lokal: cuma sekitar kursor yang kebuka garis
               geometrinya, disapu gelombang cincin keluar (shader di atas) */}
           {veilGeo && <mesh ref={veil} geometry={veilGeo} material={veilMat} scale={1.004} visible={false} />}
+          {/* jendela video pas nyelam (material bareng dari Dive.jsx) */}
+          {interactive && (
+            <mesh
+              ref={win}
+              geometry={geometry}
+              material={windowMat}
+              scale={1.006}
+              visible={false}
+              raycast={noRaycast}
+            />
+          )}
           <Artifact type={data.artifact} />
         </group>
         {interactive && (

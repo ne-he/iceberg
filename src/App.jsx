@@ -9,6 +9,7 @@ import { GLACIER_VIDEO, LOW, SCENE_VIDEO } from './perf'
 import { quality } from './quality'
 import { onCanvasCreated } from './glRuntime'
 import { scrollSettled } from './scrollSettle'
+import { DIVE, reducedMotion, startPanelVideo } from './Dive'
 import { beginFocus, bgVideoState, chatState, dragState, endFocus, faceState, focusState, introState, scrollState } from './scrollState'
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
@@ -137,15 +138,24 @@ export default function App() {
     chatState.open = false
   }
 
-  // klik batu: mulai animasi menyelam, panel konten muncul pas kamera udah nembus
+  // klik batu: mulai animasi menyelam (Dive.jsx), panel konten dipasang pas
+  // layar udah ketutup video panel. prefers-reduced-motion: tanpa ancang-ancang
+  // dan tanpa gerak kamera, cuma crossfade pendek ke video
   const openRock = (id, pos) => {
     if (focusState.phase !== 'idle') return // lagi nyelam/kebuka, abaikan klik dobel
-    beginFocus(id, pos ?? [0, 0, 0])
+    const fade = reducedMotion()
+    beginFocus(id, pos ?? [0, 0, 0], fade ? 'fade' : 'dive')
+    // masih di dalam gesture klik: video panel mulai muter (tanpa suara) sekarang,
+    // biar udah jalan pas nongol di dalam batu
+    startPanelVideo()
     clearTimeout(diveTimer.current)
-    diveTimer.current = setTimeout(() => {
-      setPanel(id) // sinkron sama durasi nembus
-      focusState.panelOpen = true
-    }, 1150)
+    diveTimer.current = setTimeout(
+      () => {
+        setPanel(id)
+        focusState.panelOpen = true
+      },
+      fade ? DIVE.FADE + 20 : DIVE.PANEL
+    )
   }
   const closeRock = () => {
     clearTimeout(diveTimer.current)

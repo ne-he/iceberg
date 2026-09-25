@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useProgress } from '@react-three/drei'
 import { beginIntro, bgVideoState, chatState, faceState, focusState, introState, scrollState } from './scrollState'
 import { warmState } from './warmup'
-import { GLACIER_VIDEO } from './perf'
+import { armPanelVideo, panelVideo } from './Dive'
 import { AVAILABILITY, CONTACT, CRYSTALS, PANELS, RESUME_URL, SECTION_WORDS } from './content'
 import DecryptedText from './components/DecryptedText'
 
@@ -209,14 +209,19 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
   // video dalam-glacier: suara nyala default (permintaan Nehemiah), bisa di-toggle
   const vidRef = useRef(null)
   const [soundOn, setSoundOn] = useState(true)
+  // elemen video yang SAMA dipinjem batu pas nyelam (tekstur di Dive.jsx)
+  const bindVid = useCallback((el) => {
+    vidRef.current = el
+    panelVideo.el = el
+  }, [])
   // video panel (905 KB) dulu preload="auto" dari awal, rebutan bandwidth sama
   // model + HDR + video langit pas loading pertama, padahal baru kepake pas batu
   // dibuka. Sekarang src-nya baru dipasang 2.5 detik setelah intro kelar, atau
-  // langsung begitu orang mulai nyelam ke batu (masih ada 1.15 detik sebelum
-  // panel nongol). Sekali dipasang gak dilepas lagi
-  const [vidArmed, setVidArmed] = useState(false)
+  // langsung di handler klik batu (armPanelVideo). Sekali dipasang gak dilepas lagi
   const vidArmedRef = useRef(false)
-  const vidSrc = vidArmed || panel ? GLACIER_VIDEO : undefined
+  // 1 = HUD tampil, 0 = lagi nyelam/panel kebuka (label, judul section, OPEN minggir)
+  const hudK = useRef(1)
+  const diving = useRef(false)
 
   useEffect(() => {
     // HUD render only, scrollState di-drive master di App.jsx (infinite loop).
@@ -239,15 +244,32 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
     // teks readout cuma ditulis kalau nilainya beneran berubah
     let lastDepth = ''
     let lastTemp = ''
+    let lastNow = performance.now()
     const tick = () => {
+      const now = performance.now()
+      const dt = Math.min(0.05, (now - lastNow) / 1000)
+      lastNow = now
       if (!vidArmedRef.current) {
-        const now = performance.now()
         if (introState.phase === 'idle' && !idleAt) idleAt = now
         if (focusState.phase !== 'idle' || (idleAt && now - idleAt > 2500)) {
           vidArmedRef.current = true
-          setVidArmed(true)
+          armPanelVideo()
         }
       }
+      // nyelam ke batu: HUD minggir halus (bukan ilang sekejap), balik lagi
+      // begitu kamera udah mendarat di posisi scroll
+      const dv = focusState.phase !== 'idle' || focusState.panelOpen
+      hudK.current += ((dv ? 0 : 1) - hudK.current) * (1 - Math.exp(-dt / (dv ? 0.07 : 0.16)))
+      const hk = hudK.current
+      if (dv !== diving.current) {
+        diving.current = dv
+        // label batu, logo/readout, vignette, tombol chat: diatur CSS (html.is-diving)
+        document.documentElement.classList.toggle('is-diving', dv)
+      }
+      // video panel sengaja tetep jalan selama animasi keluar (batunya masih
+      // nampilin video itu). Baru di-pause pas kamera udah balik
+      const pv = vidRef.current
+      if (pv && !pv.paused && !dv) pv.pause()
       const t = scrollState.damped // posisi descend (=1 selama bridge)
       const dk = scrollState.depthK // retrace pas bridge
       const br = scrollState.bridge
@@ -282,7 +304,7 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
       SECTION_WORDS.forEach((w, i) => {
         const el = words.current[i]
         if (el) {
-          const o = clamp(1 - Math.abs(t - w.center) / 0.12, 0, 1)
+          const o = clamp(1 - Math.abs(t - w.center) / 0.12, 0, 1) * hk
           el.style.opacity = o
           const vis = o > 0.15
           if (vis !== wordVis.current[i]) {
@@ -299,14 +321,15 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
       // aba-aba scroll cuma perlu sebelum orang mulai turun. Dulu nongol terus
       // sampai dk 0.82, numpuk sama tombol OPEN. Karena pakai dk (yang retrace
       // pas bridge), dia otomatis balik lagi pas mendarat di hero
-      if (hint.current) hint.current.style.opacity = clamp(1 - dk / 0.06, 0, 1) * rv
+      if (hint.current) hint.current.style.opacity = clamp(1 - dk / 0.06, 0, 1) * rv * hk
       if (openBtn.current) {
         // batu i di-frame kalau damped deket anchor snap-nya, (i+1)/(N+1), rumus
         // yang sama kayak anchor di App. Penuh dalam 0.035, pudar habis di 0.06.
-        // Mati pas bridge, pas lagi nyelam/panel kebuka, dan pas chat kebuka
+        // Mati pas bridge dan pas chat kebuka. Pas nyelam/panel kebuka dia
+        // mudar bareng HUD lain (hk)
         let fi = -1
         let fo = 0
-        if (br === 0 && focusState.phase === 'idle' && !focusState.panelOpen && !chatState.open) {
+        if (br === 0 && !chatState.open) {
           const n = CRYSTALS.length + 1
           for (let i = 0; i < CRYSTALS.length; i++) {
             const o = clamp(1 - (Math.abs(t - (i + 1) / n) - 0.035) / 0.025, 0, 1)
@@ -316,7 +339,7 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
             }
           }
         }
-        fo *= rv
+        fo *= rv * hk
         if (fi !== -1 && fi !== framed.current) {
           framed.current = fi
           if (openName.current) openName.current.textContent = CRYSTALS[fi].name
@@ -343,7 +366,7 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
     return () => {
       cancelAnimationFrame(raf)
       window.removeEventListener('resize', measure)
-      document.documentElement.classList.remove('at-outro')
+      document.documentElement.classList.remove('at-outro', 'is-diving')
     }
   }, [])
 
@@ -353,26 +376,30 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  // play + suara pas masuk kristal, pause pas keluar. Autoplay-with-sound diizinin
-  // karena dipicu klik user (buka kristal). Kalau browser tetep blok suara, fallback
-  // ke muted biar videonya tetep jalan (bukan layar item).
+  // Video udah muter tanpa suara sejak klik batu (startPanelVideo di Dive.jsx).
+  // Pas panel kebuka suaranya dinyalain, boleh karena halaman udah dapet gesture
+  // klik. Kalau browser tetep blok suara, fallback ke muted biar videonya tetep
+  // jalan (bukan layar item). Pas panel ditutup suaranya langsung mati, tapi
+  // videonya JANGAN di-pause di sini: batunya masih nampilin video itu selama
+  // animasi keluar (pause-nya di loop HUD di atas)
   useEffect(() => {
     const v = vidRef.current
     if (!v) return
     if (panel) {
+      armPanelVideo()
       v.muted = !soundOn
-      const p = v.play()
-      if (p && p.catch)
-        p.catch(() => {
-          v.muted = true
-          v.play().catch(() => {})
-        })
+      if (v.paused) {
+        const p = v.play()
+        if (p && p.catch)
+          p.catch(() => {
+            v.muted = true
+            v.play().catch(() => {})
+          })
+      }
     } else {
-      v.pause()
+      v.muted = true
     }
-    // vidSrc ikut jadi dependency: kalau panel kebuka sebelum video sempat
-    // dipasang, play() pertama jalan tanpa src, jadi diulang begitu src-nya ada
-  }, [panel, soundOn, vidSrc])
+  }, [panel, soundOn])
 
   return (
     <>
@@ -496,7 +523,23 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
           // videonya udah dikompres ke <1MB, jadi begitu src dipasang (lihat
           // vidArmed) di-preload penuh: ke-buffer semua sebelum user klik
           // kristal = main tanpa patah
-          <video ref={vidRef} className="rock-bg" src={vidSrc} loop playsInline preload="auto" />
+          <video
+            ref={bindVid}
+            className="rock-bg"
+            loop
+            playsInline
+            preload="auto"
+            // browser yang nolak nyalain suara tanpa gesture baru langsung
+            // nge-pause videonya. Pas panel kebuka itu = layar beku, jadi
+            // balik ke muted dan lanjut muter
+            onPause={(e) => {
+              const v = e.currentTarget
+              if (focusState.panelOpen && !v.muted) {
+                v.muted = true
+                v.play().catch(() => {})
+              }
+            }}
+          />
         ) : (
           <div className="rock-bg rock-bg--fallback" />
         )}

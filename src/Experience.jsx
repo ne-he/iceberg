@@ -5,6 +5,7 @@ import { Environment, Sparkles, useGLTF, useProgress } from '@react-three/drei'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import { easing } from 'maath'
 import { Crystal, IceBuffer } from './Crystal'
+import { DiveFill, stepDive } from './Dive'
 import { ParticleFace } from './ParticleFace'
 import { Portal } from './Portal'
 import { Glacier, heroFade } from './Glacier'
@@ -117,6 +118,10 @@ export default function Experience({ onOpen, hasVideo }) {
           <Bloom intensity={0.38} luminanceThreshold={0.88} luminanceSmoothing={0.22} mipmapBlur />
         </EffectComposer>
       )}
+
+      {/* penutup layar video pas nyelam ke batu (Dive.jsx), di bawah batu-batu
+          biar uniform-nya ditulis setelah CameraRig ngitung koreografinya */}
+      <DiveFill />
 
       <Warmup />
       {/* WAJIB paling bawah: useFrame-nya harus jalan setelah kamera & batu
@@ -715,8 +720,8 @@ const HOLD = 0.03
 function CameraRig() {
   const camera = useThree((s) => s.camera)
   const parallax = useMemo(() => ({ v: 1 }), [])
-  // vektor kerja buat animasi menyelam ke batu (biar gak bikin garbage tiap frame)
-  const fv = useMemo(() => ({ center: new THREE.Vector3(), dive: new THREE.Vector3(), look: new THREE.Vector3(), base: new THREE.Vector3(), baseLook: new THREE.Vector3() }), [])
+  // target pandang frame lalu, jadi titik awal animasi nyelam ke batu
+  const fv = useMemo(() => ({ look: new THREE.Vector3() }), [])
   const [p, t, anchors] = useMemo(() => {
     const v = (x, y, z) => new THREE.Vector3(x, y, z)
     // posisi kamera per anchor = tepat di depan kristalnya (offset +z)
@@ -865,46 +870,19 @@ function CameraRig() {
       }
     }
 
-    // ---- MENYELAM ke dalam batu pas diklik (permintaan Nehemiah): pertama batu
-    //      pelan digeser ke tengah + kamera dolly deket, lalu NEMBUS masuk ke
-    //      dalamnya (layar keisi es), baru panel konten muncul. 'out' = mundur ----
+    // ---- MENYELAM ke batu pas diklik: ancang-ancang mundur, nyelam lurus, batu
+    //      berubah jadi jendela video, video nutup layar, baru panel DOM. Semua
+    //      koreografinya di Dive.jsx (stepDive). Selama nyelam kamera dikunci ke
+    //      jalurnya, tanpa parallax pointer ----
     const F = focusState
-    if (F.phase !== 'idle') {
-      const now = performance.now()
-      const cx = F.pos[0], cy = F.pos[1], cz = F.pos[2]
-      fv.center.set(cx, cy + 0.3, cz + 4.6) // batu di tengah, jarak nyaman
-      fv.dive.set(cx, cy + 0.05, cz + 0.5) // nembus masuk (mepet permukaan)
-      fv.look.set(cx, cy, cz)
-      const sm = (x) => x * x * (3 - 2 * x)
-      if (F.phase === 'in') {
-        const q = THREE.MathUtils.clamp((now - F.t0) / 1250, 0, 1)
-        if (q < 0.5) {
-          const e = sm(q / 0.5)
-          p.lerp(fv.center, e) // dari kamera scroll → batu ke tengah
-          t.lerp(fv.look, e)
-        } else {
-          const e = sm((q - 0.5) / 0.5)
-          p.copy(fv.center).lerp(fv.dive, e) // nembus masuk
-          t.copy(fv.look)
-        }
-        if (q >= 1) F.phase = 'open'
-      } else if (F.phase === 'open') {
-        p.copy(fv.dive)
-        t.copy(fv.look)
-      } else if (F.phase === 'out') {
-        const e = sm(THREE.MathUtils.clamp((now - F.t0) / 800, 0, 1))
-        fv.base.copy(p) // p = kamera scroll saat ini (tujuan balik)
-        fv.baseLook.copy(t)
-        p.copy(fv.dive).lerp(fv.base, e)
-        t.copy(fv.look).lerp(fv.baseLook, e)
-        if (e >= 1) F.phase = 'idle'
-      }
-    }
+    const locked = F.phase !== 'idle' && stepDive(performance.now(), camera.position, fv.look, p, t)
 
     // parallax pointer dimatiin halus selama hero di-drag / lagi nyelam ke batu
     easing.damp(parallax, 'v', dragState.active || F.phase !== 'idle' ? 0 : 1, 0.2, delta)
-    camera.position.set(p.x + state.pointer.x * 0.5 * parallax.v, p.y + state.pointer.y * 0.3 * parallax.v, p.z)
+    if (locked) camera.position.copy(p)
+    else camera.position.set(p.x + state.pointer.x * 0.5 * parallax.v, p.y + state.pointer.y * 0.3 * parallax.v, p.z)
     camera.lookAt(t)
+    fv.look.copy(t)
   })
   return null
 }
