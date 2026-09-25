@@ -15,6 +15,55 @@ import { GPUComputationRenderer } from 'three/examples/jsm/misc/GPUComputationRe
 
 const TAU = Math.PI * 2
 
+// ===== aliran salju dari portal (dipakai GPU & loop CPU, angkanya HARUS sama) =====
+// Tiap partikel punya jadwal lepas sendiri (release 0..1). Progres rakit global
+// a (0..1) dibagi: partikel i baru lepas pas a > release * STREAM_SPAN, lalu
+// butuh (1 - STREAM_SPAN) buat terbang dari mulut portal ke titik wajahnya.
+// Jadi yang keliatan: salju ngalir keluar portal terus-terusan, bukan awan acak
+// yang tiba-tiba ngumpul.
+export const STREAM_SPAN = 0.5
+// warna es terang (linear) pas partikel masih terbang, baru "cuci" ke warna
+// foto pas udah mendarat
+export const ICE = [0.62, 0.8, 0.98]
+// bentuk dorongan pointer: dulu dorong ke samping doang (xy penuh), itu yang
+// bikin bolong di badan dan aura terang di belakang nongol jadi bintik putih.
+// Sekarang sebagian besar dorongan ke arah kamera (z), sampingnya kecil
+export const REPEL_XY = 0.6
+export const REPEL_Z = 1.0
+
+// Gak semua partikel terbang dari portal: kalau 120k titik terbang bareng,
+// kamera yang lagi lewat ketutup badai bola salju. Cuma sebagian (flyer) yang
+// jatuh dari portal, sisanya "mengkristal" di tempat: muncul sedikit di atas
+// titiknya lalu turun pelan ke posisi. Dua-duanya bikin wajahnya makin padat.
+export const FLYER_RATIO = 0.35
+
+const STREAM_GLSL = /* glsl */ `
+uniform sampler2D tRelease; // r = jadwal lepas, g = 1 kalau partikel ini salju terbang
+uniform float uA;
+uniform float uCalm;
+
+float streamS( vec2 uv ) {
+  float r = texture2D( tRelease, uv ).r;
+  return clamp( ( uA - r * STREAM_SPAN ) / ( 1.0 - STREAM_SPAN ), 0.0, 1.0 );
+}
+
+// lintasan salju: turun hampir rata (kecepatan terminal) lalu ngerem pas
+// mendarat, geser ke samping belakangan (jatuh lurus dulu baru ketarik ke
+// posisinya), plus goyang kiri-kanan yang mengecil pas deket target
+vec3 streamPath( vec3 O, vec3 T, float s, vec2 rel ) {
+  float calm = max( uCalm, 1.0 - rel.y );
+  O = mix( O, T + vec3( 0.0, 0.6, 0.0 ), calm );
+  float ey = s * ( 1.6 - 0.6 * s );
+  float ex = s * s * ( 3.0 - 2.0 * s );
+  float env = ( 1.0 - s ) * min( s * 5.0, 1.0 ) * ( 1.0 - calm );
+  return vec3(
+    mix( O.x, T.x, ex ) + sin( s * 8.0 + rel.x * 37.0 ) * 0.32 * env,
+    mix( O.y, T.y, ey ),
+    mix( O.z, T.z, ex ) + cos( s * 6.5 + rel.x * 21.0 ) * 0.26 * env
+  );
+}
+`
+
 // dorongan pointer: rumusnya sama kayak loop CPU (meluruh pelan, saturasi di
 // dalam REPEL_R). Fungsi ini dipanggil di pass offset DAN pass posisi dari
 // input yang sama (state frame sebelumnya). Hasilnya: posisi langsung pakai
@@ -31,8 +80,8 @@ vec3 repelOffset( vec2 uv ) {
   if ( d2 < REPEL_R * REPEL_R && d2 > 1e-6 ) {
     float d = sqrt( d2 );
     float push = ( 1.0 - d / REPEL_R ) * REPEL_MAX;
-    off.xy += ( dd / d * push - off.xy ) * uBlend;
-    off.z += ( push * 0.5 - off.z ) * uBlend;
+    off.xy += ( dd / d * push * REPEL_XY - off.xy ) * uBlend;
+    off.z += ( push * REPEL_Z - off.z ) * uBlend;
   }
   return off;
 }
@@ -50,13 +99,16 @@ uniform sampler2D tScatter;
 uniform sampler2D tSpeed;
 uniform sampler2D tTargetPos;
 uniform float uDelta;
-uniform float uA;
 uniform float uWob;
 uniform vec2 uWobT;
+${STREAM_GLSL}
 ${REPEL_GLSL}
 void main() {
   vec2 uv = gl_FragCoord.xy / resolution.xy;
-  float k = 1.0 - exp( -texture2D( tSpeed, uv ).r * uDelta );
+  float s = streamS( uv );
+  // pas masih terbang dikejar cepet biar lintasannya kebaca, pas udah mendarat
+  // balik ke kecepatan per partikel (morph logo & repel tetep kayak dulu)
+  float k = mix( 1.0 - exp( -14.0 * uDelta ), 1.0 - exp( -texture2D( tSpeed, uv ).r * uDelta ), smoothstep( 0.9, 1.0, s ) );
   vec3 pos = texture2D( texturePosition, uv ).xyz;
   vec3 off = repelOffset( uv );
   // goyang idle logo. Index partikel dari posisi texel, fasenya di-mod 2pi
@@ -67,9 +119,10 @@ void main() {
     sin( uWobT.x + mod( i * 0.37, 6.283185307 ) ),
     cos( uWobT.y + mod( i * 0.71, 6.283185307 ) )
   ) * ( 0.011 * uWob );
-  vec3 sc = texture2D( tScatter, uv ).xyz;
-  vec3 goal = sc + ( texture2D( tTargetPos, uv ).xyz - sc ) * uA + vec3( w, 0.0 ) + off;
-  gl_FragColor = vec4( pos + ( goal - pos ) * k, 1.0 );
+  vec3 goal = streamPath( texture2D( tScatter, uv ).xyz, texture2D( tTargetPos, uv ).xyz, s, texture2D( tRelease, uv ).rg )
+    + vec3( w, 0.0 ) + off;
+  // w = progres terbang s, dibaca vertex shader (alpha pas lepas, ukuran)
+  gl_FragColor = vec4( pos + ( goal - pos ) * k, s );
 }
 `
 
@@ -77,18 +130,28 @@ const COLOR_FRAG = /* glsl */ `
 uniform sampler2D tSpeed;
 uniform sampler2D tTargetCol;
 uniform float uDelta;
+uniform float uDev;
+uniform vec3 uIce;
+${STREAM_GLSL}
 void main() {
   vec2 uv = gl_FragCoord.xy / resolution.xy;
   float k = 1.0 - exp( -texture2D( tSpeed, uv ).r * uDelta );
   vec3 c = texture2D( textureColor, uv ).rgb;
-  gl_FragColor = vec4( c + ( texture2D( tTargetCol, uv ).rgb - c ) * k, 1.0 );
+  // es terang selama terbang, warna foto nyusul setelah mendarat DAN kamera
+  // udah di depan (uDev). Dari atas, wajah yang udah mendarat masih es terang,
+  // bukan lempengan item yang dilihat dari atas kepala
+  vec3 goal = mix( uIce, texture2D( tTargetCol, uv ).rgb, smoothstep( 0.5, 1.0, streamS( uv ) ) * uDev );
+  // yang lagi kedorong pointer ikut terang, jadi bekas sentuhan kebaca cahaya
+  // es, bukan bolong yang nunjukin aura putih di belakang
+  goal = mix( goal, uIce, clamp( length( texture2D( textureOffset, uv ).xyz ) / REPEL_MAX, 0.0, 1.0 ) * 0.55 );
+  gl_FragColor = vec4( c + ( goal - c ) * k, 1.0 );
 }
 `
 
-// Float32Array (3 atau 1 komponen per partikel) → tekstur float W x H tanpa salin.
+// Float32Array (3, 2 atau 1 komponen per partikel) → tekstur float W x H tanpa salin.
 // internalFormat WAJIB ditulis: three 0.166 nerjemahin RGBFormat + FloatType jadi
 // format RGB tanpa ukuran, dan WebGL2 nolak itu buat data float
-const SIZED = { [THREE.RGBFormat]: 'RGB32F', [THREE.RedFormat]: 'R32F', [THREE.RGBAFormat]: 'RGBA32F' }
+const SIZED = { [THREE.RGBFormat]: 'RGB32F', [THREE.RGFormat]: 'RG32F', [THREE.RedFormat]: 'R32F', [THREE.RGBAFormat]: 'RGBA32F' }
 function floatTex(data, w, h, format) {
   const t = new THREE.DataTexture(data, w, h, format, THREE.FloatType)
   t.internalFormat = SIZED[format]
@@ -107,8 +170,9 @@ export function gpuSimSupported(gl) {
 }
 
 // bikin simulasi, balikin null kalau device-nya gak sanggup (→ jalur CPU).
-// pos/col = state awal (array CPU yang sama), scatter/speeds = data statis
-export function createFaceSim(gl, { count, pos, col, scatter, speeds, repelR, repelMax }) {
+// pos/col = state awal (array CPU yang sama), scatter = titik asal di mulut
+// portal, speeds/release = data statis per partikel, calm = reduced motion
+export function createFaceSim(gl, { count, pos, col, scatter, speeds, release, calm, repelR, repelMax }) {
   if (!gpuSimSupported(gl)) return null
   let W = Math.ceil(Math.sqrt(count))
   while (count % W) W++
@@ -118,6 +182,7 @@ export function createFaceSim(gl, { count, pos, col, scatter, speeds, repelR, re
   const gpu = new GPUComputationRenderer(W, H, gl)
   const scatTex = floatTex(scatter, W, H, THREE.RGBFormat)
   const speedTex = floatTex(speeds, W, H, THREE.RedFormat)
+  const relTex = floatTex(release, W, H, THREE.RGFormat)
   const pos0 = floatTex(pos, W, H, THREE.RGBFormat)
   const col0 = floatTex(col, W, H, THREE.RGBFormat)
   // offset awal nol semua: cukup tekstur 1x1, pass init nyamplingnya ke semua texel
@@ -128,17 +193,22 @@ export function createFaceSim(gl, { count, pos, col, scatter, speeds, repelR, re
   const colVar = gpu.addVariable('textureColor', COLOR_FRAG, col0)
   gpu.setVariableDependencies(posVar, [posVar, offVar])
   gpu.setVariableDependencies(offVar, [posVar, offVar])
-  gpu.setVariableDependencies(colVar, [colVar])
+  // warna ikut baca dorongan pointer (partikel yang kedorong jadi terang)
+  gpu.setVariableDependencies(colVar, [colVar, offVar])
 
   // satu set uniform dipakai bareng semua pass. Target default = posisi sebar,
   // biar sebelum target wajah siap gak ada sampler yang nunjuk ke tekstur kosong
   const U = {
     tScatter: { value: scatTex },
     tSpeed: { value: speedTex },
+    tRelease: { value: relTex },
     tTargetPos: { value: scatTex },
     tTargetCol: { value: scatTex },
     uDelta: { value: 0 },
     uA: { value: 0 },
+    uCalm: { value: calm ? 1 : 0 },
+    uDev: { value: 0 },
+    uIce: { value: new THREE.Vector3(...ICE) },
     uDec: { value: 1 },
     uBlend: { value: 0 },
     uPointer: { value: new THREE.Vector2(1e9, 1e9) },
@@ -149,6 +219,9 @@ export function createFaceSim(gl, { count, pos, col, scatter, speeds, repelR, re
     Object.assign(v.material.uniforms, U)
     v.material.defines.REPEL_R = repelR.toFixed(6)
     v.material.defines.REPEL_MAX = repelMax.toFixed(6)
+    v.material.defines.REPEL_XY = REPEL_XY.toFixed(6)
+    v.material.defines.REPEL_Z = REPEL_Z.toFixed(6)
+    v.material.defines.STREAM_SPAN = STREAM_SPAN.toFixed(6)
   }
 
   const fail = () => {
@@ -156,6 +229,7 @@ export function createFaceSim(gl, { count, pos, col, scatter, speeds, repelR, re
     gpu.dispose()
     scatTex.dispose()
     speedTex.dispose()
+    relTex.dispose()
     return null
   }
   if (gpu.init() !== null) return fail()
@@ -224,10 +298,15 @@ export function createFaceSim(gl, { count, pos, col, scatter, speeds, repelR, re
       onBeforeCompile(shader) {
         shader.uniforms.uSimPos = view.uSimPos
         shader.uniforms.uSimCol = view.uSimCol
+        // simS (kanal w) = progres terbang partikel 0..1, dipakai patch fade &
+        // ukuran di ParticleFace
         shader.vertexShader = shader.vertexShader
           .replace('#include <common>', '#include <common>\nuniform sampler2D uSimPos;\nuniform sampler2D uSimCol;')
           .replace('#include <color_vertex>', '#include <color_vertex>\n\tvColor = texture2D( uSimCol, position.xy ).rgb;')
-          .replace('#include <begin_vertex>', 'vec3 transformed = texture2D( uSimPos, position.xy ).xyz;')
+          .replace(
+            '#include <begin_vertex>',
+            'vec4 simP = texture2D( uSimPos, position.xy );\n\tvec3 transformed = simP.xyz;\n\tfloat simS = simP.w;',
+          )
       },
       customProgramCacheKey: () => 'particleface-gpgpu',
     },
@@ -241,12 +320,13 @@ export function createFaceSim(gl, { count, pos, col, scatter, speeds, repelR, re
       }
     },
     // satu frame simulasi. Semua angka sama kayak yang dipakai loop CPU
-    step({ delta, target, a, px, py, dec, blend, wob, time }) {
+    step({ delta, target, a, dev, px, py, dec, blend, wob, time }) {
       const e = texFor(target)
       U.tTargetPos.value = e.pos
       U.tTargetCol.value = e.col
       U.uDelta.value = delta
       U.uA.value = a
+      U.uDev.value = dev
       U.uDec.value = dec
       U.uBlend.value = blend
       U.uPointer.value.set(px, py)
@@ -262,6 +342,7 @@ export function createFaceSim(gl, { count, pos, col, scatter, speeds, repelR, re
       gpu.dispose()
       scatTex.dispose()
       speedTex.dispose()
+      relTex.dispose()
       for (const e of targetTex.values()) {
         e.pos.dispose()
         e.col.dispose()

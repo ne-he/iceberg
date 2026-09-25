@@ -4,7 +4,28 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { faceState, scrollState } from './scrollState'
 import { LOW } from './perf'
 import { warmHooks } from './warmup'
-import { createFaceSim } from './particles/faceSim'
+import { FLYER_RATIO, ICE, REPEL_XY, REPEL_Z, STREAM_SPAN, createFaceSim } from './particles/faceSim'
+import { PORTAL_POS } from './Portal'
+
+// prefers-reduced-motion: partikel gak terjun dari portal, cuma turun dikit
+// sambil muncul, dan perakitannya lebih singkat. Dibaca sekali kayak LOW
+const CALM = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
+// perakitan wajah minimal segini detik walau scroll-nya ngebut (snap cuma ~1
+// detik), biar aliran saljunya sempet kebaca. Mundur (scroll balik) lebih cepet
+const ASSEMBLE_S = CALM ? 1.1 : 1.8
+const DISASSEMBLE_S = 0.5
+// mulai & kelar perakitan dalam satuan damped: mulai pas kamera nembus ring
+// (CameraRig: bidang ring kelewat di damped ~0.955)
+const A_FROM = 0.95
+const A_TO = 0.998
+// "cuci foto": warna asli foto baru boleh keluar pas kamera udah di depan wajah
+const DEV_FROM = 0.975
+const DEV_TO = 0.998
+const DEV_S = 0.9
+const sstep = (a, b, x) => {
+  const t = Math.max(0, Math.min(1, (x - a) / (b - a)))
+  return t * t * (3 - 2 * t)
+}
 
 // jumlah partikel: bener-bener padat biar fotonya kebentuk jelas ala igloo,
 // 120k + slab tipis = antar partikel makin rapat, celah ketutup, muka solid.
@@ -94,14 +115,20 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
   const mat = useRef()
   const [targets, setTargets] = useState(null)
 
-  // posisi awal: awan acak lebar, pas visitor mendarat di panggung, partikel
-  // kelihatan TERSEBAR dulu, baru ngumpul membentuk wajah (transisi diminta Nehemiah)
+  // posisi awal: DI MULUT PORTAL. Dulu awan acak kotak 16x11x8 di sekitar
+  // wajah, padahal kamera lewat di dalam kotak itu: partikel yang mepet lensa
+  // jadi gumpalan item gede, sisanya kebaca semut TV. Sekarang partikel lepas
+  // satu-satu dari portal, jatuh kayak salju, baru mendarat jadi wajah
   const positions = useRef(null)
   const colors = useRef(null)
+  const colors4 = useRef(null) // jalur CPU aja: rgb + alpha per partikel
   const speeds = useRef(null)
-  const scatter = useRef(null) // posisi sebar per partikel, titik awal sebelum ngumpul
+  const scatter = useRef(null) // titik asal per partikel (piringan di mulut portal)
+  const release = useRef(null) // jadwal lepas per partikel 0..1
   const offsets = useRef(null) // dorongan dari pointer, meluruh pelan = delay balik ala igloo
   const wobAmp = useRef(0) // amplitudo goyang idle, 0 pas nampilin foto biar mukanya tajem
+  const assemble = useRef(0) // progres rakit yang dibatasi kecepatannya (lihat ASSEMBLE_S)
+  const develop = useRef(0) // 0 = partikel masih es terang, 1 = warna foto
   const pv = useMemo(() => new THREE.Vector3(), [])
   // pointer dilacak di WINDOW, bukan lewat R3F, overlay outro (pointer-events: auto)
   // nyerap event canvas, itu yang bikin hover mati setelah outro muncul
@@ -124,16 +151,33 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
     colors.current = new Float32Array(COUNT * 3)
     speeds.current = new Float32Array(COUNT)
     scatter.current = new Float32Array(COUNT * 3)
+    release.current = new Float32Array(COUNT * 2) // [jadwal lepas, flyer 0/1]
     offsets.current = new Float32Array(COUNT * 3)
+    // pusat mulut portal dalam koordinat lokal grup wajah
+    const ox = PORTAL_POS[0] - position[0]
+    const oy = PORTAL_POS[1] - position[1]
+    const oz = PORTAL_POS[2] - position[2]
     for (let i = 0; i < COUNT; i++) {
-      scatter.current[i * 3] = (Math.random() - 0.5) * 16
-      scatter.current[i * 3 + 1] = (Math.random() - 0.5) * 11
-      scatter.current[i * 3 + 2] = (Math.random() - 0.5) * 8
+      // piringan rata di dalam lubang ring (radius 1.45), sedikit di bawah
+      // bidang ring biar keluarnya dari cahaya portal, bukan nembus segmennya
+      const r = 1.45 * Math.sqrt(Math.random())
+      const th = Math.random() * Math.PI * 2
+      scatter.current[i * 3] = ox + Math.cos(th) * r
+      scatter.current[i * 3 + 1] = oy - 0.25 - Math.random() * 0.3
+      scatter.current[i * 3 + 2] = oz + Math.sin(th) * r
       positions.current[i * 3] = scatter.current[i * 3]
       positions.current[i * 3 + 1] = scatter.current[i * 3 + 1]
       positions.current[i * 3 + 2] = scatter.current[i * 3 + 2]
-      colors.current[i * 3] = colors.current[i * 3 + 1] = colors.current[i * 3 + 2] = 0.4
+      colors.current[i * 3] = ICE[0]
+      colors.current[i * 3 + 1] = ICE[1]
+      colors.current[i * 3 + 2] = ICE[2]
       speeds.current[i] = 1.6 + Math.random() * 2.6
+      // flyer = salju yang jatuh dari portal, lepasnya disebar dari awal. Sisanya
+      // mengkristal di tempat, rata-rata lebih belakangan, jadi pembukaannya
+      // didominasi aliran salju dan wajahnya makin padat di akhir
+      const fly = Math.random() < FLYER_RATIO
+      release.current[i * 2] = fly ? Math.random() : 0.25 + Math.random() * 0.75
+      release.current[i * 2 + 1] = fly ? 1 : 0
     }
   }
 
@@ -151,9 +195,48 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
       col: colors.current,
       scatter: scatter.current,
       speeds: speeds.current,
+      release: release.current,
+      calm: CALM,
       repelR: REPEL_R,
       repelMax: REPEL_MAX,
     }),
+  )
+  // jalur CPU: warna 4 komponen, alpha per partikel (vertexAlphas three)
+  if (!sim && !colors4.current) {
+    colors4.current = new Float32Array(COUNT * 4)
+    for (let i = 0; i < COUNT; i++) {
+      colors4.current[i * 4] = ICE[0]
+      colors4.current[i * 4 + 1] = ICE[1]
+      colors4.current[i * 4 + 2] = ICE[2]
+    }
+  }
+  // patch shader points (dua jalur): ukuran titik dikunci kalau partikel lewat
+  // mepet kamera, dan dipudarin sebelum nyentuh lensa. Tanpa ini partikel
+  // yang lewat deket kamera jadi gumpalan gede kayak debu di lensa.
+  // Partikel yang belum lepas (alpha 0) ukurannya 0, biar 120k titik numpuk di
+  // mulut portal gak makan fill rate. Jalur GPU: yang masih terbang juga lebih
+  // kecil (serpih salju), baru segede normal pas mendarat
+  const matProps = useMemo(
+    () => ({
+      onBeforeCompile(shader) {
+        if (sim) sim.materialProps.onBeforeCompile(shader)
+        shader.vertexShader = shader.vertexShader
+          .replace('#include <common>', '#include <common>\nvarying float vFade;')
+          .replace(
+            '#include <fog_vertex>',
+            `gl_PointSize = size * ( scale / max( - mvPosition.z, 3.2 ) );
+	vFade = smoothstep( 1.2, 4.0, - mvPosition.z );
+	${sim ? 'vFade *= smoothstep( 0.0, 0.14, simS );\n\tgl_PointSize *= mix( 0.55, 1.0, smoothstep( 0.75, 1.0, simS ) );' : ''}
+	if ( vFade < 0.004 ) gl_PointSize = 0.0;
+	#include <fog_vertex>`,
+          )
+        shader.fragmentShader = shader.fragmentShader
+          .replace('#include <common>', '#include <common>\nvarying float vFade;')
+          .replace('#include <color_fragment>', '#include <color_fragment>\n\tdiffuseColor.a *= vFade;')
+      },
+      customProgramCacheKey: () => (sim ? 'particleface-gpgpu-v2' : 'particleface-cpu-v2'),
+    }),
+    [sim],
   )
   // layout effect biar hook warm-up udah kedaftar sebelum effect Warmup jalan
   useLayoutEffect(() => {
@@ -254,12 +337,28 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
     const target = targets[faceState.target] || targets.face
     const time = state.clock.elapsedTime
 
-    // urutan kemunculan (permintaan Nehemiah): panggung keliatan dulu → partikel
-    // muncul TERSEBAR di atas panggung → baru ngumpul membentuk wajah.
-    // o = opacity (muncul setelah tunnel mulai kebuka), a = progres perakitan.
+    // urutan kemunculan: kamera nembus ring → partikel lepas satu-satu dari
+    // mulut portal, jatuh kayak salju, mendarat jadi wajah.
+    // o = opacity grup, a = progres perakitan (0..1).
     // Pas bridge mulai (mau balik ke atas), partikel FADE OUT ketutup kabut
+    const d = scrollState.damped
     const bridgeFade = 1 - clamp((scrollState.bridge - 0.05) / 0.3, 0, 1)
-    const o = clamp((scrollState.damped - 0.968) / 0.014, 0, 1) * bridgeFade
+    const o = clamp((d - 0.944) / 0.006, 0, 1) * bridgeFade
+
+    // progres rakit ngejar target dari scroll, tapi naiknya dibatasi: snap
+    // cuma ~1 detik, kalau ngikut scroll mentah wajahnya kebentuk sekejap mata
+    // (dulu cuma ~3% scroll terakhir). Minimal ASSEMBLE_S detik dari portal ke wajah
+    const aGoal = sstep(A_FROM, A_TO, d)
+    if (o <= 0.001) assemble.current = aGoal
+    else assemble.current += clamp(aGoal - assemble.current, -delta / DISASSEMBLE_S, delta / ASSEMBLE_S)
+    const a = assemble.current
+    const devGoal = sstep(DEV_FROM, DEV_TO, d)
+    if (o <= 0.001) develop.current = devGoal
+    else develop.current += clamp(devGoal - develop.current, -delta / DISASSEMBLE_S, delta / DEV_S)
+    const dev = develop.current
+    // dibaca FaceAura (aura nyala ngikut wajah jadi) & tes Playwright
+    faceState.assemble = a
+    faceState.develop = dev
 
     // ===== PINTU KELUAR: wajah cuma hidup di ujung banget perjalanan =====
     // Sebelum ini, loop di bawah tetep jalan 120.000 iterasi (exp/sin/cos/sqrt)
@@ -272,14 +371,12 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
       return
     }
 
-    let a = clamp((scrollState.damped - 0.978) / 0.022, 0, 1)
-    a = a * a * (3 - 2 * a)
-
-    // proyeksikan pointer ke bidang partikel → titik repel (koordinat lokal grup)
+    // proyeksikan pointer ke bidang partikel → titik repel (koordinat lokal grup).
+    // Cuma pas wajah udah jadi, salju yang lagi terbang gak ikut kedorong
     const [gx, gy, gz] = [group.current.position.x, group.current.position.y, group.current.position.z]
     let px = 1e9
     let py = 1e9
-    if (o > 0.2 && ndc.current.has) {
+    if (a > 0.98 && ndc.current.has) {
       pv.set(ndc.current.x, ndc.current.y, 0.5).unproject(state.camera)
       pv.sub(state.camera.position).normalize()
       const dz = (gz - state.camera.position.z) / (pv.z || -1e-6)
@@ -302,8 +399,9 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
     if (sim) {
       // jalur GPU: angka yang masuk sama persis kayak yang dipakai loop CPU,
       // blend repel = 1 - exp(-7 * delta), sama kayak di dalam loop
-      sim.step({ delta, target, a, px, py, dec, blend: 1 - Math.exp(-7 * delta), wob, time })
+      sim.step({ delta, target, a, dev, px, py, dec, blend: 1 - Math.exp(-7 * delta), wob, time })
     } else {
+      // jalur CPU: rumus aliran salju yang SAMA kayak STREAM_GLSL di faceSim.js
       const posAttr = points.current.geometry.attributes.position
       const colAttr = points.current.geometry.attributes.color
       const arr = posAttr.array
@@ -312,10 +410,18 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
       const tp = target.pos
       const tc = target.col
       const scat = scatter.current
+      const rel = release.current
+      const kFly = 1 - Math.exp(-14 * delta)
+      const blend = 1 - Math.exp(-7 * delta)
 
       for (let i = 0; i < COUNT; i++) {
-        const k = 1 - Math.exp(-speeds.current[i] * delta)
         const i3 = i * 3
+        const i4 = i * 4
+        const r = rel[i * 2]
+        const calm = CALM ? 1 : 1 - rel[i * 2 + 1]
+        const s = clamp((a - r * STREAM_SPAN) / (1 - STREAM_SPAN), 0, 1)
+        const kS = 1 - Math.exp(-speeds.current[i] * delta)
+        const k = s < 0.9 ? kFly : kFly + (kS - kFly) * sstep(0.9, 1, s)
         let ox = offs[i3] * dec
         let oy = offs[i3 + 1] * dec
         let oz = offs[i3 + 2] * dec
@@ -323,31 +429,46 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
         const ddy = arr[i3 + 1] - py
         const d2 = ddx * ddx + ddy * ddy
         if (d2 < R2 && d2 > 1e-6) {
-          const d = Math.sqrt(d2)
+          const dd = Math.sqrt(d2)
           // displacement target berbatas, makin deket pointer makin kedorong,
           // tapi gak pernah lebih dari REPEL_MAX walau pointer nangkring lama
-          const push = (1 - d / REPEL_R) * REPEL_MAX
-          const blend = 1 - Math.exp(-7 * delta)
-          ox += ((ddx / d) * push - ox) * blend
-          oy += ((ddy / d) * push - oy) * blend
-          oz += (push * 0.5 - oz) * blend
+          const push = (1 - dd / REPEL_R) * REPEL_MAX
+          ox += ((ddx / dd) * push * REPEL_XY - ox) * blend
+          oy += ((ddy / dd) * push * REPEL_XY - oy) * blend
+          oz += (push * REPEL_Z - oz) * blend
         }
         offs[i3] = ox
         offs[i3 + 1] = oy
         offs[i3 + 2] = oz
         const wx = Math.sin(time * 1.3 + i * 0.37) * 0.011 * wob
         const wy = Math.cos(time * 1.1 + i * 0.71) * 0.011 * wob
-        // target per partikel = interpolasi posisi sebar → posisi wajah/logo,
-        // dikontrol progres perakitan a (scatter pas baru mendarat, ngumpul pas a→1)
-        const txp = scat[i3] + (tp[i3] - scat[i3]) * a
-        const typ = scat[i3 + 1] + (tp[i3 + 1] - scat[i3 + 1]) * a
-        const tzp = scat[i3 + 2] + (tp[i3 + 2] - scat[i3 + 2]) * a
-        arr[i3] += (txp + wx + ox - arr[i3]) * k
-        arr[i3 + 1] += (typ + wy + oy - arr[i3 + 1]) * k
-        arr[i3 + 2] += (tzp + oz - arr[i3 + 2]) * k
-        arrC[i3] += (tc[i3] - arrC[i3]) * k
-        arrC[i3 + 1] += (tc[i3 + 1] - arrC[i3 + 1]) * k
-        arrC[i3 + 2] += (tc[i3 + 2] - arrC[i3 + 2]) * k
+        // lintasan: asal di mulut portal (atau tepat di atas target kalau calm)
+        const O0 = calm ? tp[i3] : scat[i3]
+        const O1 = calm ? tp[i3 + 1] + 0.6 : scat[i3 + 1]
+        const O2 = calm ? tp[i3 + 2] : scat[i3 + 2]
+        const ey = s * (1.6 - 0.6 * s)
+        const ex = s * s * (3 - 2 * s)
+        const env = (1 - s) * Math.min(s * 5, 1) * (1 - calm)
+        let sx = 0
+        let sz = 0
+        if (env > 0) {
+          sx = Math.sin(s * 8 + r * 37) * 0.32 * env
+          sz = Math.cos(s * 6.5 + r * 21) * 0.26 * env
+        }
+        arr[i3] += (O0 + (tp[i3] - O0) * ex + sx + wx + ox - arr[i3]) * k
+        arr[i3 + 1] += (O1 + (tp[i3 + 1] - O1) * ey + wy + oy - arr[i3 + 1]) * k
+        arr[i3 + 2] += (O2 + (tp[i3 + 2] - O2) * ex + sz + oz - arr[i3 + 2]) * k
+        // warna: es terang pas terbang, warna foto pas mendarat, terang lagi
+        // kalau lagi kedorong pointer
+        const cm = sstep(0.5, 1, s) * dev
+        const lit = Math.min(1, Math.sqrt(ox * ox + oy * oy + oz * oz) / REPEL_MAX) * 0.55
+        const gr = ICE[0] + (tc[i3] - ICE[0]) * cm
+        const gg = ICE[1] + (tc[i3 + 1] - ICE[1]) * cm
+        const gb = ICE[2] + (tc[i3 + 2] - ICE[2]) * cm
+        arrC[i4] += (gr + (ICE[0] - gr) * lit - arrC[i4]) * kS
+        arrC[i4 + 1] += (gg + (ICE[1] - gg) * lit - arrC[i4 + 1]) * kS
+        arrC[i4 + 2] += (gb + (ICE[2] - gb) * lit - arrC[i4 + 2]) * kS
+        arrC[i4 + 3] = sstep(0, 0.14, s)
       }
       posAttr.needsUpdate = true
       colAttr.needsUpdate = true
@@ -365,8 +486,10 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
           background, gak pernah ketelen kabut, muka harus keliatan jelas maksimal */}
       {/* jalur GPU: atribut position isinya koordinat texel partikel (posisi
           aslinya dibaca vertex shader dari tekstur simulasi), jadi frustum
-          culling dari bounding box atribut itu gak ada artinya, dimatiin */}
-      <points ref={points} renderOrder={10} frustumCulled={!sim}>
+          culling dari bounding box atribut itu gak ada artinya, dimatiin.
+          Jalur CPU juga dimatiin: bounding sphere-nya dihitung sekali dari
+          posisi awal (piringan di portal), wajah di bawahnya bakal ke-cull */}
+      <points ref={points} renderOrder={10} frustumCulled={false}>
         {sim ? (
           <bufferGeometry boundingSphere={sim.bounds}>
             <bufferAttribute attach="attributes-position" count={COUNT} array={sim.uvs} itemSize={3} />
@@ -374,7 +497,7 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
         ) : (
           <bufferGeometry>
             <bufferAttribute attach="attributes-position" count={COUNT} array={positions.current} itemSize={3} />
-            <bufferAttribute attach="attributes-color" count={COUNT} array={colors.current} itemSize={3} />
+            <bufferAttribute attach="attributes-color" count={COUNT} array={colors4.current} itemSize={4} />
           </bufferGeometry>
         )}
         <pointsMaterial
@@ -388,7 +511,7 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
           depthWrite={false}
           depthTest={false}
           fog={false}
-          {...(sim ? sim.materialProps : null)}
+          {...matProps}
         />
       </points>
     </group>
