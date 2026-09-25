@@ -16,10 +16,12 @@ body {
   overflow-x: hidden;
 }
 
-/* video langit di paling belakang, fade out via JS pas scroll turun */
+/* video langit di paling belakang, fade out via JS pas scroll turun.
+   Tinggi 100lvh (layar pas address bar HP ngumpet), bukan inset 0: address bar
+   yang naik-turun pas scroll gak bikin video nge-zoom ulang tiap kali */
 .bg-video {
-  position: fixed; inset: 0; z-index: 0;
-  width: 100%; height: 100%; object-fit: cover;
+  position: fixed; top: 0; left: 0; z-index: 0;
+  width: 100%; height: 100vh; height: 100lvh; object-fit: cover;
   pointer-events: none;
 }
 /* tirai kabut yang NAIK DARI BAWAH nutupin video pas scroll, transisi
@@ -59,7 +61,7 @@ body {
 /* tint biru gletser buat backdrop kosong (di atas video/veil, di bawah canvas),
    opacity digerakin JS ngikut kedalaman: makin dalam makin biru, kesan dalam es */
 .depth-tint {
-  position: fixed; inset: 0; z-index: 0; opacity: 0;
+  position: fixed; top: 0; left: 0; right: 0; height: 100vh; height: 100lvh; z-index: 0; opacity: 0;
   background: radial-gradient(ellipse at 50% 30%, rgba(70, 116, 150, 0.55) 0%, rgba(40, 74, 104, 0.9) 75%);
   pointer-events: none;
 }
@@ -74,7 +76,11 @@ body {
   html, body, * { cursor: none !important; }
 }
 
-.canvas-wrap { position: fixed; inset: 0; z-index: 1; }
+/* canvas WebGL setinggi 100lvh, BUKAN inset 0. Di HP address bar naik-turun
+   pas scroll, dan kalau kotaknya ikut berubah, r3f resize canvas + semua render
+   target tiap kali (kerasa loncat & patah). lvh = tinggi pas bar ngumpet,
+   konstan; pas bar nongol, sisa bawahnya cuma ketutup bar. vh = cadangan */
+.canvas-wrap { position: fixed; top: 0; left: 0; right: 0; height: 100vh; height: 100lvh; z-index: 1; }
 .canvas-wrap canvas { display: block; }
 /* 480vh untuk 5 segmen = ±1 layar scroll per batu, dulunya 600vh/4 segmen,
    kerasa "patah/ngelag" karena harus 2x scroll baru pindah batu */
@@ -83,12 +89,12 @@ body {
 /* ---------- HUD ---------- */
 .hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; text-transform: uppercase; }
 .logo {
-  position: absolute; top: 28px; left: 32px;
+  position: absolute; top: calc(28px + env(safe-area-inset-top)); left: calc(32px + env(safe-area-inset-left));
   font-size: 26px; font-weight: 600; letter-spacing: 0.24em;
   text-shadow: 0 1px 18px rgba(90, 100, 110, 0.45);
 }
 .meta {
-  position: absolute; top: 34px; right: 32px;
+  position: absolute; top: calc(34px + env(safe-area-inset-top)); right: calc(32px + env(safe-area-inset-right));
   font-size: 12px; letter-spacing: 0.14em; opacity: 0.92;
   text-align: right; line-height: 1.7;
   text-shadow: 0 1px 12px rgba(90, 100, 110, 0.5);
@@ -104,12 +110,12 @@ body {
 .hud-cv:hover { border-bottom-color: #fff; }
 .hud-cv:focus-visible { outline: 2px solid #cfe8fa; outline-offset: 3px; }
 .readout {
-  position: absolute; top: 50%; right: 32px; transform: translateY(-50%);
+  position: absolute; top: 50%; right: calc(32px + env(safe-area-inset-right)); transform: translateY(-50%);
   font-size: 10px; letter-spacing: 0.14em; text-align: right; line-height: 1.9; opacity: 0.85;
   text-shadow: 0 1px 12px rgba(90, 100, 110, 0.5);
 }
 .hint {
-  position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%);
+  position: absolute; bottom: calc(26px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
   font-size: 11px; letter-spacing: 0.22em;
   text-shadow: 0 1px 12px rgba(90, 100, 110, 0.5);
 }
@@ -121,7 +127,7 @@ body {
    transform (ditulis loop rAF di UI.jsx). Latarnya gradient solid, nol
    backdrop-filter, nol shadow yang gerak */
 .rock-open {
-  position: absolute; bottom: 28px; left: 50%;
+  position: absolute; bottom: calc(28px + env(safe-area-inset-bottom)); left: 50%;
   transform: translate(-50%, 10px); opacity: 0; visibility: hidden; pointer-events: none;
   display: flex; align-items: center; gap: 14px;
   min-height: 44px; padding: 0 20px;
@@ -144,7 +150,7 @@ body {
    kedalaman, lebarnya dibatasin biar berhenti sebelum tombol OPEN di tengah
    bawah, dan batu (yang selalu di-frame di tengah) cuma kesenggol ujung bawahnya */
 .bigword {
-  position: fixed; left: 128px; bottom: 44px;
+  position: fixed; left: calc(128px + env(safe-area-inset-left)); bottom: calc(44px + env(safe-area-inset-bottom));
   font-size: clamp(44px, 6vw, 96px); font-weight: 600; letter-spacing: 0.04em; line-height: 1;
   color: rgba(255, 255, 255, 0.72);
   /* halo gelap di belakang huruf, background-nya "digelapin" biar putihnya
@@ -178,7 +184,7 @@ body {
 .outro {
   position: fixed; inset: 0; z-index: 6;
   display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
-  padding: 0 16px 40px;
+  padding: 0 16px calc(40px + env(safe-area-inset-bottom));
   text-align: center; opacity: 0; pointer-events: none; text-transform: uppercase;
   /* teks outro GELAP, kartunya terang, kontrasnya kebalik dari HUD */
   color: #111b22;
@@ -333,7 +339,7 @@ body {
 .rock-top {
   position: absolute; top: 0; left: 0; right: 0; z-index: 3;
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  padding: 20px 34px 46px;
+  padding: calc(20px + env(safe-area-inset-top)) calc(34px + env(safe-area-inset-right)) 46px calc(34px + env(safe-area-inset-left));
   background: linear-gradient(180deg, rgba(6, 12, 18, 0.97) 0%, rgba(6, 12, 18, 0.9) 50%, rgba(6, 12, 18, 0) 100%);
   pointer-events: none;
 }
@@ -375,7 +381,7 @@ body {
 .rock-content::-webkit-scrollbar { display: none; }
 .rock-modal.is-open .rock-content { transform: none; }
 .rock-inner {
-  max-width: 1160px; margin: 0 auto; padding: 17vh 0 14vh;
+  max-width: 1160px; margin: 0 auto; padding: 17vh 0 calc(14vh + env(safe-area-inset-bottom));
   display: grid; grid-template-columns: minmax(200px, 270px) minmax(0, 1fr);
   gap: 0 clamp(40px, 5vw, 84px); align-items: start;
 }
@@ -460,7 +466,7 @@ body {
   }
 }
 @media (max-width: 860px) {
-  .rock-inner { display: block; padding: 118px 0 12vh; }
+  .rock-inner { display: block; padding: calc(118px + env(safe-area-inset-top)) 0 calc(12vh + env(safe-area-inset-bottom)); }
   .rock-aside { position: static; margin-bottom: 26px; }
 }
 
@@ -471,7 +477,7 @@ body {
    (dua-duanya maksa repaint/re-blur tiap frame = scroll ngelag). Glow kedap-kedip
    dipindah ke ::before yang cuma animasi OPACITY (compositor-only, gratis). */
 .echo-btn {
-  position: fixed; right: 28px; bottom: 30px; z-index: 30;
+  position: fixed; right: calc(28px + env(safe-area-inset-right)); bottom: calc(30px + env(safe-area-inset-bottom)); z-index: 30;
   display: flex; align-items: center; gap: 12px;
   padding: 12px 20px 12px 13px;
   background: linear-gradient(150deg, rgba(16, 27, 38, 0.94), rgba(8, 14, 21, 0.95));
@@ -582,7 +588,7 @@ body {
 .echo-head {
   position: relative; z-index: 1;
   display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
-  padding: 22px 22px 18px;
+  padding: calc(22px + env(safe-area-inset-top)) calc(22px + env(safe-area-inset-right)) 18px 22px;
   background:
     radial-gradient(ellipse at 84% 2%, rgba(104, 152, 194, 0.34) 0%, rgba(104, 152, 194, 0) 56%),
     linear-gradient(162deg, #0c1824 0%, #0a141d 60%, #09131c 100%);
@@ -615,7 +621,7 @@ body {
 /* z-index 1: naik di atas lapisan facet/grain drawer */
 .echo-body {
   position: relative; z-index: 1;
-  flex: 1; overflow-y: auto; padding: 20px 22px;
+  flex: 1; overflow-y: auto; padding: 20px calc(22px + env(safe-area-inset-right)) 20px 22px;
   display: flex; flex-direction: column; gap: 14px; scrollbar-width: none;
 }
 .echo-body::-webkit-scrollbar { display: none; }
@@ -711,6 +717,7 @@ body {
    jadi kolom ketik kepisah dari transkrip tanpa perlu garis tebal */
 .echo-composer {
   position: relative; z-index: 1;
+  padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) 0;
   border-top: 1px solid rgba(52, 112, 158, 0.16);
   background: linear-gradient(180deg, rgba(247, 251, 254, 0.5), rgba(253, 254, 255, 0.94));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
@@ -775,7 +782,7 @@ body {
 
 /* ---------- depth ruler kiri: penggaris kedalaman yang ikut scroll ---------- */
 .ruler {
-  position: fixed; left: 32px; top: 0; bottom: 0; z-index: 9;
+  position: fixed; left: calc(32px + env(safe-area-inset-left)); top: 0; bottom: 0; z-index: 9;
   overflow: hidden; pointer-events: none; opacity: 0.55;
 }
 .ruler-in { padding: 42vh 0; will-change: transform; }
@@ -838,13 +845,13 @@ body {
 .loader span { opacity: 0.6; }
 
 @media (max-width: 640px) {
-  .logo { left: 20px; top: 20px; font-size: 20px; }
+  .logo { left: calc(20px + env(safe-area-inset-left)); top: calc(20px + env(safe-area-inset-top)); font-size: 20px; }
   /* di layar HP logo sama blok nama rebutan baris atas yang sama dan tulisannya
      saling tindih (paling parah di 360px). Nama diturunin ke bawah logo, tetep
      rata kanan biar bacaannya masih kaya HUD instrumen */
-  .meta { right: 20px; top: 52px; font-size: 10.5px; letter-spacing: 0.1em; }
+  .meta { right: calc(20px + env(safe-area-inset-right)); top: calc(52px + env(safe-area-inset-top)); font-size: 10.5px; letter-spacing: 0.1em; }
   /* tap target 44px, dan di outro minggir: kartunya udah punya link CV sendiri */
-  .hud-cv { right: 20px; top: 88px; min-height: 44px; font-size: 10.5px; border-bottom: none; text-decoration: underline; text-underline-offset: 4px; }
+  .hud-cv { right: calc(20px + env(safe-area-inset-right)); top: calc(88px + env(safe-area-inset-top)); min-height: 44px; font-size: 10.5px; border-bottom: none; text-decoration: underline; text-underline-offset: 4px; }
   html.at-outro .hud-cv { opacity: 0; pointer-events: none; }
   .readout { display: none; }
   .ruler { display: none; }
@@ -853,11 +860,11 @@ body {
   /* tombol chat nangkring di pojok kanan bawah dan nutupin dua petunjuk ini.
      Padahal "scroll to descend" satu-satunya aba-aba cara mulai, jadi
      dua-duanya dinaikin sampai lewat atas tombol */
-  .hint { bottom: 88px; }
+  .hint { bottom: calc(88px + env(safe-area-inset-bottom)); }
   /* tombol OPEN duduk di slot yang sama kayak aba-aba scroll (di atas tombol
      chat). Keduanya gak pernah nongol bareng: aba-aba udah pudar di dk 0.06,
      batu pertama baru di-frame dari 0.14 */
-  .rock-open { bottom: 80px; }
+  .rock-open { bottom: calc(80px + env(safe-area-inset-bottom)); }
   /* tombol chat melayang disembunyiin pas di outro (kelas dari UI.jsx), jadi
      kartunya boleh turun mepet bawah: muka + bahu partikel lega di atasnya */
   .outro { padding-bottom: calc(18px + env(safe-area-inset-bottom)); }
@@ -866,14 +873,14 @@ body {
   html.at-outro .echo-btn::before { animation: none; }
   /* judul section di atas tombol OPEN, sejajar kiri sama logo. 13.5vw biar
      kata terpanjang (PROJECTS) tetep muat di 360px tanpa kepotong */
-  .bigword { left: 20px; bottom: 142px; font-size: 13.5vw; }
+  .bigword { left: calc(20px + env(safe-area-inset-left)); bottom: calc(142px + env(safe-area-inset-bottom)); font-size: 13.5vw; }
   .bigword-code { font-size: 10px; margin-bottom: 8px; }
   /* di layar sempit labelnya jatuh di luar layar (offset 3D-nya kelebaran),
      paling banter nongol kepotong di tepi. Tombol OPEN yang ngambil alih */
   .anno { display: none; }
-  .rock-content { padding: 0 22px; }
+  .rock-content { padding: 0 calc(22px + env(safe-area-inset-right)) 0 calc(22px + env(safe-area-inset-left)); }
   .rock-scrim { background: linear-gradient(180deg, rgba(6, 12, 18, 0.62) 0%, rgba(6, 12, 18, 0.88) 100%); }
-  .rock-top { padding: 12px 14px 34px 20px; }
+  .rock-top { padding: calc(12px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) 34px calc(20px + env(safe-area-inset-left)); }
   .rock-logo { font-size: 17px; }
   .rock-controls { gap: 4px; }
   /* di HP tombol suara cukup ikon (aria-label tetep nyebut fungsinya), biar
@@ -883,9 +890,41 @@ body {
   .rock-p { font-size: 15.5px; }
   .rock-hook { font-size: 16.5px; }
   .echo-drawer { width: 100vw; }
-  .echo-btn { right: 14px; bottom: 16px; padding: 10px 15px 10px 11px; }
+  .echo-btn { right: calc(14px + env(safe-area-inset-right)); bottom: calc(16px + env(safe-area-inset-bottom)); padding: 10px 15px 10px 11px; }
   .echo-btn-orb { width: 34px; height: 34px; }
   .echo-gem { width: 23px; height: 23px; }
   .echo-btn-title { font-size: 13px; }
   .echo-btn-kicker { font-size: 10.5px; }
+  /* outro di HP: potret partikel ada di tengah atas dan logo + nama HUD nimpa
+     kepalanya. Pas mendarat di outro (html.at-outro dari UI.jsx) dua-duanya
+     disembunyiin, kartu kontaknya udah jadi pusat perhatian */
+  .logo, .meta { transition: opacity 0.45s ease, visibility 0.45s; }
+  html.at-outro .logo, html.at-outro .meta { opacity: 0; visibility: hidden; }
+}
+
+/* ---------- target sentuh minimal 44 px (pedoman Apple / WCAG) ----------
+   Cuma di layar sentuh, desktop tetep versi ringkas. Link bergaris bawah di
+   kartu outro digedein lewat padding + margin negatif: kotak sentuhnya 44 px,
+   posisi teksnya tetep sama, garis bawahnya pindah ke text-decoration biar
+   gak ikut turun ke dasar padding */
+@media (pointer: coarse) {
+  .soc-carousel .soc-side { min-height: 44px; }
+  .soc-current { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 20px; }
+  .soc-current::before, .soc-current::after { top: 6px; bottom: 6px; }
+  .echo-inline { min-height: 44px; }
+  .outro-mail, .outro .sister-site {
+    border-bottom: none;
+    text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px;
+  }
+  .outro-mail { text-decoration-color: rgba(17, 27, 34, 0.5); padding: 13px 0; margin: 1px 0 -10px; }
+  .outro .sister-site { text-decoration-color: rgba(52, 68, 79, 0.45); padding: 15px 0; margin: -3px 0 -12px; }
+  .rock-links a, .rock-more { min-height: 44px; }
+  .rock-sound { min-height: 44px; }
+  .echo-close { min-height: 44px; min-width: 44px; justify-content: center; }
+  .echo-chip { min-height: 44px; }
+  .echo-send { width: 44px; height: 44px; }
+  .echo-input textarea { min-height: 44px; }
+}
+@media (pointer: coarse) and (max-width: 640px) {
+  .rock-sound { width: 44px; }
 }
