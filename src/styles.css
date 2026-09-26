@@ -100,7 +100,7 @@ body {
   text-shadow: 0 1px 12px rgba(90, 100, 110, 0.5);
 }
 .hud-cv {
-  position: absolute; top: 80px; right: 32px; pointer-events: auto;
+  position: absolute; top: calc(80px + env(safe-area-inset-top)); right: calc(32px + env(safe-area-inset-right)); pointer-events: auto;
   display: inline-flex; align-items: center; gap: 6px; min-height: 32px;
   color: inherit; font-size: 11px; font-weight: 600; letter-spacing: 0.18em; text-decoration: none;
   border-bottom: 1px solid rgba(255, 255, 255, 0.55);
@@ -340,7 +340,10 @@ body {
   position: absolute; top: 0; left: 0; right: 0; z-index: 3;
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
   padding: calc(20px + env(safe-area-inset-top)) calc(34px + env(safe-area-inset-right)) 46px calc(34px + env(safe-area-inset-left));
-  background: linear-gradient(180deg, rgba(6, 12, 18, 0.97) 0%, rgba(6, 12, 18, 0.9) 50%, rgba(6, 12, 18, 0) 100%);
+  /* titik 0.9 digeser setengah safe area: pas pelatnya ketambahan tinggi notch,
+     baris logo/CLOSE tetep di bagian yang pekat, teks yang di-scroll gak
+     nembus di belakangnya */
+  background: linear-gradient(180deg, rgba(6, 12, 18, 0.97) 0%, rgba(6, 12, 18, 0.9) calc(50% + env(safe-area-inset-top) / 2), rgba(6, 12, 18, 0) 100%);
   pointer-events: none;
 }
 .rock-top > * { pointer-events: auto; }
@@ -904,20 +907,22 @@ body {
 
 /* ---------- target sentuh minimal 44 px (pedoman Apple / WCAG) ----------
    Cuma di layar sentuh, desktop tetep versi ringkas. Link bergaris bawah di
-   kartu outro digedein lewat padding + margin negatif: kotak sentuhnya 44 px,
-   posisi teksnya tetep sama, garis bawahnya pindah ke text-decoration biar
-   gak ikut turun ke dasar padding */
+   kartu outro digedein jadi kotak 44 px dengan teks di tengah, lalu margin
+   negatif ngembaliin posisi teksnya persis kayak semula. Garis bawahnya pindah
+   ke text-decoration biar tetep nempel di teks, gak turun ke dasar kotak */
 @media (pointer: coarse) {
   .soc-carousel .soc-side { min-height: 44px; }
   .soc-current { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 20px; }
   .soc-current::before, .soc-current::after { top: 6px; bottom: 6px; }
   .echo-inline { min-height: 44px; }
-  .outro-mail, .outro .sister-site {
-    border-bottom: none;
+  .outro-links a, .outro .sister-site {
+    display: inline-flex; align-items: center; min-height: 44px; padding: 0; border-bottom: none;
     text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px;
+    text-decoration-color: rgba(17, 27, 34, 0.5);
   }
-  .outro-mail { text-decoration-color: rgba(17, 27, 34, 0.5); padding: 13px 0; margin: 1px 0 -10px; }
-  .outro .sister-site { text-decoration-color: rgba(52, 68, 79, 0.45); padding: 15px 0; margin: -3px 0 -12px; }
+  .outro-links { margin: 1px 0 -10px; row-gap: 0; }
+  .outro .sister-site { text-decoration-color: rgba(52, 68, 79, 0.45); margin: -3px 0 -12px; }
+  .hud-cv { min-height: 44px; border-bottom: none; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(255, 255, 255, 0.55); }
   .rock-links a, .rock-more { min-height: 44px; }
   .rock-sound { min-height: 44px; }
   .echo-close { min-height: 44px; min-width: 44px; justify-content: center; }
@@ -927,4 +932,47 @@ body {
 }
 @media (pointer: coarse) and (max-width: 640px) {
   .rock-sound { width: 44px; }
+}
+/* kursor bracket (TargetCursor) cuma buat mouse. Komponennya udah balikin null
+   di HP, tapi iPad (UA-nya ngaku Mac, layarnya > 768) masih lolos */
+@media (pointer: coarse) {
+  .target-cursor-wrapper { display: none; }
+}
+
+/* ---------- HP miring (landscape, tinggi layar < 500 px) ----------
+   Layout desktop gak muat di tinggi 390: judul section nabrak tombol OPEN,
+   label batu nabrak readout, kartu kontak nutup potret partikel. Di sini HUD
+   dirampingin, label batu diganti tombol OPEN (sama kayak HP tegak), dan
+   kartu kontak pindah ke kanan potret */
+@media (max-height: 500px) and (orientation: landscape) {
+  .logo { top: calc(14px + env(safe-area-inset-top)); left: calc(20px + env(safe-area-inset-left)); font-size: 18px; }
+  .meta { top: calc(16px + env(safe-area-inset-top)); right: calc(20px + env(safe-area-inset-right)); font-size: 10px; line-height: 1.6; }
+  .hud-cv { top: calc(46px + env(safe-area-inset-top)); right: calc(20px + env(safe-area-inset-right)); }
+  .readout, .ruler, .anno { display: none; }
+  .hint { bottom: calc(14px + env(safe-area-inset-bottom)); }
+  .rock-open { bottom: calc(14px + env(safe-area-inset-bottom)); }
+  .bigword { left: calc(22px + env(safe-area-inset-left)); bottom: calc(18px + env(safe-area-inset-bottom)); font-size: 40px; }
+  .bigword-code { font-size: 10px; margin-bottom: 6px; }
+  .echo-btn { right: calc(16px + env(safe-area-inset-right)); bottom: calc(14px + env(safe-area-inset-bottom)); padding: 8px 14px 8px 9px; }
+  .echo-btn-orb { width: 32px; height: 32px; }
+  .echo-gem { width: 22px; height: 22px; }
+  .outro {
+    align-items: flex-end; justify-content: center; text-align: center;
+    padding: calc(8px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) 0;
+  }
+  .outro-in { width: min(300px, 38vw); padding: 12px 14px 10px; }
+  .soc-carousel { gap: 6px; }
+  .soc-carousel .soc-side { min-width: 0; }
+  .soc-current { min-width: 108px; }
+  .outro h2 { font-size: 17px; }
+  .outro-avail { margin-top: 4px; font-size: 13px; }
+  .soc-carousel { margin-top: 4px; }
+  .echo-inline { margin-top: 6px; }
+  .loop-hint { display: none; }
+  .logo, .meta { transition: opacity 0.45s ease, visibility 0.45s; }
+  html.at-outro .logo, html.at-outro .meta, html.at-outro .hud-cv, html.at-outro .echo-btn {
+    opacity: 0; visibility: hidden; pointer-events: none;
+  }
+  .rock-top { padding-bottom: 26px; }
+  .rock-inner { padding-top: calc(84px + env(safe-area-inset-top)); }
 }
