@@ -16,7 +16,7 @@ import { GLACIER_VIDEO } from './perf'
 // udah ketutup video full. Dulu kamera masuk ke dalam mesh dan ~0.2 detik layar
 // isinya pecahan abu + gumpalan gelap (bagian dalam geometri).
 export const DIVE = {
-  ANTIC: 250, // ancang-ancang: kamera mundur ~15% + naik dikit, batu "napas"
+  ANTIC: 300, // ancang-ancang: kamera mundur ~22% + naik dikit, batu "napas"
   IN: 1100, // kamera nyampe titik akhir
   PANEL: 1150, // panel DOM dipasang (App.jsx, setTimeout)
   FADE: 400, // prefers-reduced-motion: cuma crossfade ke video, kamera diem
@@ -116,22 +116,26 @@ export function stepDive(now, cam, look, p, t) {
       n.subVectors(from, C)
       const d0 = n.length() || 1
       n.divideScalar(d0)
-      // ancang-ancang: mundur 15% + naik dikit, pelan di awal & di ujung
+      // ancang-ancang: mundur 22% + naik dikit, pelan di awal & di ujung.
+      // 15% kebaca diem di rekaman, mundurnya harus keliatan jelas
       // (kecepatan 0 pas mulai nyelam, jadi nyelamnya kerasa "dilepas")
       const a = sstep(0, DIVE.ANTIC, T)
-      // nyelam: makin lama makin kenceng (ease-in)
+      // nyelam: makin lama makin kenceng (ease-in). Pangkat 2.3 kebanyakan:
+      // batunya baru kerasa gede pas video udah nutup, zoom-in-nya gak kebaca
       const u = clamp01((T - DIVE.ANTIC) / (DIVE.IN - DIVE.ANTIC))
-      const e = Math.pow(u, 2.3)
+      const e = Math.pow(u, 1.6)
       // berhenti di LUAR bola pembatas batu (radius x skala hover 1.07 + jarak aman)
       const dEnd = Math.min(d0, (rockRadius.get(F.id) ?? 1.6) * 1.07 + 0.3)
-      const dist = THREE.MathUtils.lerp(d0 * (1 + 0.15 * a), dEnd, e)
+      const dist = THREE.MathUtils.lerp(d0 * (1 + 0.22 * a), dEnd, e)
       p.copy(C).addScaledVector(n, dist)
       p.y += 0.32 * a * (1 - e)
       t.copy(fromLook).lerp(C, sstep(0, 450, T))
       diveFx.breath = T < 340 ? Math.sin((Math.PI * T) / 340) : 0
-      diveFx.k = sstep(600, 1000, T)
-      diveFx.zoom = sstep(600, 1100, T)
-      diveFx.fill = sstep(820, 1100, T)
+      // batu mulai tembus lebih awal biar video di dalamnya sempat kebaca
+      // sebelum nutup layar (permintaan: "pas masuk batunya udah agak transparan")
+      diveFx.k = sstep(480, 960, T)
+      diveFx.zoom = sstep(560, 1100, T)
+      diveFx.fill = sstep(860, 1100, T)
     }
     if (F.phase === 'in' && tau >= (fade ? DIVE.FADE : DIVE.IN)) F.phase = 'open'
     return true
