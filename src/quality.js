@@ -99,6 +99,7 @@ export function startQuality(state) {
 
   const decide = (now) => {
     if (quality.lock !== null || introState.phase !== 'idle') return
+    if (!quality.log.length && quality.note === 'waiting for intro') quality.note = 'watching, no change needed'
     if (skip > 0) {
       skip--
       return
