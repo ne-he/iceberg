@@ -131,7 +131,7 @@ export function stepDive(now, cam, look, p, t) {
       diveFx.breath = T < 340 ? Math.sin((Math.PI * T) / 340) : 0
       diveFx.k = sstep(600, 1000, T)
       diveFx.zoom = sstep(600, 1100, T)
-      diveFx.fill = sstep(860, 1080, T)
+      diveFx.fill = sstep(820, 1100, T)
     }
     if (F.phase === 'in' && tau >= (fade ? DIVE.FADE : DIVE.IN)) F.phase = 'open'
     return true
@@ -260,12 +260,21 @@ const fillVert = /* glsl */ `
     gl_Position = vec4(position.xy, 0.0, 1.0);
   }
 `
+// penutup layar: video-nya MELEBAR keluar dari siluet batu sampai nutup layar
+// (bukan crossfade rata, yang bikin scene & video numpuk kayak hantu).
+// uRadial 0 = crossfade biasa, dipakai mode prefers-reduced-motion
 const fillFrag = /* glsl */ `
   ${panelChunk}
   uniform float uFill;
+  uniform float uRadial;
   varying vec2 vS;
   void main() {
-    gl_FragColor = vec4(panelColor(vS), uFill);
+    vec2 c = mix(uCenter, vec2(0.5), uFill);
+    float d = length((vS - c) * vec2(uAspect, 1.0)) / length(vec2(uAspect, 1.0));
+    float r = mix(0.12, 1.25, uFill);
+    float grow = 1.0 - smoothstep(r - 0.28, r, d);
+    float a = mix(uFill, grow * smoothstep(0.0, 0.08, uFill), uRadial);
+    gl_FragColor = vec4(panelColor(vS), uFill > 0.999 ? 1.0 : a);
     #include <colorspace_fragment>
   }
 `
@@ -279,7 +288,7 @@ export const windowMat = new THREE.ShaderMaterial({
   depthWrite: false,
 })
 const fillMat = new THREE.ShaderMaterial({
-  uniforms: { ...videoUniforms, uFill: { value: 0 } },
+  uniforms: { ...videoUniforms, uFill: { value: 0 }, uRadial: { value: 1 } },
   vertexShader: fillVert,
   fragmentShader: fillFrag,
   transparent: true,
@@ -339,6 +348,7 @@ export function DiveFill() {
     }
     windowMat.uniforms.uK.value = diveFx.k
     fillMat.uniforms.uFill.value = diveFx.fill
+    fillMat.uniforms.uRadial.value = focusState.mode === 'fade' ? 0 : 1
     if (mesh.current) mesh.current.visible = diveFx.fill > 0.001
   })
   return (

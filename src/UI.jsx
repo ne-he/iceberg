@@ -304,8 +304,10 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
       SECTION_WORDS.forEach((w, i) => {
         const el = words.current[i]
         if (el) {
-          const o = clamp(1 - Math.abs(t - w.center) / 0.12, 0, 1) * hk
-          el.style.opacity = o
+          const o = clamp(1 - Math.abs(t - w.center) / 0.12, 0, 1)
+          el.style.opacity = o * hk
+          // visibilitas decode dihitung TANPA hk: balik dari panel gak perlu
+          // muter ulang animasi decode judulnya
           const vis = o > 0.15
           if (vis !== wordVis.current[i]) {
             wordVis.current[i] = vis
