@@ -14,7 +14,7 @@ const MODEL = '/models/iceberg.glb'
 // `resolution` sengaja gak ada lagi di sini, lihat IceBuffer di bawah.
 const ICE = LOW
   ? {
-      samples: 2,
+      samples: 4, // 2 kebaca bintik kasar di tepi gelap batu, 4 = grain separuhnya, +~0.6 ms GPU (Iris Xe, ukuran HP)
       chromaticAberration: 0,
       anisotropy: 0,
       distortion: 0,
