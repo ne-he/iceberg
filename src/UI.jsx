@@ -372,6 +372,18 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
     }
   }, [])
 
+  // thumbnail demo di kartu PROJECTS (8 file, ~115 KB) diambil diam-diam pas
+  // browser nganggur setelah load, jadi pas panelnya kebuka gambarnya udah di
+  // cache. Dulu baru di-fetch pas panel nongol: kotaknya kosong sedetik-dua
+  useEffect(() => {
+    const load = () =>
+      PANELS.projects.rows.forEach((r) => {
+        if (r.thumb) new Image().src = r.thumb
+      })
+    const id = setTimeout(() => (window.requestIdleCallback ? requestIdleCallback(load) : load()), 6000)
+    return () => clearTimeout(id)
+  }, [])
+
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
