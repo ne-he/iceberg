@@ -263,8 +263,10 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
         }
       }
       if (outro.current) {
-        // muncul pas mendarat, FADE OUT pas bridge mulai (mau balik ke atas)
-        const o = clamp((t - 0.974) / 0.022, 0, 1) * (1 - smooth(clamp(br / 0.3, 0, 1)))
+        // muncul pas mendarat, FADE OUT pas bridge mulai (mau balik ke atas).
+        // Mulainya digeser ke 0.984: kamera udah natap wajah dari depan, jadi
+        // kartu gak nongol di atas salju yang masih turun dari portal
+        const o = clamp((t - 0.984) / 0.014, 0, 1) * (1 - smooth(clamp(br / 0.3, 0, 1)))
         outro.current.style.opacity = o
         if (outroIn.current) outroIn.current.style.pointerEvents = o > 0.5 ? 'auto' : 'none'
         // kelas di <html> buat CSS: di HP tombol chat melayang disembunyiin pas
