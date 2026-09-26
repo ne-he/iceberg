@@ -796,6 +796,8 @@ body {
   .echo-gem, .echo-btn-dot { animation: none; }
   /* panel batu: tanpa geser naik, cuma fade */
   .rock-content, .rock-modal.is-open .rock-content { transform: none; }
+  /* grain yang loncat 4x per detik dan aba-aba yang kedip-kedip: diem aja */
+  .grain, .hint-inner, .loop-hint { animation: none; }
 }
 
 /* ---------- depth ruler kiri: penggaris kedalaman yang ikut scroll ---------- */
