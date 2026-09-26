@@ -256,7 +256,14 @@ function DeepWater() {
     const S = introState
     const rv = S.phase === 'idle' ? 1 : S.reveal
     const dk = scrollState.depthK
-    const o = THREE.MathUtils.clamp((dk - 0.24) / 0.4, 0, 1) * 0.5 * rv
+    let o = THREE.MathUtils.clamp((dk - 0.24) / 0.4, 0, 1) * 0.5 * rv
+    // abis nembus portal kamarnya GELAP dulu, biar salju es terang yang lagi
+    // turun kebaca (di latar pucat biasa dia cuma jadi kabut abu). Pas wajahnya
+    // "dicuci" jadi warna foto (faceState.develop), kamar balik terang lagi
+    // bareng aura. Balik 0 sendiri pas bridge (damped tetep 1 tapi develop turun
+    // bareng partikel yang fade)
+    const dark = smoothstep(0.945, 0.965, scrollState.damped) * (1 - (faceState.develop ?? 0)) * (1 - smoothstep(0, 0.1, scrollState.bridge))
+    o += (0.9 - o) * dark
     mat.uniforms.uOpacity.value = o
     mat.uniforms.uTime.value = state.clock.elapsedTime * 0.22
     mat.uniforms.uAspect.value = size.width / Math.max(1, size.height)

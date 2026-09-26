@@ -99,7 +99,7 @@ export function Portal() {
     const win = ign * (1 - clamp01((d - 0.955) / 0.03))
     if (ringMat.current) ringMat.current.emissiveIntensity = 0.06 + 0.2 * win
     if (segMat.current) segMat.current.emissiveIntensity = 0.06 + 0.2 * win
-    if (glowRing.current) glowRing.current.material.opacity = win * 0.22 * pulse
+    if (glowRing.current) glowRing.current.material.opacity = win * 0.14 * pulse
     if (glowCore.current) glowCore.current.material.opacity = win * 0.12 * pulse
     if (light.current) light.current.intensity = win * 6
   })
@@ -114,12 +114,12 @@ export function Portal() {
             {/* es padat, bukan putih mati: emissive dulu 1.5 (desktop gak pakai
                 tone mapping, jadi apa pun di atas 1 kepotong putih rata). Sekarang
                 emissive kecil, bentuk ring kebaca dari cahaya & pantulan env */}
-            <meshStandardMaterial ref={ringMat} color="#adc6d8" roughness={0.16} metalness={0.3} emissive="#9fd6f7" emissiveIntensity={0.06} />
+            <meshStandardMaterial ref={ringMat} color="#7d9bb3" roughness={0.24} metalness={0.16} envMapIntensity={0.55} emissive="#9fd6f7" emissiveIntensity={0.06} />
           </mesh>
         )}
         {segGeo && (
           <mesh ref={segs} geometry={segGeo}>
-            <meshStandardMaterial ref={segMat} color="#9fb9cc" roughness={0.3} metalness={0.15} emissive="#86c4ec" emissiveIntensity={0.08} />
+            <meshStandardMaterial ref={segMat} color="#7f9db4" roughness={0.3} metalness={0.12} envMapIntensity={0.6} emissive="#86c4ec" emissiveIntensity={0.08} />
           </mesh>
         )}
         {/* LIGHT-LIGHTNYA: ring cahaya + inti terang, dua-duanya additive.
@@ -222,10 +222,10 @@ function PortalFlash() {
       // cuma kalau kamera beneran lewat LUBANG ring (bukan pinggirnya)
       const off = Math.hypot(cam.x - PORTAL_POS[0], cam.z - PORTAL_POS[2])
       const dy = cam.y - PORTAL_POS[1]
-      const w = dy > 0 ? 1.4 : 2.2
+      const w = dy > 0 ? 1.4 : 1.7
       f = Math.exp(-(dy / w) * (dy / w)) * (1 - sstep(1.2, 2.6, off))
     }
-    amt.current = Math.max(f, amt.current * Math.exp(-delta / 0.3))
+    amt.current = Math.max(f, amt.current * Math.exp(-delta / 0.22))
     if (amt.current < 0.003) amt.current = 0
     mat.uniforms.uAmt.value = amt.current * PEAK
     mat.uniforms.uAspect.value = size.width / Math.max(1, size.height)

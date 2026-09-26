@@ -172,12 +172,10 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
       colors.current[i * 3 + 1] = ICE[1]
       colors.current[i * 3 + 2] = ICE[2]
       speeds.current[i] = 1.6 + Math.random() * 2.6
-      // flyer = salju yang jatuh dari portal, lepasnya disebar dari awal. Sisanya
-      // mengkristal di tempat, rata-rata lebih belakangan, jadi pembukaannya
-      // didominasi aliran salju dan wajahnya makin padat di akhir
-      const fly = Math.random() < FLYER_RATIO
-      release.current[i * 2] = fly ? Math.random() : 0.25 + Math.random() * 0.75
-      release.current[i * 2 + 1] = fly ? 1 : 0
+      // [jadwal lepas, ketinggian asal]: flyer mulai dari mulut portal (0),
+      // sisanya udah di tengah jalan antara portal dan wajah
+      release.current[i * 2] = Math.random()
+      release.current[i * 2 + 1] = Math.random() < FLYER_RATIO ? 0 : Math.random()
     }
   }
 
@@ -226,7 +224,7 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
             '#include <fog_vertex>',
             `gl_PointSize = size * ( scale / max( - mvPosition.z, 3.2 ) );
 	vFade = smoothstep( 1.2, 4.0, - mvPosition.z );
-	${sim ? 'vFade *= smoothstep( 0.0, 0.14, simS );\n\tgl_PointSize *= mix( 0.55, 1.0, smoothstep( 0.75, 1.0, simS ) );' : ''}
+	${sim ? 'vFade *= smoothstep( 0.0, 0.14, simS );\n\tgl_PointSize *= mix( 0.8, 1.0, smoothstep( 0.75, 1.0, simS ) );' : ''}
 	if ( vFade < 0.004 ) gl_PointSize = 0.0;
 	#include <fog_vertex>`,
           )
@@ -418,7 +416,7 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
         const i3 = i * 3
         const i4 = i * 4
         const r = rel[i * 2]
-        const calm = CALM ? 1 : 1 - rel[i * 2 + 1]
+        const calm = CALM ? 1 : rel[i * 2 + 1]
         const s = clamp((a - r * STREAM_SPAN) / (1 - STREAM_SPAN), 0, 1)
         const kS = 1 - Math.exp(-speeds.current[i] * delta)
         const k = s < 0.9 ? kFly : kFly + (kS - kFly) * sstep(0.9, 1, s)
@@ -442,10 +440,10 @@ export function ParticleFace({ position = [0, -36.55, 1.5] }) {
         offs[i3 + 2] = oz
         const wx = Math.sin(time * 1.3 + i * 0.37) * 0.011 * wob
         const wy = Math.cos(time * 1.1 + i * 0.71) * 0.011 * wob
-        // lintasan: asal di mulut portal (atau tepat di atas target kalau calm)
-        const O0 = calm ? tp[i3] : scat[i3]
-        const O1 = calm ? tp[i3 + 1] + 0.6 : scat[i3 + 1]
-        const O2 = calm ? tp[i3 + 2] : scat[i3 + 2]
+        // lintasan: asal di antara mulut portal (calm 0) dan tepat di atas target (calm 1)
+        const O0 = scat[i3] + (tp[i3] - scat[i3]) * calm
+        const O1 = scat[i3 + 1] + (tp[i3 + 1] + 0.6 - scat[i3 + 1]) * calm
+        const O2 = scat[i3 + 2] + (tp[i3 + 2] - scat[i3 + 2]) * calm
         const ey = s * (1.6 - 0.6 * s)
         const ex = s * s * (3 - 2 * s)
         const env = (1 - s) * Math.min(s * 5, 1) * (1 - calm)

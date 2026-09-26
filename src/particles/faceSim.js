@@ -31,14 +31,17 @@ export const ICE = [0.62, 0.8, 0.98]
 export const REPEL_XY = 0.6
 export const REPEL_Z = 1.0
 
-// Gak semua partikel terbang dari portal: kalau 120k titik terbang bareng,
-// kamera yang lagi lewat ketutup badai bola salju. Cuma sebagian (flyer) yang
-// jatuh dari portal, sisanya "mengkristal" di tempat: muncul sedikit di atas
-// titiknya lalu turun pelan ke posisi. Dua-duanya bikin wajahnya makin padat.
+// Gak semua partikel mulai dari mulut portal: kalau 120k titik terbang bareng
+// dari satu piringan, kamera yang lagi lewat ketutup badai bola salju. Sebagian
+// (FLYER_RATIO) jatuh dari mulut portal, sisanya udah "di jalan": titik
+// asalnya di sembarang ketinggian antara mulut portal dan sedikit di atas
+// titik wajahnya (kanal g tRelease, 0 = mulut portal, 1 = tepat di atasnya).
+// Semuanya tetep JATUH ke bawah, jadi kebacanya hujan salju yang numpuk jadi
+// wajah, bukan awan yang tiba-tiba ngumpul.
 export const FLYER_RATIO = 0.35
 
 const STREAM_GLSL = /* glsl */ `
-uniform sampler2D tRelease; // r = jadwal lepas, g = 1 kalau partikel ini salju terbang
+uniform sampler2D tRelease; // r = jadwal lepas, g = ketinggian titik asal (lihat FLYER_RATIO)
 uniform float uA;
 uniform float uCalm;
 
@@ -51,7 +54,7 @@ float streamS( vec2 uv ) {
 // mendarat, geser ke samping belakangan (jatuh lurus dulu baru ketarik ke
 // posisinya), plus goyang kiri-kanan yang mengecil pas deket target
 vec3 streamPath( vec3 O, vec3 T, float s, vec2 rel ) {
-  float calm = max( uCalm, 1.0 - rel.y );
+  float calm = max( uCalm, rel.y );
   O = mix( O, T + vec3( 0.0, 0.6, 0.0 ), calm );
   float ey = s * ( 1.6 - 0.6 * s );
   float ex = s * s * ( 3.0 - 2.0 * s );
