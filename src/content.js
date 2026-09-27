@@ -72,8 +72,9 @@ export const CRYSTALS = [
 // kartu LET'S CONNECT. Jangan ditambahin tanggal atau janji lain di sini
 export const AVAILABILITY = 'Open to AI/ML and data internships.'
 
-// CV satu halaman, digenerate dari data yang sama kayak situs ini (bukan file
-// Canva di folder CV). Nomor HP sengaja gak masuk: ini file publik
+// CV satu halaman. Sejak 27 Sep 2026 ini CV desain Nehemiah sendiri (Canva,
+// Work/CV/final/cv_port/latest), dipasang apa adanya atas permintaannya.
+// Ganti CV = timpa file ini dengan nama yang sama, link di situs gak berubah
 export const RESUME_URL = '/Nehemiah-Wilhelmus-Junaidi-CV.pdf'
 
 export const SECTION_WORDS = [

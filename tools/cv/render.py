@@ -1,4 +1,7 @@
-"""Render tools/cv/cv.html jadi public/Nehemiah-Wilhelmus-Junaidi-CV.pdf (A4, satu halaman).
+"""Render tools/cv/cv.html jadi CV versi ATS (A4, satu halaman) di tools/cv/.
+
+Sejak 27 Sep 2026 CV yang dipasang di situs (public/Nehemiah-Wilhelmus-Junaidi-CV.pdf)
+itu CV desain Nehemiah sendiri, jadi skrip ini SENGAJA gak nulis ke public/ lagi.
 
 Pakai: python tools/cv/render.py   (butuh playwright + chromium)
 Gagal kalau hasilnya lebih dari satu halaman, biar CV gak diam-diam kepotong.
@@ -11,7 +14,7 @@ from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SRC = ROOT / "tools" / "cv" / "cv.html"
-OUT = ROOT / "public" / "Nehemiah-Wilhelmus-Junaidi-CV.pdf"
+OUT = ROOT / "tools" / "cv" / "CV-ats-version.pdf"
 
 with sync_playwright() as p:
     browser = p.chromium.launch()

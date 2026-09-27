@@ -8,3 +8,6 @@ graphify-out
 
 # local agent/editor config, not part of the project
 .claude/
+
+# CV versi ATS hasil tools/cv/render.py, bukan yang dipasang di situs
+tools/cv/*.pdf
