@@ -15,13 +15,19 @@ import { GLACIER_VIDEO } from './perf'
 // berhentinya di luar bola pembatas batu (lihat stepDive), dan sebelum itu layar
 // udah ketutup video full. Dulu kamera masuk ke dalam mesh dan ~0.2 detik layar
 // isinya pecahan abu + gumpalan gelap (bagian dalam geometri).
+// Revisi 27 Sep (feedback Nehemiah): "jangan abis zoom out langsung zoom in,
+// dan zoom in-nya kecepetan", "kasih kabut dulu", "keluarnya jangan tiba-tiba".
+// Jadi: mundur pelan, DIAM sebentar, baru nyelam pelan-kenceng-pelan. Pas
+// mendekat kabut es menebal, video glacier muncul dari balik kabut, kabutnya
+// menipis, baru panel. Keluar = kebalikannya lewat kabut juga.
 export const DIVE = {
-  ANTIC: 300, // ancang-ancang: kamera mundur ~22% + naik dikit, batu "napas"
-  IN: 1100, // kamera nyampe titik akhir
-  PANEL: 1150, // panel DOM dipasang (App.jsx, setTimeout)
+  ANTIC: 420, // ancang-ancang: kamera mundur ~22% + naik dikit, batu "napas"
+  HOVER: 640, // sampai sini kamera diem di titik mundur, baru mulai nyelam
+  IN: 1750, // kamera nyampe titik akhir
+  PANEL: 2050, // panel DOM dipasang (App.jsx, setTimeout)
   FADE: 400, // prefers-reduced-motion: cuma crossfade ke video, kamera diem
   MODAL_OUT: 320, // lama panel DOM mudar pas ditutup (samain sama styles.css)
-  OUT: 1000, // kamera balik ke posisi scroll
+  OUT: 1800, // kamera balik ke posisi scroll (lewat kabut)
 }
 
 // nilai per frame, ditulis stepDive (CameraRig), dibaca batu + DiveFill
@@ -29,7 +35,8 @@ export const DIVE = {
 //   fill  : 0..1 video nutup layar penuh
 //   zoom  : 0..1 video "tumbuh" (0 = kecil di dalam batu, 1 = pas kayak panel)
 //   breath: 0..1..0 denyut kecil batu pas ancang-ancang
-export const diveFx = { k: 0, fill: 0, zoom: 0, breath: 0 }
+//   fog   : 0..1 kabut es layar penuh (DiveFill), nutupin momen nembus
+export const diveFx = { k: 0, fill: 0, zoom: 0, breath: 0, fog: 0 }
 
 // radius dunia tiap batu (didaftarin Crystal), buat nentuin kamera berhenti di mana
 export const rockRadius = new Map()
@@ -74,10 +81,13 @@ const C = new THREE.Vector3()
 const n = new THREE.Vector3()
 const tmp = new THREE.Vector3()
 let snapT0 = -1
-const out0 = { k: 0, fill: 0, zoom: 0, hold: 0 }
+const out0 = { k: 0, fill: 0, zoom: 0, fog: 0, hold: 0 }
+// smootherstep: kecepatan 0 di awal & akhir, jadi gerak kamera gak "dilempar"
+const smoother = (x) => x * x * x * (x * (x * 6 - 15) + 10)
+const FOG_MAX = 0.72 // 0.85 kebaca layar putih polos, bukan kabut
 
 function resetFx() {
-  diveFx.k = diveFx.fill = diveFx.zoom = diveFx.breath = 0
+  diveFx.k = diveFx.fill = diveFx.zoom = diveFx.breath = diveFx.fog = 0
 }
 
 // Dipanggil CameraRig tiap frame selama focusState.phase != 'idle'.
@@ -94,6 +104,7 @@ export function stepDive(now, cam, look, p, t) {
       out0.k = diveFx.k
       out0.fill = diveFx.fill
       out0.zoom = diveFx.zoom
+      out0.fog = diveFx.fog
       // dari panel yang kebuka: tahan dulu selama panel DOM mudar, layarnya
       // ketutup video panel yang identik sama isi canvas
       out0.hold = diveFx.fill > 0.99 ? DIVE.MODAL_OUT : 0
@@ -103,7 +114,8 @@ export function stepDive(now, cam, look, p, t) {
   const fade = F.mode === 'fade'
 
   if (F.phase === 'in' || F.phase === 'open') {
-    const T = F.phase === 'open' ? 1e9 : tau
+    // 'open' tetep pakai waktu asli: kabut masih nipis sampai panel dipasang
+    const T = tau
     diveFx.breath = 0
     if (fade) {
       p.copy(from)
@@ -116,26 +128,28 @@ export function stepDive(now, cam, look, p, t) {
       n.subVectors(from, C)
       const d0 = n.length() || 1
       n.divideScalar(d0)
-      // ancang-ancang: mundur 22% + naik dikit, pelan di awal & di ujung.
-      // 15% kebaca diem di rekaman, mundurnya harus keliatan jelas
-      // (kecepatan 0 pas mulai nyelam, jadi nyelamnya kerasa "dilepas")
+      // ancang-ancang: mundur 22% + naik dikit, pelan di awal & di ujung,
+      // terus DIEM sampai HOVER (dulu langsung nyelam, kerasa mantul)
       const a = sstep(0, DIVE.ANTIC, T)
-      // nyelam: makin lama makin kenceng (ease-in). Pangkat 2.3 kebanyakan:
-      // batunya baru kerasa gede pas video udah nutup, zoom-in-nya gak kebaca
-      const u = clamp01((T - DIVE.ANTIC) / (DIVE.IN - DIVE.ANTIC))
-      const e = Math.pow(u, 1.6)
+      // nyelam pelan-kenceng-pelan (smootherstep) selama ~1.1 detik. Dulu
+      // ease-in 0.8 detik, kerasa ngebut
+      const u = clamp01((T - DIVE.HOVER) / (DIVE.IN - DIVE.HOVER))
+      const e = smoother(u)
       // berhenti di LUAR bola pembatas batu (radius x skala hover 1.07 + jarak aman)
       const dEnd = Math.min(d0, (rockRadius.get(F.id) ?? 1.6) * 1.07 + 0.3)
       const dist = THREE.MathUtils.lerp(d0 * (1 + 0.22 * a), dEnd, e)
       p.copy(C).addScaledVector(n, dist)
       p.y += 0.32 * a * (1 - e)
-      t.copy(fromLook).lerp(C, sstep(0, 450, T))
-      diveFx.breath = T < 340 ? Math.sin((Math.PI * T) / 340) : 0
-      // batu mulai tembus lebih awal biar video di dalamnya sempat kebaca
-      // sebelum nutup layar (permintaan: "pas masuk batunya udah agak transparan")
-      diveFx.k = sstep(480, 960, T)
-      diveFx.zoom = sstep(560, 1100, T)
-      diveFx.fill = sstep(860, 1100, T)
+      t.copy(fromLook).lerp(C, sstep(0, 600, T))
+      diveFx.breath = T < 520 ? Math.sin((Math.PI * T) / 520) : 0
+      // batu mulai tembus pas kamera udah setengah jalan, video di dalamnya
+      // kebaca dulu ("batunya udah agak transparan pas masuk"), lalu kabut es
+      // menebal nutupin momen nembus, video melebar di balik kabut, kabutnya
+      // tipis lagi sebelum panel DOM dipasang
+      diveFx.k = sstep(1000, 1450, T)
+      diveFx.zoom = sstep(1100, 1850, T)
+      diveFx.fill = sstep(1380, 1780, T)
+      diveFx.fog = FOG_MAX * sstep(1150, 1520, T) * (1 - sstep(1620, 2000, T))
     }
     if (F.phase === 'in' && tau >= (fade ? DIVE.FADE : DIVE.IN)) F.phase = 'open'
     return true
@@ -151,21 +165,36 @@ export function stepDive(now, cam, look, p, t) {
       diveFx.k = out0.k
       diveFx.fill = out0.fill
       diveFx.zoom = out0.zoom
+      diveFx.fog = out0.fog
       return true
     }
-    const dur = fade ? DIVE.FADE : DIVE.OUT
-    // dari panel: langsung ngebut keluar lalu melambat (ease-out). Dari tengah
-    // nyelam (Escape sebelum panel): balik halus, kamera lagi gerak ke arah batu
-    const q = clamp01(T / dur)
-    const m = fade ? 1 : out0.hold ? 1 - Math.pow(1 - q, 3) : q * q * (3 - 2 * q)
+    if (fade) {
+      diveFx.fill = out0.fill * (1 - sstep(0, DIVE.FADE, T))
+      diveFx.k = diveFx.zoom = diveFx.fog = 0
+      if (T >= DIVE.FADE) {
+        F.phase = 'idle'
+        resetFx()
+        return false
+      }
+      return true
+    }
+    // keluar lewat kabut (dulu kamera langsung ditarik, kerasa tiba-tiba):
+    // kabut es naik nutupin video, video mengecil balik ke batu di balik
+    // kabut, kamera mundur pelan-kenceng-pelan, kabut tipis, batu padat lagi.
+    // Dari tengah nyelam (Escape sebelum panel) mulainya dari kondisi sekarang
+    const fromPanel = out0.hold > 0
+    const q = clamp01((T - (fromPanel ? 200 : 0)) / (DIVE.OUT - (fromPanel ? 200 : 0)))
+    const m = smoother(q)
     tmp.copy(from).lerp(p, m)
     p.copy(tmp)
     tmp.copy(fromLook).lerp(t, m)
     t.copy(tmp)
-    diveFx.fill = out0.fill * (1 - sstep(0, fade ? DIVE.FADE : 320, T))
-    diveFx.k = out0.k * (1 - sstep(120, 700, T))
-    diveFx.zoom = out0.zoom * (1 - sstep(0, 650, T))
-    if (T >= dur) {
+    const fogUp = fromPanel ? FOG_MAX * sstep(0, 380, T) : out0.fog
+    diveFx.fog = Math.max(out0.fog * (1 - sstep(0, 700, T)), fogUp * (1 - sstep(700, 1300, T)))
+    diveFx.fill = out0.fill * (1 - sstep(280, 820, T))
+    diveFx.zoom = out0.zoom * (1 - sstep(280, 900, T))
+    diveFx.k = out0.k * (1 - sstep(760, 1450, T))
+    if (T >= DIVE.OUT) {
       F.phase = 'idle'
       resetFx()
       return false
@@ -267,18 +296,44 @@ const fillVert = /* glsl */ `
 // penutup layar: video-nya MELEBAR keluar dari siluet batu sampai nutup layar
 // (bukan crossfade rata, yang bikin scene & video numpuk kayak hantu).
 // uRadial 0 = crossfade biasa, dipakai mode prefers-reduced-motion
+// + kabut es layar penuh (uFog): noise value 3 oktaf yang ngalir pelan, lebih
+// tebel di sekitar batu (tempat kamera nembus). Warna akhirnya dikomposisi
+// manual: video dan kabut ditumpuk di atas scene dalam satu draw
 const fillFrag = /* glsl */ `
   ${panelChunk}
   uniform float uFill;
   uniform float uRadial;
+  uniform float uFog;
+  uniform float uTime;
   varying vec2 vS;
+  float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float vnoise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + 1.0), u.x), u.y);
+  }
+  float fbm(vec2 p) {
+    float v = 0.0, a = 0.5;
+    for (int i = 0; i < 3; i++) { v += a * vnoise(p); p = p * 2.03 + 11.7; a *= 0.5; }
+    return v;
+  }
   void main() {
     vec2 c = mix(uCenter, vec2(0.5), uFill);
     float d = length((vS - c) * vec2(uAspect, 1.0)) / length(vec2(uAspect, 1.0));
     float r = mix(0.12, 1.25, uFill);
     float grow = 1.0 - smoothstep(r - 0.28, r, d);
     float a = mix(uFill, grow * smoothstep(0.0, 0.08, uFill), uRadial);
-    gl_FragColor = vec4(panelColor(vS), uFill > 0.999 ? 1.0 : a);
+    a = uFill > 0.999 ? 1.0 : a;
+    vec3 col = panelColor(vS);
+    // kabut: dua lapis noise geser beda arah, dipadetin deket batu
+    vec2 q = vS * vec2(uAspect, 1.0) * 2.2;
+    float n = fbm(q + vec2(uTime * 0.05, -uTime * 0.03)) * 0.6 + fbm(q * 0.55 - vec2(uTime * 0.02, 0.0)) * 0.4;
+    float near = 1.0 - smoothstep(0.0, 0.9, length((vS - uCenter) * vec2(uAspect, 1.0)));
+    float f = clamp(uFog * (0.25 + 0.95 * n + 0.3 * near), 0.0, 1.0);
+    vec3 fogCol = mix(vec3(0.47, 0.6, 0.7), vec3(0.8, 0.87, 0.92), n);
+    float A = 1.0 - (1.0 - a) * (1.0 - f);
+    vec3 C = (col * a * (1.0 - f) + fogCol * f) / max(A, 1e-4);
+    gl_FragColor = vec4(C, A);
     #include <colorspace_fragment>
   }
 `
@@ -292,7 +347,7 @@ export const windowMat = new THREE.ShaderMaterial({
   depthWrite: false,
 })
 const fillMat = new THREE.ShaderMaterial({
-  uniforms: { ...videoUniforms, uFill: { value: 0 }, uRadial: { value: 1 } },
+  uniforms: { ...videoUniforms, uFill: { value: 0 }, uRadial: { value: 1 }, uFog: { value: 0 }, uTime: { value: 0 } },
   vertexShader: fillVert,
   fragmentShader: fillFrag,
   transparent: true,
@@ -352,8 +407,10 @@ export function DiveFill() {
     }
     windowMat.uniforms.uK.value = diveFx.k
     fillMat.uniforms.uFill.value = diveFx.fill
+    fillMat.uniforms.uFog.value = diveFx.fog
+    fillMat.uniforms.uTime.value = state.clock.elapsedTime
     fillMat.uniforms.uRadial.value = focusState.mode === 'fade' ? 0 : 1
-    if (mesh.current) mesh.current.visible = diveFx.fill > 0.001
+    if (mesh.current) mesh.current.visible = diveFx.fill > 0.001 || diveFx.fog > 0.001
   })
   return (
     <mesh ref={mesh} material={fillMat} frustumCulled={false} renderOrder={10000} visible={false} raycast={noRaycast}>

@@ -105,7 +105,7 @@ body {
   color: inherit; font-size: 11px; font-weight: 600; letter-spacing: 0.18em; text-decoration: none;
   border-bottom: 1px solid rgba(255, 255, 255, 0.55);
   text-shadow: 0 1px 12px rgba(90, 100, 110, 0.5);
-  transition: border-color 0.25s;
+  transition: border-color 0.25s, opacity 0.35s ease;
 }
 .hud-cv:hover { border-bottom-color: #fff; }
 .hud-cv:focus-visible { outline: 2px solid #cfe8fa; outline-offset: 3px; }
@@ -319,6 +319,33 @@ body {
 }
 .rock-modal.is-open { opacity: 1; pointer-events: auto; transition: none; }
 .rock-scrim, .rock-top { opacity: 0; transition: opacity 0.3s ease; }
+/* kabut di dalam batu: dua lapis gradient lembut yang geser pelan (transform
+   doang, murah di compositor; canvas WebGL udah berhenti render pas panel
+   kebuka). Nongol pelan abis serah terima, ilang duluan pas ditutup biar
+   frame-nya sama lagi kayak canvas */
+.rock-mist {
+  position: absolute; inset: -12%; pointer-events: none;
+  opacity: 0; transition: opacity 0.25s ease;
+}
+.rock-mist::before, .rock-mist::after {
+  content: ''; position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 42% 30% at 28% 36%, rgba(206, 226, 240, 0.17) 0%, rgba(206, 226, 240, 0) 70%),
+    radial-gradient(ellipse 38% 26% at 74% 62%, rgba(186, 212, 232, 0.14) 0%, rgba(186, 212, 232, 0) 70%),
+    radial-gradient(ellipse 60% 22% at 50% 88%, rgba(220, 234, 244, 0.15) 0%, rgba(220, 234, 244, 0) 72%);
+  animation: mist-drift 26s ease-in-out infinite alternate;
+}
+.rock-mist::after {
+  transform: scale(1.15) rotate(180deg);
+  opacity: 0.8;
+  animation-duration: 34s;
+  animation-direction: alternate-reverse;
+}
+@keyframes mist-drift {
+  from { transform: translate3d(-4%, 1.5%, 0) scale(1.05); }
+  to { transform: translate3d(4%, -2%, 0) scale(1.12); }
+}
+.rock-modal.is-open .rock-mist { opacity: 1; transition: opacity 1.8s ease 0.35s; }
 .rock-modal.is-open .rock-scrim,
 .rock-modal.is-open .rock-top { opacity: 1; transition: opacity 0.6s ease; }
 /* background: video loop dalam-glacier (generate Nehemiah) atau gradient es fallback */
@@ -798,6 +825,7 @@ body {
   .rock-content, .rock-modal.is-open .rock-content { transform: none; }
   /* grain yang loncat 4x per detik dan aba-aba yang kedip-kedip: diem aja */
   .grain, .hint-inner, .loop-hint { animation: none; }
+  .rock-mist::before, .rock-mist::after { animation: none; }
 }
 
 /* ---------- depth ruler kiri: penggaris kedalaman yang ikut scroll ---------- */
@@ -827,6 +855,7 @@ body {
 .logo, .meta, .readout, .progress-bar, .ruler, .vignette { transition: opacity 0.35s ease; }
 html.is-diving .logo, html.is-diving .meta, html.is-diving .readout,
 html.is-diving .progress-bar, html.is-diving .ruler, html.is-diving .vignette { opacity: 0; }
+html.is-diving .hud-cv { opacity: 0; pointer-events: none; }
 html.is-diving .anno { opacity: 0; transition-duration: 0.25s; pointer-events: none !important; }
 html.is-diving .echo-btn { opacity: 0; pointer-events: none; }
 

@@ -558,6 +558,10 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
           <div className="rock-bg rock-bg--fallback" />
         )}
         <div className="rock-scrim" />
+        {/* kabut tipis yang ngalir pelan di atas latar gelap, di bawah teks. Mulai
+            dari 0 pas serah terima (canvas udah bening), lalu pelan-pelan nebel.
+            Di atas scrim, soalnya di bawahnya ketutup gelap sampai gak kebaca */}
+        <div className="rock-mist" aria-hidden="true" />
         {/* kepala panel: logo kiri, suara + CLOSE kanan, di atas pelat gradient
             solid. Dulu logo/CLOSE ngambang tanpa latar jadi numpuk sama teks pas
             di-scroll, dan tombol suara di pojok kiri bawah nutupin link LIVE/REPO
