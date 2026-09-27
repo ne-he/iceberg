@@ -43,7 +43,7 @@ export const rockRadius = new Map()
 
 // elemen <video> panel (UI.jsx). SATU elemen yang sama dipakai panel DOM dan
 // tekstur di batu: decode sekali, waktunya nyambung, frame pas serah terima identik
-export const panelVideo = { el: null }
+export const panelVideo = { el: null, soundOn: true, audio: null }
 const PANEL_SRC = GLACIER_VIDEO // HP dapet versi 540p
 
 // pasang src video panel sekali (dipanggil 2.5 detik abis intro, atau pas klik batu).
@@ -61,8 +61,67 @@ export function startPanelVideo() {
   const v = panelVideo.el
   if (!v) return
   armPanelVideo()
-  v.muted = true
-  if (v.paused) v.play().catch(() => {})
+  // masih di dalam gesture klik: jalur audio dibikin sekarang (AudioContext
+  // butuh gesture), gain mulai dari 0, jadi walau gak di-mute gak ada yang kedengeran
+  ensureAudio(v)
+  v.muted = !panelVideo.soundOn
+  if (v.paused)
+    v.play().catch(() => {
+      v.muted = true
+      v.play().catch(() => {})
+    })
+  // musiknya masuk pelan-pelan mulai pas video kelihatan di dalam batu
+  rampPanelSound(PANEL_VOL, 3.2, 1.0)
+}
+
+// ===== suara video panel: pelan dan gak ngagetin (permintaan 27 Sep) =====
+// Volume diatur GainNode (Web Audio), bukan video.volume: di iPhone properti
+// volume itu read-only (selalu 1). Muted tetep dihormati di jalur Web Audio.
+// Kalau Web Audio gak ada, fallback ke video.volume.
+export const PANEL_VOL = 0.28
+const sound = { ctx: null, gain: null, raf: 0 }
+function ensureAudio(v) {
+  if (sound.ctx === null) {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext
+      const ctx = new AC()
+      const g = ctx.createGain()
+      g.gain.value = 0
+      ctx.createMediaElementSource(v).connect(g)
+      g.connect(ctx.destination)
+      sound.ctx = ctx
+      sound.gain = g
+    } catch {
+      sound.ctx = false
+      v.volume = 0
+    }
+    panelVideo.audio = sound
+  }
+  if (sound.ctx && sound.ctx.state === 'suspended') sound.ctx.resume().catch(() => {})
+  return !!sound.ctx
+}
+// volume ke `to` dalam `secs` detik, mulai `delay` detik lagi
+export function rampPanelSound(to, secs, delay = 0) {
+  const v = panelVideo.el
+  if (!v) return
+  if (ensureAudio(v)) {
+    const g = sound.gain.gain
+    const t0 = sound.ctx.currentTime
+    g.cancelScheduledValues(t0)
+    g.setValueAtTime(g.value, t0)
+    if (delay > 0) g.setValueAtTime(g.value, t0 + delay)
+    g.linearRampToValueAtTime(to, t0 + delay + secs)
+    return
+  }
+  cancelAnimationFrame(sound.raf)
+  const from = v.volume
+  const start = performance.now() + delay * 1000
+  const step = (now) => {
+    const k = Math.min(1, Math.max(0, (now - start) / (secs * 1000)))
+    v.volume = from + (to - from) * k
+    if (k < 1) sound.raf = requestAnimationFrame(step)
+  }
+  sound.raf = requestAnimationFrame(step)
 }
 
 export const reducedMotion = () =>

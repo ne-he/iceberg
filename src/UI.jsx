@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useProgress } from '@react-three/drei'
 import { beginIntro, bgVideoState, chatState, faceState, focusState, introState, scrollState } from './scrollState'
 import { warmState } from './warmup'
-import { armPanelVideo, panelVideo } from './Dive'
+import { armPanelVideo, PANEL_VOL, panelVideo, rampPanelSound } from './Dive'
 import { AVAILABILITY, CONTACT, CRYSTALS, PANELS, RESUME_URL, SECTION_WORDS } from './content'
 import DecryptedText from './components/DecryptedText'
 
@@ -396,12 +396,17 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
   // jalan (bukan layar item). Pas panel ditutup suaranya langsung mati, tapi
   // videonya JANGAN di-pause di sini: batunya masih nampilin video itu selama
   // animasi keluar (pause-nya di loop HUD di atas)
+  // Volume pelan (PANEL_VOL) dan selalu lewat fade: masuk pelan-pelan, keluar
+  // mudar ~0.9 detik baru di-mute (dulu langsung nyala kenceng & mati mendadak)
   useEffect(() => {
     const v = vidRef.current
     if (!v) return
+    panelVideo.soundOn = soundOn
     if (panel) {
       armPanelVideo()
       v.muted = !soundOn
+      // lanjutin fade dari posisi sekarang (udah mulai naik sejak klik batu)
+      if (soundOn) rampPanelSound(PANEL_VOL, 2.0)
       if (v.paused) {
         const p = v.play()
         if (p && p.catch)
@@ -411,7 +416,11 @@ export function UI({ panel, onClose, hasGlacier, onOpenChat, onOpenRock }) {
           })
       }
     } else {
-      v.muted = true
+      rampPanelSound(0, 0.9)
+      const id = setTimeout(() => {
+        if (!focusState.panelOpen) v.muted = true
+      }, 950)
+      return () => clearTimeout(id)
     }
   }, [panel, soundOn])
 
