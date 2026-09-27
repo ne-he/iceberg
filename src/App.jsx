@@ -9,7 +9,7 @@ import { GLACIER_VIDEO, LOW, SCENE_VIDEO } from './perf'
 import { quality } from './quality'
 import { onCanvasCreated } from './glRuntime'
 import { scrollSettled } from './scrollSettle'
-import { DIVE, reducedMotion, startPanelVideo } from './Dive'
+import { DIVE, panelVideo, reducedMotion, startPanelVideo } from './Dive'
 import { beginFocus, bgVideoState, chatState, dragState, endFocus, faceState, focusState, introState, scrollState } from './scrollState'
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
@@ -166,6 +166,7 @@ export default function App() {
   const veilRef = useRef()
   const washRef = useRef()
   const depthTintRef = useRef()
+  const outroDarkRef = useRef()
   const scrollSpaceRef = useRef()
 
   // ===== master: intro batu jatuh (sekali) + infinite loop scroll dua arah =====
@@ -297,7 +298,8 @@ export default function App() {
         // ke infinite loop kita: idle 450ms → SELALU dikunci ke anchor (gak ada
         // posisi nyangkut di tengah section), dan DIRECTIONAL, lewat 22% gap
         // searah gerakan terakhir udah dianggap "niat pindah section"
-        if (!snapTween && now - lastUser > 450 && !dragState.active && focusState.phase === 'idle') {
+        // nunggu 650 ms diem (dulu 450): biar gak kerasa "direbut" pas baru berhenti
+        if (!snapTween && now - lastUser > 650 && !dragState.active && focusState.phase === 'idle') {
           // dua anchor pengapit posisi sekarang
           let lo = SNAP_ANCHORS[0]
           let hi = SNAP_ANCHORS[SNAP_ANCHORS.length - 1]
@@ -327,8 +329,11 @@ export default function App() {
               // ~1 detik ala scrollingSpeed fullPage, dikit lebih lama kalau jauh.
               // Jembatan dikasih waktu lebih: isinya animasi nyelam + emerge,
               // kalau disapu 1 detik kerasa kebut
-              duration: inBridge ? Math.min(2.2, 1.2 + dist * 6) : Math.min(1.5, 0.85 + dist * 1.2),
-              ease: inBridge ? 'power1.inOut' : 'power2.out', // tarikan tegas di awal, mendarat lembut
+              // Revisi 27 Sep (permintaan: "auto adjust-nya jangan cepet, pelan-pelan"):
+              // 1.3 s ke atas + sine.inOut, mulai dan berhentinya sama-sama lembut.
+              // Dulu 0.85 s power2.out: nyentak di awal
+              duration: inBridge ? Math.min(2.2, 1.2 + dist * 6) : Math.min(2.2, 1.3 + dist * 3),
+              ease: inBridge ? 'power1.inOut' : 'sine.inOut',
               onUpdate: () => window.scrollTo(0, proxy.y),
               onComplete: () => {
                 snapTween = null
@@ -372,6 +377,12 @@ export default function App() {
       const dk = scrollState.depthK
       if (depthTintRef.current) {
         depthTintRef.current.style.opacity = clamp((dk - 0.2) / 0.5, 0, 1) * 0.68 * rv
+      }
+      if (outroDarkRef.current) {
+        // pakai damped (bukan depthK) biar gelapnya nahan selama di outro, dan
+        // padam di awal bridge pas mau balik ke hero
+        const od = smooth(clamp((scrollState.damped - 0.81) / 0.07, 0, 1)) * (1 - clamp(scrollState.bridge / 0.12, 0, 1))
+        outroDarkRef.current.style.opacity = od * rv
       }
       const veil = veilRef.current
       if (veil) {
@@ -426,6 +437,7 @@ export default function App() {
       close: closeRock,
       openChat,
       closeChat,
+      panelVideo,
     }
     // cek beneran video, dev server Vite ngebales 200 text/html buat file yang gak ada
     fetch(SCENE_VIDEO, { method: 'HEAD' })
@@ -466,6 +478,9 @@ export default function App() {
       {hasVideo && <div ref={veilRef} className="fog-veil" aria-hidden="true" />}
       {/* tint biru gletser di backdrop, makin dalam makin pekat */}
       <div ref={depthTintRef} className="depth-tint" aria-hidden="true" />
+      {/* abis SKILLS latarnya jadi biru tua gelap sampai wajah partikel
+          (permintaan 27 Sep: "gelap, terang di akunya aja") */}
+      <div ref={outroDarkRef} className="outro-dark" aria-hidden="true" />
       {/* gradient "air dalam" dulu di sini sebagai ShaderGradientCanvas, alias
           konteks WebGL KEDUA. Sekarang digambar di canvas utama (DeepWater di
           Experience.jsx), jadi GPU gak gonta-ganti konteks tiap frame lagi */}

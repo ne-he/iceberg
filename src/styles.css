@@ -60,6 +60,12 @@ body {
 }
 /* tint biru gletser buat backdrop kosong (di atas video/veil, di bawah canvas),
    opacity digerakin JS ngikut kedalaman: makin dalam makin biru, kesan dalam es */
+/* biru tua gelap dari SKILLS sampai wajah partikel, opacity dari App.jsx.
+   Tengah agak terang dikit (di belakang figur), pinggir hampir hitam */
+.outro-dark {
+  position: fixed; inset: 0; z-index: 0; opacity: 0; pointer-events: none;
+  background: radial-gradient(ellipse 60% 70% at 50% 42%, #173049 0%, #0c1a29 55%, #050b12 100%);
+}
 .depth-tint {
   position: fixed; top: 0; left: 0; right: 0; height: 100vh; height: 100lvh; z-index: 0; opacity: 0;
   background: radial-gradient(ellipse at 50% 30%, rgba(70, 116, 150, 0.55) 0%, rgba(40, 74, 104, 0.9) 75%);

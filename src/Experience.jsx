@@ -20,6 +20,8 @@ const FOG_TOP = new THREE.Color('#b9c0c7')
 // kabut dalam dibikin sedikit lebih terang/biru-es (dulu #5c83a4 agak murky) biar
 // dasar (kamar partikel) kerasa bercahaya, bukan gelap, vibe beda (permintaan Nehemiah)
 const FOG_DEEP = new THREE.Color('#6b93b5')
+// kabut di bagian outro (abis SKILLS): biru tua, senada .outro-dark
+const FOG_OUTRO = new THREE.Color('#15283a')
 const _fogCol = new THREE.Color()
 
 export default function Experience({ onOpen, hasVideo }) {
@@ -87,7 +89,9 @@ export default function Experience({ onOpen, hasVideo }) {
       {/* aura terang di belakang wajah = vibe BEDA pas bagian partikel: bukan
           kabut gelap, tapi kamar es bercahaya (permintaan Nehemiah, ala ss#4) */}
       <FaceAura />
-      <ParticleFace position={[0, -40.55, 1.5]} />
+      {/* diturunin 0.9 (dulu -40.55): potongan bawah fotonya jatuh di bawah
+          tepi layar, gak kebaca "kaki kepotong di tengah" */}
+      <ParticleFace position={[0, -41.45, 1.5]} />
       <OutroStage />
       {/* batu asal yang naik dari bawah podium saat transisi loop (100→120).
           Suspense sendiri: batunya baru kepake pas bridge, jadi jangan sampai
@@ -275,6 +279,10 @@ function DeepWater() {
     // bareng partikel yang fade)
     const dark = smoothstep(0.945, 0.965, scrollState.damped) * (1 - (faceState.develop ?? 0)) * (1 - smoothstep(0, 0.1, scrollState.bridge))
     o += (0.9 - o) * dark
+    // Revisi 27 Sep: dari SKILLS sampai wajah latarnya TETEP biru tua gelap
+    // (dulu balik terang pas wajah jadi). Terangnya cuma di aura belakang wajah
+    const deep = smoothstep(0.81, 0.88, scrollState.damped) * (1 - smoothstep(0, 0.1, scrollState.bridge))
+    o += (0.82 - o) * deep * (1 - dark)
     mat.uniforms.uOpacity.value = o
     mat.uniforms.uTime.value = state.clock.elapsedTime * 0.22
     mat.uniforms.uAspect.value = size.width / Math.max(1, size.height)
@@ -318,6 +326,10 @@ function FogRig() {
       // warna kabut geser ke biru gletser makin dalam, objek (batu/dinding es)
       // membaur ke biru dalam, bukan abu pucat
       _fogCol.copy(FOG_TOP).lerp(FOG_DEEP, THREE.MathUtils.smoothstep(k, 0.15, 0.85))
+      // abis SKILLS kabutnya ikut biru tua, biar bongkahan es & panggung
+      // membaur ke gelap, bukan biru pucat
+      const deep = smoothstep(0.81, 0.9, scrollState.damped) * (1 - smoothstep(0, 0.12, scrollState.bridge))
+      _fogCol.lerp(FOG_OUTRO, deep)
       scene.fog.color.copy(_fogCol)
     }
   })
@@ -546,7 +558,7 @@ function FaceAura() {
     // pas ECHO (chatbot) lagi ngetik & kita di section wajah: aura "denyut" lebih
     // terang, kesannya muka partikel lagi ngomong (avatar chatbot hidup)
     const talk = chatState.streaming ? 1 + 0.28 * (0.5 + 0.5 * Math.sin(t * 7)) : 1
-    if (glow.current) glow.current.material.opacity = 0.85 * a * talk
+    if (glow.current) glow.current.material.opacity = (LOW ? 0.62 : 0.85) * a * talk
     // dua cincin tipis pelan berputar = kesan spiral cahaya di ss#4
     if (ring1.current) {
       ring1.current.material.opacity = 0.3 * ringA * talk
@@ -559,10 +571,12 @@ function FaceAura() {
     if (light.current) light.current.intensity = 3.4 * a * talk
   })
   return (
-    <group position={[0, -40.4, -3.5]}>
-      {/* halo utama, plane additive gede di belakang wajah */}
+    <group position={[0, -41.2, -3.5]}>
+      {/* halo utama di belakang badan. Diperkecil (dulu 26) biar terangnya
+          ngumpul di figurnya, latar sekitarnya tetep gelap. Di HP layarnya
+          sempit, halo 17 nutup selebar layar jadi semua terang: dikecilin lagi */}
       <mesh ref={glow}>
-        <planeGeometry args={[26, 26]} />
+        <planeGeometry args={LOW ? [10, 10] : [17, 17]} />
         <meshBasicMaterial map={tex} transparent opacity={0} blending={THREE.AdditiveBlending} depthWrite={false} fog={false} toneMapped={false} />
       </mesh>
       {/* cincin cahaya konsentris tipis */}
